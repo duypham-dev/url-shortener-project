@@ -25,6 +25,6 @@ app.use(cors(corsOptions)); //comment to test with postman
 app.use(express.urlencoded({ extended: false })); // GIS redirect POST form
 
 // Mount API routes
-app.use('/api', shortenRouter)
+app.use(baseUrl, shortenRouter)
 
 export default app
