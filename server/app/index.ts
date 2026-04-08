@@ -3,7 +3,7 @@ import morgan from 'morgan';
 import cors from "cors";
 import helmet from "helmet";
 import cookieParser from 'cookie-parser';
-import shortenRouter from './routes/shorten.js'
+import shortenRouter from './routes/shorten'
 // import Route from '#routes/index.js';
 const app = express()
 

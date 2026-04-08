@@ -14,7 +14,7 @@ export const fetchShortenData = async () : Promise<ShortenResponse> => {
 
 export const createShortenUrl = async (originalUrl: string) : Promise<ShortenResponse> => {
     try{
-        const response = await api.post('/api/shorten', { originalUrl });
+        const response = await api.post('/api/shorten', { originalUrl, userId: null });
         return response.data;
     }catch(err){
         console.error(err)
