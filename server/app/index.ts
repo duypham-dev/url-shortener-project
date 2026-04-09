@@ -3,10 +3,10 @@ import morgan from 'morgan';
 import cors from "cors";
 import helmet from "helmet";
 import cookieParser from 'cookie-parser';
-import shortenRouter from './routes/shorten'
+import shortenRouter from './routes/shortlink.route'
+
 // import Route from '#routes/index.js';
 const app = express()
-
 
 const baseUrl = process.env.BASE_URL || '/api/v1';
 const corsOptions = {
