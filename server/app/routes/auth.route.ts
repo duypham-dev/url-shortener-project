@@ -18,6 +18,7 @@ import {
   logoutHandler,
   getMeHandler,
 } from "../controllers/auth.controller";
+import { googleLogin } from "../controllers/googleLogin.controller";
 import { verifyToken } from "../middlewares/verifyToken.middleware";
 
 const authRouter = Router();
@@ -26,7 +27,7 @@ const authRouter = Router();
 authRouter.post("/register", registerHandler);
 authRouter.post("/login", loginHandler);
 authRouter.post("/refresh", refreshHandler);
-
+authRouter.post("/google", googleLogin);
 // ---- Protected routes (yêu cầu accessToken hợp lệ) ----
 authRouter.post("/logout", verifyToken, logoutHandler);
 authRouter.get("/me", verifyToken, getMeHandler);

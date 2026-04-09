@@ -1,14 +1,14 @@
 import { create } from 'zustand';
 import { axiosClient } from '../api/axiosClient';
 
-interface User {
+export interface User {
   id: number;
   username: string;
   email: string;
   role: string;
 }
 
-interface AuthState {
+export interface AuthState {
   isAuthenticated: boolean;
   user: User | null;
   isLoading: boolean; // For initial auth check
@@ -21,7 +21,7 @@ export const useAuthStore = create<AuthState>((set) => ({
   isAuthenticated: false,
   user: null,
   isLoading: true, // start loading to check auth on mount
-
+  
   login: (userData, accessToken) => {
     localStorage.setItem('accessToken', accessToken);
     set({ isAuthenticated: true, user: userData });
@@ -42,6 +42,7 @@ export const useAuthStore = create<AuthState>((set) => ({
     try {
       set({ isLoading: true });
       const response: any = await axiosClient.get('/auth/me');
+      console.log('Auth check response:', response);
       if (response && response.success) {
         set({ isAuthenticated: true, user: response.data.user });
       }

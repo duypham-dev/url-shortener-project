@@ -4,6 +4,7 @@
  * Tuân thủ Single Responsibility Principle - chỉ xử lý logic, không biết về HTTP.
  */
 import bcrypt from "bcrypt";
+import crypto from "crypto";
 import { prisma } from "../libs/prisma.js";
 import redis from "../libs/redis";
 import {
@@ -29,8 +30,76 @@ const buildRefreshTokenKey = (userId: number): string =>
 // ----------------------------------------------------------------
 // Helper: tạo Redis key cho blacklist accessToken
 // ----------------------------------------------------------------
-const buildBlacklistKey = (token: string): string =>
-  `blacklist:${token}`;
+const buildBlacklistKey = (token: string): string => `blacklist:${token}`;
+
+function generateSecureRandomPassword() {
+  return crypto.randomBytes(32).toString("hex");
+}
+
+// ================================================================
+//OAUTH with Google (GoogleLogin)
+// ================================================================
+export interface OAuthInput {
+  fullName: string;
+  email: string;
+}
+
+// export interface OAuthResult {
+//   accessToken: string;
+//   refreshToken: string;
+//   user: {
+//     id: number;
+//     username: string;
+//     email: string;
+//     role: string;
+//   };
+// }
+
+export const findOrCreateOAuthUser = async (
+  input: OAuthInput,
+): Promise<AuthResult> => {
+  const { email, fullName } = input;
+
+  // Try to find existing user by email
+  let user = await prisma.users.findUnique({
+    where: { email },
+    select: {
+      id: true,
+      username: true,
+      email: true,
+      role: true,
+    },
+  });
+
+  if (user) {
+    const payload: JwtPayload = {
+      userId: user?.id || 0, 
+      email,
+      role: user?.role || "user",
+    }
+    return issueTokens(payload, user);
+  }
+
+  // Create new user with OAuth data
+  // Password is randomly generated (OAuth users don't use password login)
+  user = await prisma.users.create({
+    data: {
+      username: email.split("@")[0] || email,
+      email,
+      password_hash: generateSecureRandomPassword(),
+      role: "user",
+    },
+    select: { id: true, username: true, email: true,password_hash: true, role: true },
+  });
+
+  const payload: JwtPayload = {
+    userId: user.id,
+    email,
+    role: user.role || "user",
+  };
+
+  return issueTokens(payload, user);
+};
 
 // ================================================================
 // REGISTER
@@ -160,7 +229,7 @@ export const login = async (input: LoginInput): Promise<AuthResult> => {
  * - Phát hành cặp token mới (Invalidate token cũ)
  */
 export const refreshTokens = async (
-  incomingRefreshToken: string
+  incomingRefreshToken: string,
 ): Promise<Omit<AuthResult, "user">> => {
   // 1. Verify chữ ký và hạn sử dụng
   let payload: JwtPayload;
@@ -176,7 +245,7 @@ export const refreshTokens = async (
     // Có thể là token replay attack - xóa token để force logout
     await redis.del(buildRefreshTokenKey(payload.userId));
     throw new UnauthorizedError(
-      "Refresh token đã bị thu hồi hoặc không hợp lệ."
+      "Refresh token đã bị thu hồi hoặc không hợp lệ.",
     );
   }
 
@@ -203,7 +272,7 @@ export const refreshTokens = async (
   await redis.setex(
     buildRefreshTokenKey(user.id),
     REFRESH_TOKEN_TTL_SECONDS,
-    newRefreshToken
+    newRefreshToken,
   );
 
   return { accessToken, refreshToken: newRefreshToken };
@@ -219,7 +288,7 @@ export const refreshTokens = async (
  */
 export const logout = async (
   userId: number,
-  accessToken: string
+  accessToken: string,
 ): Promise<void> => {
   // Xóa refreshToken - user không thể refresh nữa
   await redis.del(buildRefreshTokenKey(userId));
@@ -245,7 +314,7 @@ export const isTokenBlacklisted = async (token: string): Promise<boolean> => {
 // ================================================================
 async function issueTokens(
   payload: JwtPayload,
-  user: { id: number; username: string; email: string; role: string | null }
+  user: { id: number; username: string; email: string; role: string | null },
 ): Promise<AuthResult> {
   const accessToken = signAccessToken(payload);
   const refreshToken = signRefreshToken(payload);
@@ -254,7 +323,7 @@ async function issueTokens(
   await redis.setex(
     buildRefreshTokenKey(payload.userId),
     REFRESH_TOKEN_TTL_SECONDS,
-    refreshToken
+    refreshToken,
   );
 
   return {

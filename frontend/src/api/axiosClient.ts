@@ -16,6 +16,13 @@ axiosClient.interceptors.request.use(
     if (token && config.headers) {
       config.headers.Authorization = `Bearer ${token}`;
     }
+    // Prevent browser from serving cached GET responses (helps when user navigates back)
+    // const method = (config.method || '').toString().toLowerCase();
+    // if (method === 'get') {
+    //   if (!config.headers) config.headers = {} as any;
+    //   config.headers['Cache-Control'] = 'no-cache, no-store';
+    //   config.headers['Pragma'] = 'no-cache';
+    // }
     return config;
   },
   (error) => Promise.reject(error)
@@ -89,7 +96,7 @@ axiosClient.interceptors.response.use(
         localStorage.removeItem('accessToken');
         
         // Chỉ redirect tự động nếu không phải đang ở trang login rễ để tránh loop
-        if (window.location.pathname !== '/login' && window.location.pathname !== '/register' && window.location.pathname !== '/') {
+        if (window.location.pathname !== '/login' && window.location.pathname !== '/register' && window.location.pathname !== '/' && !window.location.pathname.startsWith('/oauth/callback')) {
            window.location.href = '/login';
         }
         return Promise.reject(refreshError);

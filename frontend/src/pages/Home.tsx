@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { Link } from "react-router-dom";
 import { Link2, QrCode, ArrowRight, CheckCircle2, Copy, Check, Shield, Zap, BarChart3, Scissors } from "lucide-react";
-import { createShortenUrl } from "../api/urlApi";
+import { createShortenUrl } from "../api/url.api";
 
 const Home: React.FC = () => {
   const [url, setUrl] = useState<string>("");
@@ -9,7 +9,7 @@ const Home: React.FC = () => {
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [isCopied, setIsCopied] = useState<boolean>(false);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.SyntheticEvent) => {
     e.preventDefault();
     if (!url.trim()) return;
 

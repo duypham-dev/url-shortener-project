@@ -23,7 +23,7 @@ const REFRESH_TOKEN_COOKIE = "refreshToken";
 const COOKIE_OPTIONS = {
   httpOnly: true,
   secure: process.env.NODE_ENV === "production", // HTTPS only trong prod
-  sameSite: "strict" as const,
+  sameSite: "lax" as const,
   maxAge: 7 * 24 * 60 * 60 * 1000, // 7 ngày (milliseconds)
   path: "/",
 };
@@ -57,7 +57,7 @@ export const registerHandler = async (
 
     // 3. Set refreshToken vào httpOnly cookie
     res.cookie(REFRESH_TOKEN_COOKIE, refreshToken, COOKIE_OPTIONS);
-
+    res.header("")
     // 4. Trả về accessToken và thông tin user qua JSON
     res.status(201).json({
       success: true,

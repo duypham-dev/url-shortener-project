@@ -1,37 +1,17 @@
 // frontend/src/App.tsx
 import React, { useEffect } from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { useAuthStore } from './store/useAuthStore';
 import './App.css';
 // Pages
 import Home from './pages/Home';
 import Login from './pages/Login';
 import Register from './pages/Register';
-import api from "./config/apiConfig";
-// Tạo một component bọc (Wrapper) cho các Private Routes
-const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { isAuthenticated, isLoading } = useAuthStore();
-
-  if (isLoading) {
-    return <div className="h-screen flex items-center justify-center">Đang tải...</div>;
-  }
-
-  if (!isAuthenticated) {
-    return <Navigate to="/login" replace />;
-  }
-
-  return <>{children}</>;
-};
-
-// Component bọc để ngăn User đã login vào lại trang Login/Register
-const PublicRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { isAuthenticated, isLoading } = useAuthStore();
-  
-  if (isLoading) return <div className="h-screen flex items-center justify-center">Đang tải...</div>;
-  if (isAuthenticated) return <Navigate to="/dashboard" replace />;
-  
-  return <>{children}</>;
-};
+// Route guards
+import ProtectedRoute from './components/ProtectedRoute';
+import PublicRoute from './components/PublicRoute';
+import OAuthRedirect from './pages/OauthRedirect';
+// Route guards implemented in separate components under `src/components`
 
 const Dashboard = () => {
   const { logout } = useAuthStore();
@@ -43,12 +23,11 @@ const Dashboard = () => {
 };
 
 const App: React.FC = () => {
-  const { checkAuth } = useAuthStore();
-
   // Kiểm tra trạng thái đăng nhập ngay khi ứng dụng mount (F5)
+  // Call via getState to avoid subscribing to the function reference
   useEffect(() => {
-    checkAuth();
-  }, [checkAuth]);
+    useAuthStore.getState().checkAuth();
+  }, []);
 
   return (
     <BrowserRouter>
@@ -59,7 +38,7 @@ const App: React.FC = () => {
         {/* Guest routes - Chỉ cho người chưa login */}
         <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
         <Route path="/register" element={<PublicRoute><Register /></PublicRoute>} />
-
+        <Route path="/oauth/callback" element={<PublicRoute><OAuthRedirect /></PublicRoute>} />
         {/* Private routes - Yêu cầu login */}
         <Route 
           path="/dashboard" 
