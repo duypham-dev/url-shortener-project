@@ -9,14 +9,43 @@ datasource db {
 }
 
 model url_mappings {
-  short_code  String    @id @db.VarChar(10)
+  short_code  String       @id @db.VarChar(10)
   long_url    String
   user_id     Int?
-  is_custom   Boolean?  @default(false)
-  created_at  DateTime? @default(now()) @db.Timestamp(6)
-  expires_at  DateTime? @db.Timestamp(6)
-  click_count Int?      @default(0)
+  title       String?      @db.VarChar(255)
+  is_custom   Boolean?     @default(false)
+  is_active   Boolean?     @default(true)
+  created_at  DateTime?    @default(now()) @db.Timestamptz(6)
+  expires_at  DateTime?    @db.Timestamptz(6)
+  click_count Int?         @default(0)
+  click_logs  click_logs[]
+  users       users?       @relation(fields: [user_id], references: [id], onUpdate: NoAction)
 
-  @@index([created_at], map: "idx_created_at")
-  @@index([long_url, user_id], map: "idx_long_url_user", where: raw("(is_custom = false)"))
+  @@index([long_url, user_id], map: "idx_long_url_user", where: raw("((is_custom = false) AND (is_active = true))"))
+  @@index([expires_at], map: "idx_expires_at")
+  @@index([user_id], map: "idx_user_id")
+}
+
+model click_logs {
+  id           BigInt        @id @default(autoincrement())
+  short_code   String?       @db.VarChar(10)
+  clicked_at   DateTime?     @default(now()) @db.Timestamptz(6)
+  ip_address   String?       @db.Inet
+  user_agent   String?
+  referrer     String?       @db.VarChar(255)
+  country      String?       @db.VarChar(100)
+  url_mappings url_mappings? @relation(fields: [short_code], references: [short_code], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([short_code], map: "idx_click_logs_short_code")
+}
+
+model users {
+  id            Int            @id @default(autoincrement())
+  username      String         @unique @db.VarChar(255)
+  email         String         @unique @db.VarChar(255)
+  password_hash String
+  role          String?        @default("user") @db.VarChar(50)
+  created_at    DateTime?      @default(now()) @db.Timestamptz(6)
+  updated_at    DateTime?      @default(now()) @db.Timestamptz(6)
+  url_mappings  url_mappings[]
 }
