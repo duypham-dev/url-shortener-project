@@ -33,7 +33,7 @@ const App: React.FC = () => {
     <BrowserRouter>
       <Routes>
         {/* Public routes - Ai cũng vào được */}
-        <Route path="/" element={<Home />} />
+        <Route path="/" element={<PublicRoute><Home /></PublicRoute>} />
         
         {/* Guest routes - Chỉ cho người chưa login */}
         <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
