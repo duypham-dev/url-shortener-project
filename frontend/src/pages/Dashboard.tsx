@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Link as LinkIcon, QrCode, Lock, HelpCircle } from 'lucide-react';
+import { createShortenUrl } from "../api/url.api";
 
 export const Dashboard: React.FC = () => {
   const [url, setUrl] = useState('');

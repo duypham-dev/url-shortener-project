@@ -1,9 +1,9 @@
-import api from "../config/apiConfig";
+import { axiosClient } from "../config/axiosClient";
 import type ShortenResponse from "../types/api.type";
 
 export const fetchShortenData = async () : Promise<ShortenResponse> => {
     try{
-    const response = await api.get('/shorten')
+    const response = await axiosClient.get('/shorten')
     console.log(response.data)
     return response.data;
     }catch(err){
@@ -14,7 +14,7 @@ export const fetchShortenData = async () : Promise<ShortenResponse> => {
 
 export const createShortenUrl = async (originalUrl: string) : Promise<ShortenResponse> => {
     try{
-        const response = await api.post('/shorten', { originalUrl, userId: null });
+        const response = await axiosClient.post('/shorten', { originalUrl, userId: null });
         return response.data;
     }catch(err){
         console.error(err)

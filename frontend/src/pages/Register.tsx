@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuthStore } from '../store/useAuthStore';
-import { axiosClient } from '../api/axiosClient';
+import { axiosClient } from '../config/axiosClient';
 import { Loader2, Scissors } from 'lucide-react';
 
 const Register: React.FC = () => {
