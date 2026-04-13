@@ -1,19 +1,32 @@
 import React, { useState } from 'react';
 import { Link as LinkIcon, QrCode, Lock, HelpCircle } from 'lucide-react';
-import { createShortenUrl } from '../api/url.api';
+import { createShortenUrl } from '../api/shortUrl.api';
+import { SuccessModal } from '../components/SuccessModal';
 
 export const Dashboard: React.FC = () => {
   const [url, setUrl] = useState('');
   const [createQrCode, setCreateQrCode] = useState(false);
   const [activeTab, setActiveTab] = useState<'link' | 'qr'>('link');
+  
+  // Modal state
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [generatedShortUrl, setGeneratedShortUrl] = useState('');
 
   const handleCreate = async () => {
     // Handling create shortlink
     if (!url) return;
     console.log('Creating shortlink for:', url, 'with QR:', createQrCode);
     try {
-      const data = await createShortenUrl(url);
-      console.log('Shortened URL:', data.shortUrl);
+      const response = await createShortenUrl(url);
+      
+      // Handle nested backend data structure based on the controller `genShortLink`
+      const actualShortUrl = response?.shortUrl || "";
+      
+      if (actualShortUrl) {
+        setGeneratedShortUrl(actualShortUrl);
+        setIsModalOpen(true);
+        setUrl(''); // Opt: Clear the input after success
+      }
     } catch (error) {
       console.error('Error creating shortlink:', error);
     }
@@ -132,6 +145,12 @@ export const Dashboard: React.FC = () => {
           </div>
         </div>
       </div>
+
+      <SuccessModal 
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        shortUrl={generatedShortUrl}
+      />
     </>
   );
 };

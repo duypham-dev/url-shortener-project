@@ -1,0 +1,132 @@
+import React from 'react';
+import { X, Copy, BarChart2, Check, Mail, MessageCircle, AtSign } from 'lucide-react';
+import { FaFacebook, FaSquareInstagram } from 'react-icons/fa6';
+import { useNavigate } from 'react-router-dom';
+import { useCopyToClipboard } from '../hooks/useCopyToClipboard';
+
+interface SuccessModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  shortUrl: string;
+}
+
+const SocialIconItem = React.memo(({ Icon, label, onClick }: { Icon: React.FC<any>, label: string, onClick?: () => void }) => (
+  <button 
+    onClick={onClick}
+    className="flex flex-col items-center gap-2 group transition-transform hover:-translate-y-1"
+  >
+    <div className="w-14 h-14 border border-gray-200 rounded-2xl flex items-center justify-center text-gray-700 bg-white group-hover:border-blue-500 group-hover:text-blue-600 transition-colors shadow-sm">
+      <Icon size={24} strokeWidth={1.5} />
+    </div>
+    <span className="text-xs text-gray-600 font-medium">{label}</span>
+  </button>
+));
+
+export const SuccessModal: React.FC<SuccessModalProps> = React.memo(({ isOpen, onClose, shortUrl }) => {
+  const [copiedValue, copy] = useCopyToClipboard();
+  const navigate = useNavigate();
+
+  if (!isOpen) return null;
+
+  const handleCopy = () => {
+    if (shortUrl) {
+       // Append dummy prefix if it's just an id, otherwise use as is
+       const fullUrl = shortUrl.startsWith('http') ? shortUrl : `https://${shortUrl}`;
+       copy(fullUrl);
+    }
+  };
+
+  const handleShare = (platform: string) => {
+    const fullUrl = shortUrl.startsWith('http') ? shortUrl : `https://${shortUrl}`;
+    const encodedUrl = encodeURIComponent(fullUrl);
+    let shareUrl = '';
+
+    switch (platform) {
+      case 'facebook':
+        shareUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodedUrl}`;
+        break;
+      case 'x':
+        shareUrl = `https://twitter.com/intent/tweet?url=${encodedUrl}`;
+        break;
+      case 'email':
+        shareUrl = `mailto:?subject=Check this link out&body=${encodedUrl}`;
+        break;
+      case 'whatsapp':
+        shareUrl = `https://wa.me/?text=${encodedUrl}`;
+        break;
+      default:
+        return;
+    }
+    if (shareUrl) window.open(shareUrl, '_blank', 'noopener,noreferrer');
+  };
+
+  return (
+    <>
+      <div 
+        className="fixed inset-0 bg-black/40 backdrop-blur-sm z-40 transition-opacity" 
+        onClick={onClose}
+        aria-hidden="true"
+      />
+      <div className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[90%] max-w-lg bg-white rounded-2xl shadow-xl z-50 overflow-hidden flex flex-col animate-in fade-in zoom-in duration-200">
+        
+        {/* Header */}
+        <div className="flex items-center justify-between px-8 py-6 pb-2">
+          <h2 className="text-2xl font-bold flex items-center gap-2">
+            Your link is ready! <span role="img" aria-label="party">🎉</span>
+          </h2>
+          <button 
+            onClick={onClose}
+            className="p-2 text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-100 transition-colors"
+          >
+            <X size={24} />
+          </button>
+        </div>
+
+        {/* Body content */}
+        <div className="px-8 pb-8 flex flex-col gap-6">
+          <p className="text-gray-600">
+            Copy the link below to share it or choose a platform to share it to.
+          </p>
+
+          {/* Link box */}
+          <div className="bg-blue-50/50 border border-blue-100 rounded-xl p-8 flex flex-col items-center justify-center gap-6 mt-2">
+            <span className="text-xl truncate w-full font-bold text-blue-600 select-all">
+              {shortUrl}
+            </span>
+            
+            <div className="flex items-center gap-4">
+              <button 
+                onClick={() => navigate('/links')} // assuming /links is the details page
+                className="flex items-center gap-2 px-6 py-2.5 rounded-md font-medium text-blue-600 border border-blue-600 hover:bg-blue-50 transition-colors"
+              >
+                <BarChart2 size={18} />
+                View link details
+              </button>
+              
+              <button 
+                onClick={handleCopy}
+                className="flex items-center gap-2 px-6 py-2.5 rounded-md font-medium text-white bg-blue-600 hover:bg-blue-700 transition-colors focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+              >
+                {copiedValue ? <Check size={18} /> : <Copy size={18} />}
+                {copiedValue ? 'Copied!' : 'Copy link'}
+              </button>
+            </div>
+          </div>
+
+          {/* Social share icons */}
+          <div className="flex items-center justify-center gap-4 pt-4 mt-2 mb-2">
+            <SocialIconItem Icon={MessageCircle} label="WhatsApp" onClick={() => handleShare('whatsapp')} />
+            <SocialIconItem Icon={FaFacebook} label="Facebook" onClick={() => handleShare('facebook')} />
+            <SocialIconItem Icon={FaSquareInstagram} label="Instagram" />
+            <SocialIconItem Icon={X} label="X" onClick={() => handleShare('x')} />
+            <SocialIconItem Icon={AtSign} label="Threads" />
+            <SocialIconItem Icon={Mail} label="Email" onClick={() => handleShare('email')} />
+          </div>
+
+        </div>
+      </div>
+    </>
+  );
+});
+
+export default SuccessModal;

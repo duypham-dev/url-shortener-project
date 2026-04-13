@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { Link } from "react-router-dom";
 import { Link2, ArrowRight, CheckCircle2, Copy, Check, Shield, Zap, BarChart3, Scissors } from "lucide-react";
-import { createShortenUrl } from "../api/url.api";
+import { createShortenUrl } from "../api/shortUrl.api";
 
 const Home: React.FC = () => {
   const [url, setUrl] = useState<string>("");
