@@ -29,7 +29,7 @@ const getSecret = (key: string): string => {
 // ----------------------------------------------------------------
 export const signAccessToken = (payload: JwtPayload): string => {
   return jwt.sign(payload, getSecret("JWT_ACCESS_SECRET"), {
-    expiresIn: "15m",
+    expiresIn: "1m",
     algorithm: "HS256",
   });
 };

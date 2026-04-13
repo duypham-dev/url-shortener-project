@@ -235,12 +235,14 @@ export const refreshTokens = async (
   let payload: JwtPayload;
   try {
     payload = verifyRefreshToken(incomingRefreshToken);
-  } catch {
+  } catch (error) {
+    console.error("Error occurred while verifying refresh token:", error);
     throw new UnauthorizedError("Refresh token không hợp lệ hoặc đã hết hạn.");
   }
 
   // 2. Kiểm tra trong Redis - Token Rotation: mỗi refreshToken chỉ dùng 1 lần
   const storedToken = await redis.get(buildRefreshTokenKey(payload.userId));
+  console.log("Stored refresh token in Redis:", storedToken);
   if (!storedToken || storedToken !== incomingRefreshToken) {
     // Có thể là token replay attack - xóa token để force logout
     await redis.del(buildRefreshTokenKey(payload.userId));

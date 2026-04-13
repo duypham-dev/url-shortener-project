@@ -20,6 +20,7 @@ import {
   errorHandler,
   notFoundHandler,
 } from "./middlewares/errorHandler.middleware.js";
+import { initKafka } from "./services/kafka.service.js";
 
 const app = express();
 

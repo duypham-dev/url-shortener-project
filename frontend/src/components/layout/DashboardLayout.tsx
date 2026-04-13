@@ -1,0 +1,29 @@
+import React from 'react';
+import type { ReactNode } from 'react';
+import { Outlet } from 'react-router-dom';
+import { Sidebar } from './Sidebar';
+import { Header } from './Header';
+
+interface DashboardLayoutProps {
+  children?: ReactNode;
+}
+
+export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
+  return (
+    <div className="flex h-screen bg-gray-50 overflow-hidden font-sans">
+      <Sidebar />
+      
+      <div className="flex flex-col flex-1 w-0 overflow-hidden">
+        <Header />
+        
+        <main className="flex-1 relative z-0 overflow-y-auto focus:outline-none">
+          <div className="py-6 min-h-screen">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8">
+              {children || <Outlet />}
+            </div>
+          </div>
+        </main>
+      </div>
+    </div>
+  );
+};

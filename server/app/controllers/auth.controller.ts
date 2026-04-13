@@ -57,7 +57,7 @@ export const registerHandler = async (
 
     // 3. Set refreshToken vào httpOnly cookie
     res.cookie(REFRESH_TOKEN_COOKIE, refreshToken, COOKIE_OPTIONS);
-    res.header("")
+
     // 4. Trả về accessToken và thông tin user qua JSON
     res.status(201).json({
       success: true,
@@ -133,9 +133,7 @@ export const refreshHandler = async (
     }
 
     // 2. Gọi service - sẽ rotate token (phát hành cặp mới, invalidate cũ)
-    const { accessToken, refreshToken: newRefreshToken } =
-      await authService.refreshTokens(incomingRefreshToken);
-
+    const { accessToken, refreshToken: newRefreshToken } = await authService.refreshTokens(incomingRefreshToken);
     // 3. Cập nhật cookie với refreshToken mới
     res.cookie(REFRESH_TOKEN_COOKIE, newRefreshToken, COOKIE_OPTIONS);
 
