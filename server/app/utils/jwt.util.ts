@@ -11,6 +11,7 @@ import jwt from "jsonwebtoken";
 // ----------------------------------------------------------------
 export interface JwtPayload {
   userId: number;
+  fullName: string;
   email: string;
   role: string;
 }

@@ -1,14 +1,3 @@
-/**
- * auth.controller.ts
- * Xử lý tầng HTTP: đọc request, gọi service, trả về response.
- * Tuân thủ Single Responsibility: KHÔNG chứa business logic.
- *
- * Cookie options:
- * - httpOnly: true    → JS phía client không đọc được (chống XSS)
- * - secure: true      → Chỉ gửi qua HTTPS (bật trong production)
- * - sameSite: 'strict'→ Chống CSRF
- * - maxAge            → 7 ngày (khớp với TTL refreshToken)
- */
 import type { Request, Response, NextFunction } from "express";
 import * as authService from "../services/auth.service";
 import {
@@ -50,7 +39,7 @@ export const registerHandler = async (
 
     // 2. Gọi service
     const { accessToken, refreshToken, user } = await authService.register({
-      username: (req.body.username as string).trim(),
+      full_name: (req.body.fullName as string).trim(),
       email: (req.body.email as string).trim().toLowerCase(),
       password: req.body.password as string,
     });

@@ -24,8 +24,7 @@ const REFRESH_TOKEN_TTL_SECONDS = 7 * 24 * 60 * 60; // 7 ngày
 // ----------------------------------------------------------------
 // Helper: tạo Redis key lưu refreshToken của user
 // ----------------------------------------------------------------
-const buildRefreshTokenKey = (userId: number): string =>
-  `refresh_token:${userId}`;
+const buildRefreshTokenKey = (userId: number): string => `refresh_token:${userId}`;
 
 // ----------------------------------------------------------------
 // Helper: tạo Redis key cho blacklist accessToken
@@ -44,17 +43,6 @@ export interface OAuthInput {
   email: string;
 }
 
-// export interface OAuthResult {
-//   accessToken: string;
-//   refreshToken: string;
-//   user: {
-//     id: number;
-//     username: string;
-//     email: string;
-//     role: string;
-//   };
-// }
-
 export const findOrCreateOAuthUser = async (
   input: OAuthInput,
 ): Promise<AuthResult> => {
@@ -65,7 +53,7 @@ export const findOrCreateOAuthUser = async (
     where: { email },
     select: {
       id: true,
-      username: true,
+      full_name: true,
       email: true,
       role: true,
     },
@@ -73,7 +61,8 @@ export const findOrCreateOAuthUser = async (
 
   if (user) {
     const payload: JwtPayload = {
-      userId: user?.id || 0, 
+      userId: user?.id || 0,
+      fullName: user?.full_name || "",
       email,
       role: user?.role || "user",
     }
@@ -84,17 +73,18 @@ export const findOrCreateOAuthUser = async (
   // Password is randomly generated (OAuth users don't use password login)
   user = await prisma.users.create({
     data: {
-      username: email.split("@")[0] || email,
-      email,
+      full_name: fullName,
+      email: email,
       password_hash: generateSecureRandomPassword(),
       role: "user",
     },
-    select: { id: true, username: true, email: true,password_hash: true, role: true },
+    select: { id: true, full_name: true, email: true,password_hash: true, role: true },
   });
 
   const payload: JwtPayload = {
     userId: user.id,
-    email,
+    fullName: user.full_name,
+    email: user.email,
     role: user.role || "user",
   };
 
@@ -105,7 +95,7 @@ export const findOrCreateOAuthUser = async (
 // REGISTER
 // ================================================================
 export interface RegisterInput {
-  username: string;
+  full_name: string;
   email: string;
   password: string;
 }
@@ -115,7 +105,7 @@ export interface AuthResult {
   refreshToken: string;
   user: {
     id: number;
-    username: string;
+    full_name: string;
     email: string;
     role: string;
   };
@@ -129,24 +119,16 @@ export interface AuthResult {
  * - Phát hành token ngay sau khi đăng ký
  */
 export const register = async (input: RegisterInput): Promise<AuthResult> => {
-  const { username, email, password } = input;
+  const { full_name, email, password } = input;
 
   // 1. Kiểm tra email đã tồn tại chưa
   const existingByEmail = await prisma.users.findUnique({
     where: { email },
     select: { id: true },
   });
+
   if (existingByEmail) {
     throw new ConflictError("Email đã được sử dụng.");
-  }
-
-  // 2. Kiểm tra username đã tồn tại chưa
-  const existingByUsername = await prisma.users.findUnique({
-    where: { username },
-    select: { id: true },
-  });
-  if (existingByUsername) {
-    throw new ConflictError("Username đã được sử dụng.");
   }
 
   // 3. Hash password (bcrypt tự thêm salt)
@@ -154,13 +136,14 @@ export const register = async (input: RegisterInput): Promise<AuthResult> => {
 
   // 4. Tạo user trong database
   const newUser = await prisma.users.create({
-    data: { username, email, password_hash },
-    select: { id: true, username: true, email: true, role: true },
+    data: { full_name, email, password_hash },
+    select: { id: true, full_name: true, email: true, role: true },
   });
 
   // 5. Phát hành tokens
   const payload: JwtPayload = {
     userId: newUser.id,
+    fullName: newUser.full_name,
     email: newUser.email,
     role: newUser.role ?? "user",
   };
@@ -190,7 +173,7 @@ export const login = async (input: LoginInput): Promise<AuthResult> => {
     where: { email },
     select: {
       id: true,
-      username: true,
+      full_name: true,
       email: true,
       role: true,
       password_hash: true,
@@ -211,6 +194,7 @@ export const login = async (input: LoginInput): Promise<AuthResult> => {
   // 3. Phát hành tokens
   const payload: JwtPayload = {
     userId: user.id,
+    fullName: user.full_name,
     email: user.email,
     role: user.role ?? "user",
   };
@@ -231,6 +215,7 @@ export const login = async (input: LoginInput): Promise<AuthResult> => {
 export const refreshTokens = async (
   incomingRefreshToken: string,
 ): Promise<Omit<AuthResult, "user">> => {
+  console.log("Refresh new token!");
   // 1. Verify chữ ký và hạn sử dụng
   let payload: JwtPayload;
   try {
@@ -242,7 +227,7 @@ export const refreshTokens = async (
 
   // 2. Kiểm tra trong Redis - Token Rotation: mỗi refreshToken chỉ dùng 1 lần
   const storedToken = await redis.get(buildRefreshTokenKey(payload.userId));
-  console.log("Stored refresh token in Redis:", storedToken);
+
   if (!storedToken || storedToken !== incomingRefreshToken) {
     // Có thể là token replay attack - xóa token để force logout
     await redis.del(buildRefreshTokenKey(payload.userId));
@@ -254,7 +239,7 @@ export const refreshTokens = async (
   // 3. Lấy user hiện tại để cập nhật role (đề phòng role thay đổi)
   const user = await prisma.users.findUnique({
     where: { id: payload.userId },
-    select: { id: true, email: true, role: true },
+    select: { id: true, full_name: true, email: true, role: true },
   });
   if (!user) {
     throw new UnauthorizedError("Tài khoản không tồn tại.");
@@ -263,6 +248,7 @@ export const refreshTokens = async (
   // 4. Tạo cặp token mới
   const newPayload: JwtPayload = {
     userId: user.id,
+    fullName: user.full_name,
     email: user.email,
     role: user.role ?? "user",
   };
@@ -316,7 +302,7 @@ export const isTokenBlacklisted = async (token: string): Promise<boolean> => {
 // ================================================================
 async function issueTokens(
   payload: JwtPayload,
-  user: { id: number; username: string; email: string; role: string | null },
+  user: { id: number; full_name: string; email: string; role: string | null },
 ): Promise<AuthResult> {
   const accessToken = signAccessToken(payload);
   const refreshToken = signRefreshToken(payload);
@@ -333,7 +319,7 @@ async function issueTokens(
     refreshToken,
     user: {
       id: user.id,
-      username: user.username,
+      full_name: user.full_name,
       email: user.email,
       role: user.role ?? "user",
     },
@@ -341,7 +327,7 @@ async function issueTokens(
 }
 
 // ================================================================
-// Custom Error Classes (Single Responsibility cho error handling)
+// Custom Error Classes (Single Responsibility for error handling)
 // ================================================================
 export class ConflictError extends Error {
   statusCode = 409;

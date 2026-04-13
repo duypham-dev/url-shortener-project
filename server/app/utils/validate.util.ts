@@ -13,19 +13,17 @@ export interface ValidationResult {
 // Validate register input
 // ----------------------------------------------------------------
 export const validateRegisterInput = (body: {
-  username?: unknown;
+  fullName?: unknown;
   email?: unknown;
   password?: unknown;
 }): ValidationResult => {
   const errors: Record<string, string> = {};
 
-  // Username
-  if (!body.username || typeof body.username !== "string") {
-    errors["username"] = "Username là bắt buộc.";
-  } else if (body.username.trim().length < 3 || body.username.trim().length > 50) {
-    errors["username"] = "Username phải từ 3 đến 50 ký tự.";
-  } else if (!/^[a-zA-Z0-9_]+$/.test(body.username.trim())) {
-    errors["username"] = "Username chỉ được chứa chữ cái, số và dấu gạch dưới.";
+  // Full Name
+  if (!body.fullName || typeof body.fullName !== "string") {
+    errors["fullName"] = "Full name là bắt buộc.";
+  } else if (body.fullName.trim().length < 3 || body.fullName.trim().length > 50) {
+    errors["fullName"] = "Full name phải từ 3 đến 50 ký tự.";
   }
 
   // Email

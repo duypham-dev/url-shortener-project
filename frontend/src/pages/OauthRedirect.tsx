@@ -48,7 +48,7 @@ const OAuthRedirect = () => {
         setStatus("success");
         // Redirect to home after brief success message
           navigate("/", { replace: true });
-      } catch (error) {
+      } catch {
         setStatus("error");
         setErrorMessage("Lỗi xác thực. Vui lòng thử lại.");
         // Redirect to login

@@ -1,17 +1,22 @@
 import React, { useState } from 'react';
 import { Link as LinkIcon, QrCode, Lock, HelpCircle } from 'lucide-react';
-import { createShortenUrl } from "../api/url.api";
+import { createShortenUrl } from '../api/url.api';
 
 export const Dashboard: React.FC = () => {
   const [url, setUrl] = useState('');
   const [createQrCode, setCreateQrCode] = useState(false);
   const [activeTab, setActiveTab] = useState<'link' | 'qr'>('link');
 
-  const handleCreate = () => {
+  const handleCreate = async () => {
     // Handling create shortlink
     if (!url) return;
     console.log('Creating shortlink for:', url, 'with QR:', createQrCode);
-    // API call goes here
+    try {
+      const data = await createShortenUrl(url);
+      console.log('Shortened URL:', data.shortUrl);
+    } catch (error) {
+      console.error('Error creating shortlink:', error);
+    }
   };
 
   return (

@@ -1,5 +1,5 @@
 import { axiosClient } from "../config/axiosClient";
-import type ShortenResponse from "../types/api.type";
+import type ShortenResponse from "../types/url.type";
 
 export const fetchShortenData = async () : Promise<ShortenResponse> => {
     try{

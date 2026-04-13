@@ -1,12 +1,7 @@
-import { create } from 'zustand';
-import { axiosClient } from '../config/axiosClient';
+import { create } from "zustand";
+import { getMeApi, logoutApi } from '../api/auth.api';
+import type { User } from "../types/auth.type";
 
-export interface User {
-  id: number;
-  username: string;
-  email: string;
-  role: string;
-}
 
 export interface AuthState {
   isAuthenticated: boolean;
@@ -17,38 +12,66 @@ export interface AuthState {
   checkAuth: () => Promise<void>;
 }
 
+// ============================================================
+// Helper: lưu/đọc user từ localStorage
+// ============================================================
+const STORAGE_KEYS = {
+  ACCESS_TOKEN: "accessToken",
+  USER: "user",
+} as const;
+
+const persistUser = (user: User, accessToken: string): void => {
+  localStorage.setItem(STORAGE_KEYS.ACCESS_TOKEN, accessToken);
+  localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(user));
+};
+
+const clearSession = (): void => {
+  localStorage.removeItem(STORAGE_KEYS.ACCESS_TOKEN);
+  localStorage.removeItem(STORAGE_KEYS.USER);
+};
+
 export const useAuthStore = create<AuthState>((set) => ({
   isAuthenticated: false,
   user: null,
   isLoading: true, // start loading to check auth on mount
-  
-  login: (userData, accessToken) => {
-    localStorage.setItem('accessToken', accessToken);
-    set({ isAuthenticated: true, user: userData });
+
+  login: (user, accessToken) => {
+    persistUser(user, accessToken);
+    set({ isAuthenticated: true, user });
   },
 
   logout: async () => {
     try {
-      await axiosClient.post('/auth/logout');
-    } catch (error) {
-      console.error('Logout error', error);
+      await logoutApi();
+    } catch {
+      // Dù server lỗi vẫn phải clear local session
     } finally {
-      localStorage.removeItem('accessToken');
+      clearSession();
       set({ isAuthenticated: false, user: null });
     }
   },
 
   checkAuth: async () => {
+    const token = localStorage.getItem(STORAGE_KEYS.ACCESS_TOKEN);
+ 
+    // If no token, user is not authenticated
+    if (!token) {
+      set({ isAuthenticated: false, user: null, isLoading: false });
+      return;
+    }
+
     try {
       set({ isLoading: true });
-      const response: any = await axiosClient.get('/auth/me');
-      console.log('Auth check response:', response);
+      
+      const response = await getMeApi();
+
       if (response && response.success) {
         set({ isAuthenticated: true, user: response.data.user });
       }
-    } catch (error) {
-      // Error handles refresh logic in interceptor automatically.
+      
+    } catch {
       // If still fails, interceptor clears token.
+      clearSession();
       set({ isAuthenticated: false, user: null });
     } finally {
       set({ isLoading: false });
