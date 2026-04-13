@@ -1,4 +1,5 @@
 import React from 'react';
+import { createPortal } from 'react-dom';
 import { X, Copy, BarChart2, Check, Mail, MessageCircle, AtSign } from 'lucide-react';
 import { FaFacebook, FaSquareInstagram } from 'react-icons/fa6';
 import { useNavigate } from 'react-router-dom';
@@ -60,14 +61,14 @@ export const SuccessModal: React.FC<SuccessModalProps> = React.memo(({ isOpen, o
     if (shareUrl) window.open(shareUrl, '_blank', 'noopener,noreferrer');
   };
 
-  return (
+  return createPortal(
     <>
       <div 
-        className="fixed inset-0 bg-black/40 backdrop-blur-sm z-40 transition-opacity" 
+        className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 transition-opacity" 
         onClick={onClose}
         aria-hidden="true"
       />
-      <div className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[90%] max-w-lg bg-white rounded-2xl shadow-xl z-50 overflow-hidden flex flex-col animate-in fade-in zoom-in duration-200">
+      <div className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[90%] max-w-lg bg-white rounded-2xl shadow-xl z-[60] overflow-hidden flex flex-col animate-in fade-in zoom-in duration-200">
         
         {/* Header */}
         <div className="flex items-center justify-between px-8 py-6 pb-2">
@@ -125,7 +126,8 @@ export const SuccessModal: React.FC<SuccessModalProps> = React.memo(({ isOpen, o
 
         </div>
       </div>
-    </>
+    </>,
+    document.body
   );
 });
 
