@@ -13,7 +13,7 @@ export const Upgrade: React.FC = () => {
       try {
         setLoading(true);
         const plansData = await getSubscriptionPlans();
-        setPlans((plansData as any).data || plansData || []);
+        setPlans(plansData || []);
       } catch (error) {
         console.error("Failed to fetch plans:", error);
       } finally {
@@ -25,7 +25,7 @@ export const Upgrade: React.FC = () => {
 
   const handleSelectPlan = async (plan: SubscriptionPlan) => {
     try {
-      const data = await createPaymentUrl(Number(plan.price));
+      const data = await createPaymentUrl(plan.id, Number(plan.price), null );
       console.log("Create payment response: ", data);
 
       if (data && data.paymentUrl) {
@@ -38,13 +38,6 @@ export const Upgrade: React.FC = () => {
       console.error("Payment error:", error);
       alert("Không thể kết nối đến máy chủ thanh toán");
     }
-  };
-
-  const getDurationText = (days: number) => {
-    if (days === 30) return "1 tháng";
-    if (days === 90) return "3 tháng";
-    if (days === 365) return "1 năm";
-    return `${days} ngày`;
   };
 
   if (loading) {
@@ -94,7 +87,7 @@ export const Upgrade: React.FC = () => {
                     {Number(plan.price).toLocaleString()}
                   </span>
                   <span className="ml-1 text-xl font-semibold">{plan.currency}</span>
-                  <span className="ml-2 text-gray-500">/ {getDurationText(plan.duration_days)}</span>
+                  <span className="ml-2 text-gray-500">/ {plan.name} </span>
                 </p>
                 <p className="mt-4 text-sm text-gray-500">Nâng cấp tài khoản với tính năng phù hợp</p>
                 
@@ -135,7 +128,7 @@ export const Upgrade: React.FC = () => {
                       : "bg-[#e6f6f5] text-[#00a99d] hover:bg-[#ccece9]"
                   }`}
                 >
-                  Chọn gói {getDurationText(plan.duration_days)}
+                  Chọn {plan.name}
                 </button>
               </div>
             </div>

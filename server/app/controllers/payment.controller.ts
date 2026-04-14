@@ -20,7 +20,7 @@ export const createPaymentUrl = (req: Request, res: Response) => {
   const amount = parseInt(req.body.amount, 10);
   const bankCode = req.body.bankCode;
   const locale = req.body.language;
-
+    
   try {
     const paymentUrl = generateVnPayUrl(amount, bankCode, locale, ipAddr as string);
     res.status(200).json({ paymentUrl });
