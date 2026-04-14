@@ -1,18 +1,8 @@
 import React, { useEffect, useState } from "react";
 import { Check, Loader2 } from "lucide-react";
-import { axiosClient } from "../config/axiosClient";
-
-interface SubscriptionPlan {
-  id: number;
-  name: string;
-  duration_days: number;
-  price: string;
-  currency: string;
-  max_links: number;
-  max_custom_links: number;
-  allow_analytics: boolean;
-  allow_expiry: boolean;
-}
+import { getSubscriptionPlans } from "../api/subscription.api";
+import { createPaymentUrl } from "../api/payment.api";
+import type { SubscriptionPlan } from "../types/subscription.type";
 
 export const Upgrade: React.FC = () => {
   const [plans, setPlans] = useState<SubscriptionPlan[]>([]);
@@ -22,8 +12,8 @@ export const Upgrade: React.FC = () => {
     const fetchPlans = async () => {
       try {
         setLoading(true);
-        const response = await axiosClient.get("/subscriptions/plans");
-        setPlans(response.data || []);
+        const plansData = await getSubscriptionPlans();
+        setPlans((plansData as any).data || plansData || []);
       } catch (error) {
         console.error("Failed to fetch plans:", error);
       } finally {
@@ -33,16 +23,9 @@ export const Upgrade: React.FC = () => {
     fetchPlans();
   }, []);
 
-  // Skeleton function for future payment integration (Stripe, VNPay, MoMo, etc.)
   const handleSelectPlan = async (plan: SubscriptionPlan) => {
     try {
-      const response = await axiosClient.post("/create_payment_url", {
-        amount: Number(plan.price), // vnp_Amount sẽ tự động được x100 ở backend theo chuẩn
-        bankCode: null, // Mặc định chuyển sang cổng chọn phương thức thanh toán của VNPAY
-      });
-      
-      const responseData = response as any;
-      const data = responseData.data || responseData;
+      const data = await createPaymentUrl(Number(plan.price));
       console.log("Create payment response: ", data);
 
       if (data && data.paymentUrl) {
