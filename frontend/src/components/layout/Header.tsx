@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Search, HelpCircle, Zap } from 'lucide-react';
 import { useAuthStore } from '../../store/useAuthStore';
 
@@ -6,6 +7,7 @@ export const Header: React.FC = () => {
   const { user, logout } = useAuthStore();
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const navigate = useNavigate();
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -41,7 +43,10 @@ export const Header: React.FC = () => {
 
       {/* Right section */}
       <div className="flex-1 flex items-center justify-end gap-4 ml-6">
-        <button className="hidden sm:inline-flex bg-[#00a99d] hover:bg-[#009188] text-white text-sm font-medium px-4 py-2 rounded shadow-sm transition-colors">
+        <button 
+          onClick={() => navigate('/dashboard/upgrade')}
+          className="hidden sm:inline-flex bg-[#00a99d] hover:bg-[#009188] text-white text-sm font-medium px-4 py-2 rounded shadow-sm transition-colors"
+        >
           Upgrade
         </button>
         
@@ -85,7 +90,13 @@ export const Header: React.FC = () => {
                      <div className="font-medium text-base truncate">{user?.fullName || 'o_34h76e8osl'}</div>
                      <div className="text-sm text-gray-500">Free account</div>
                    </div>
-                   <button className="bg-[#00a99d] hover:bg-[#009188] text-white text-sm font-medium px-3 py-1.5 rounded transition-colors shrink-0">
+                   <button 
+                     onClick={() => {
+                        setIsDropdownOpen(false);
+                        navigate('/dashboard/upgrade');
+                     }}
+                     className="bg-[#00a99d] hover:bg-[#009188] text-white text-sm font-medium px-3 py-1.5 rounded transition-colors shrink-0"
+                   >
                      Upgrade
                    </button>
                 </div>

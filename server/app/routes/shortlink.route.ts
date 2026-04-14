@@ -11,6 +11,7 @@ router.get('/links', verifyToken, getLinks);
 
 // POST /api/shorten - create a short URL
 router.post('/shorten', verifyToken, genShortLink);
+
 // GET /api/shorten - simple example response for quick testing
 router.get('/:shortCode', redirectLink);
 

@@ -14,6 +14,8 @@ import OAuthRedirect from "./pages/OauthRedirect";
 import Dashboard from "./pages/Dashboard";
 import { DashboardLayout } from "./components/layout/DashboardLayout";
 import { Links } from "./pages/Links";
+import { Upgrade } from "./pages/Upgrade";
+import { PaymentResult } from "./pages/PaymentSuccess";
 
 const App: React.FC = () => {
   // Kiểm tra trạng thái đăng nhập ngay khi ứng dụng mount (F5)
@@ -78,7 +80,11 @@ const App: React.FC = () => {
           <Route path="domains" element={<p>domains page</p>} />
           <Route path="integrations" element={<p>integrations page</p>} />
           <Route path="settings" element={<p>settings page</p>} />
+          <Route path="upgrade" element={<Upgrade />} />
         </Route>
+        
+        {/* Kết quả thanh toán */}
+        <Route path="/payment-success" element={<PaymentResult />} />
       </Routes>
     </BrowserRouter>
   );
