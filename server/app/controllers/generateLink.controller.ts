@@ -28,12 +28,21 @@ const genShortLink = async (
   req: Request<{}, ShortenResponseBody, ShortenRequestBody>,
   res: Response,
 ): Promise<void> => {
-  const { originalUrl, userId } = req.body;
-  console.log("Received URL:", originalUrl);
+
+  const { originalUrl} = req.body;
+  const userId = req.user?.userId || null;
+
+  if (!userId) {
+    res.status(401).json({ message: "Unauthorized." });
+    return;
+  }
+
   if (!originalUrl?.trim()) {
     res.status(400).json({ message: "URL is required." });
     return;
   }
+
+  console.log("Received URL:", originalUrl, "from user:", userId);
 
   if (!isValidUrl(originalUrl)) {
     res

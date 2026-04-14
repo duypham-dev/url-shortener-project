@@ -97,7 +97,7 @@ export const SuccessModal: React.FC<SuccessModalProps> = React.memo(({ isOpen, o
             
             <div className="flex items-center gap-4">
               <button 
-                onClick={() => navigate('/links')} // assuming /links is the details page
+                onClick={() => navigate('/links')}
                 className="flex items-center gap-2 px-6 py-2.5 rounded-md font-medium text-blue-600 border border-blue-600 hover:bg-blue-50 transition-colors"
               >
                 <BarChart2 size={18} />

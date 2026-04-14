@@ -3,8 +3,14 @@ import { prisma } from '../libs/prisma.js';
 const router = express.Router()
 import genShortLink from '../controllers/generateLink.controller.js';
 import redirectLink from '../controllers/redirecLink.controller.js';
-// POST /api/shorten - create a fake short URL
-router.post('/shorten', genShortLink);
+import getLinks from '../controllers/getLinks.controller.js';
+import { verifyToken } from '../middlewares/verifyToken.middleware.js';
+
+// GET /api/v1/links - get user's links
+router.get('/links', verifyToken, getLinks);
+
+// POST /api/shorten - create a short URL
+router.post('/shorten', verifyToken, genShortLink);
 // GET /api/shorten - simple example response for quick testing
 router.get('/:shortCode', redirectLink);
 

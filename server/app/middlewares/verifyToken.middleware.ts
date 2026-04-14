@@ -11,7 +11,7 @@ import { isTokenBlacklisted } from "../services/auth.service";
 import type { JwtPayload } from "../utils/jwt.util";
 
 // ----------------------------------------------------------------
-// Mở rộng kiểu của Express Request để thêm trường `user`
+// Expand Express Request interface to include user property 
 // ----------------------------------------------------------------
 declare global {
   namespace Express {
