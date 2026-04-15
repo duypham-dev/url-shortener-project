@@ -5,7 +5,7 @@
  */
 import bcrypt from "bcrypt";
 import crypto from "crypto";
-import { prisma } from "../libs/prisma.js";
+import { prisma } from "../libs/prisma";
 import redis from "../libs/redis";
 import {
   signAccessToken,
@@ -14,6 +14,11 @@ import {
   getTokenRemainingTTL,
   type JwtPayload,
 } from "../utils/jwt.util";
+import {
+  ConflictError,
+  UnauthorizedError,
+} from "../errors/app.error.js";
+import { isVipUser } from "./subscriptionAccess.service.js";
 
 // ----------------------------------------------------------------
 // Constants
@@ -34,6 +39,22 @@ const buildBlacklistKey = (token: string): string => `blacklist:${token}`;
 function generateSecureRandomPassword() {
   return crypto.randomBytes(32).toString("hex");
 }
+
+interface AuthUserBase {
+  id: number;
+  full_name: string;
+  email: string;
+  role: string | null;
+}
+
+const enrichUserWithVip = async (user: AuthUserBase) => {
+  const vipStatus = await isVipUser(user.id);
+  return {
+    ...user,
+    role: user.role ?? "user",
+    is_vip: vipStatus,
+  };
+};
 
 // ================================================================
 //OAUTH with Google (GoogleLogin)
@@ -56,19 +77,20 @@ export const findOrCreateOAuthUser = async (
       full_name: true,
       email: true,
       role: true,
-      is_vip: true,
     },
   });
 
   if (user) {
+    const hydratedUser = await enrichUserWithVip(user);
     const payload: JwtPayload = {
-      userId: user?.id || 0,
-      fullName: user?.full_name || "",
+      userId: hydratedUser.id,
+      fullName: hydratedUser.full_name,
       email,
-      is_vip: user?.is_vip || false,
-      role: user?.role || "user",
-    }
-    return issueTokens(payload, user);
+      is_vip: hydratedUser.is_vip,
+      role: hydratedUser.role,
+    };
+
+    return issueTokens(payload, hydratedUser);
   }
 
   // Create new user with OAuth data
@@ -79,20 +101,21 @@ export const findOrCreateOAuthUser = async (
       email: email,
       password_hash: generateSecureRandomPassword(),
       role: "user",
-      is_vip: false,
     },
-    select: { id: true, full_name: true, email: true, is_vip: true, password_hash: true, role: true },
+    select: { id: true, full_name: true, email: true, password_hash: true, role: true },
   });
 
+  const hydratedUser = await enrichUserWithVip(user);
+
   const payload: JwtPayload = {
-    userId: user.id,
-    fullName: user.full_name,
-    email: user.email,
-    is_vip: user.is_vip,
-    role: user.role || "user",
+    userId: hydratedUser.id,
+    fullName: hydratedUser.full_name,
+    email: hydratedUser.email,
+    is_vip: hydratedUser.is_vip,
+    role: hydratedUser.role,
   };
 
-  return issueTokens(payload, user);
+  return issueTokens(payload, hydratedUser);
 };
 
 // ================================================================
@@ -142,19 +165,21 @@ export const register = async (input: RegisterInput): Promise<AuthResult> => {
   // 4. Tạo user trong database
   const newUser = await prisma.users.create({
     data: { full_name, email, password_hash },
-    select: { id: true, full_name: true, email: true, is_vip: true, role: true },
+    select: { id: true, full_name: true, email: true, role: true },
   });
+
+  const hydratedUser = await enrichUserWithVip(newUser);
 
   // 5. Phát hành tokens
   const payload: JwtPayload = {
-    userId: newUser.id,
-    fullName: newUser.full_name,
-    email: newUser.email,
-    is_vip: newUser.is_vip,
-    role: newUser.role ?? "user",
+    userId: hydratedUser.id,
+    fullName: hydratedUser.full_name,
+    email: hydratedUser.email,
+    is_vip: hydratedUser.is_vip,
+    role: hydratedUser.role,
   };
 
-  return issueTokens(payload, newUser);
+  return issueTokens(payload, hydratedUser);
 };
 
 // ================================================================
@@ -182,7 +207,6 @@ export const login = async (input: LoginInput): Promise<AuthResult> => {
       full_name: true,
       email: true,
       role: true,
-      is_vip: true,
       password_hash: true,
     },
   });
@@ -199,16 +223,18 @@ export const login = async (input: LoginInput): Promise<AuthResult> => {
   }
 
   // 3. Phát hành tokens
+  const { password_hash: _, ...safeUser } = user;
+  const hydratedUser = await enrichUserWithVip(safeUser);
+
   const payload: JwtPayload = {
-    userId: user.id,
-    fullName: user.full_name,
-    email: user.email,
-    is_vip: user.is_vip,
-    role: user.role ?? "user",
+    userId: hydratedUser.id,
+    fullName: hydratedUser.full_name,
+    email: hydratedUser.email,
+    is_vip: hydratedUser.is_vip,
+    role: hydratedUser.role,
   };
 
-  const { password_hash: _, ...safeUser } = user;
-  return issueTokens(payload, safeUser);
+  return issueTokens(payload, hydratedUser);
 };
 
 // ================================================================
@@ -247,19 +273,21 @@ export const refreshTokens = async (
   // 3. Lấy user hiện tại để cập nhật role (đề phòng role thay đổi)
   const user = await prisma.users.findUnique({
     where: { id: payload.userId },
-    select: { id: true, full_name: true, email: true, is_vip: true, role: true },
+    select: { id: true, full_name: true, email: true, role: true },
   });
   if (!user) {
     throw new UnauthorizedError("Tài khoản không tồn tại.");
   }
 
+  const hydratedUser = await enrichUserWithVip(user);
+
   // 4. Tạo cặp token mới
   const newPayload: JwtPayload = {
-    userId: user.id,
-    fullName: user.full_name,
-    email: user.email,
-    is_vip: user.is_vip,
-    role: user.role ?? "user",
+    userId: hydratedUser.id,
+    fullName: hydratedUser.full_name,
+    email: hydratedUser.email,
+    is_vip: hydratedUser.is_vip,
+    role: hydratedUser.role,
   };
 
   const accessToken = signAccessToken(newPayload);
@@ -311,7 +339,7 @@ export const isTokenBlacklisted = async (token: string): Promise<boolean> => {
 // ================================================================
 async function issueTokens(
   payload: JwtPayload,
-  user: { id: number; full_name: string; email: string; is_vip: boolean; role: string | null },
+  user: { id: number; full_name: string; email: string; is_vip: boolean; role: string },
 ): Promise<AuthResult> {
   const accessToken = signAccessToken(payload);
   const refreshToken = signRefreshToken(payload);
@@ -334,31 +362,4 @@ async function issueTokens(
       role: user.role ?? "user",
     },
   };
-}
-
-// ================================================================
-// Custom Error Classes (Single Responsibility for error handling)
-// ================================================================
-export class ConflictError extends Error {
-  statusCode = 409;
-  constructor(message: string) {
-    super(message);
-    this.name = "ConflictError";
-  }
-}
-
-export class UnauthorizedError extends Error {
-  statusCode = 401;
-  constructor(message: string) {
-    super(message);
-    this.name = "UnauthorizedError";
-  }
-}
-
-export class ValidationError extends Error {
-  statusCode = 422;
-  constructor(message: string) {
-    super(message);
-    this.name = "ValidationError";
-  }
 }

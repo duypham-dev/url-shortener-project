@@ -1,44 +1,44 @@
-import { prisma } from "../libs/prisma.js";
+import { prisma } from "../libs/prisma";
 
 export const getActiveSubscriptionPlans = async () => {
-  return await prisma.subscription_plans.findMany({
+  return prisma.subscription_plans.findMany({
     where: {
       is_active: true,
     },
     orderBy: {
-      price: 'asc'
-    }
+      price: "asc",
+    },
+    select: {
+      id: true,
+      name: true,
+      tier: true,
+      duration_days: true,
+      price: true,
+      currency: true,
+      max_links: true,
+      max_custom_links: true,
+      reset_period: true,
+      allow_analytics: true,
+      allow_expiry: true,
+      allow_custom_domain: true,
+      allow_qr_code: true,
+      sort_order: true,
+    },
   });
 };
 
 export const getSubscriptionPlanById = async (planId: number) => {
-  return await prisma.subscription_plans.findUnique({
+  return prisma.subscription_plans.findUnique({
     where: {
-        id: planId,
-    },
-  });
-}
-
-export const getSubscriptionPlanPrice= async (planId: number) => {
-  const plan = await prisma.subscription_plans.findUnique({
-    where: {
-        id: planId,
+      id: planId,
     },
     select: {
-      price: true
-    }
-  });
-  return plan ? Number(plan.price) : 0;
-}
-
-export const getSubscriptionPlanDuration = async (planId: number) => {
-  const plan = await prisma.subscription_plans.findUnique({
-    where: {
-      id: planId
+      id: true,
+      name: true,
+      tier: true,
+      price: true,
+      currency: true,
+      is_active: true,
     },
-    select: {
-      duration_days: true
-    }
   });
-  return plan ? Number(plan.duration_days) : 0;
 };

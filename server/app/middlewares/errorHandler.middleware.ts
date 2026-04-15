@@ -4,17 +4,13 @@
  * Bắt tất cả lỗi được next(err) truyền lên và chuẩn hóa response.
  *
  * Phân loại lỗi:
- * - Custom errors (ConflictError, UnauthorizedError, ValidationError): dùng statusCode của chúng
+ * - App errors (AppError): dùng statusCode + code của lỗi nghiệp vụ
  * - Prisma errors: xử lý riêng cho các lỗi DB phổ biến
  * - JWT errors: 401
  * - Fallback: 500 Internal Server Error
  */
 import type { Request, Response, NextFunction } from "express";
-import {
-  ConflictError,
-  UnauthorizedError,
-  ValidationError,
-} from "../services/auth.service.js";
+import { AppError } from "../errors/app.error.js";
 
 // ----------------------------------------------------------------
 // Kiểu chuẩn cho error response
@@ -22,7 +18,8 @@ import {
 interface ErrorResponse {
   success: false;
   message: string;
-  errors?: Record<string, string>; // Chi tiết lỗi validation nếu có
+  code?: string;
+  errors?: unknown; // Chi tiết lỗi validation nếu có
 }
 
 // ----------------------------------------------------------------
@@ -51,14 +48,12 @@ export const errorHandler = (
   const errorResponse: ErrorResponse = { success: false, message: "Đã xảy ra lỗi." };
 
   // ---- 1. Custom application errors ----
-  if (
-    err instanceof ConflictError ||
-    err instanceof UnauthorizedError ||
-    err instanceof ValidationError
-  ) {
+  if (err instanceof AppError) {
     res.status(err.statusCode).json({
       ...errorResponse,
       message: err.message,
+      code: err.code,
+      ...(err.details ? { errors: err.details } : {}),
     });
     return;
   }

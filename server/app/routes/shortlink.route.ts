@@ -5,12 +5,13 @@ import genShortLink from '../controllers/generateLink.controller.js';
 import redirectLink from '../controllers/redirecLink.controller.js';
 import getLinks from '../controllers/getLinks.controller.js';
 import { verifyToken } from '../middlewares/verifyToken.middleware.js';
+import { enforceCreateLinkQuota } from '../middlewares/quota.middleware.js';
 
 // GET /api/v1/links - get user's links
 router.get('/links', verifyToken, getLinks);
 
 // POST /api/shorten - create a short URL
-router.post('/shorten', verifyToken, genShortLink);
+router.post('/shorten', verifyToken, enforceCreateLinkQuota, genShortLink);
 
 // GET /api/shorten - simple example response for quick testing
 router.get('/:shortCode', redirectLink);

@@ -8,6 +8,7 @@ export const Upgrade: React.FC = () => {
   const [plans, setPlans] = useState<SubscriptionPlan[]>([]);
   const [loading, setLoading] = useState(true);
   const [processingPlanId, setProcessingPlanId] = useState<number | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchPlans = async () => {
@@ -26,23 +27,30 @@ export const Upgrade: React.FC = () => {
 
   const handleSelectPlan = async (plan: SubscriptionPlan) => {
     try {
+      setErrorMessage(null);
       setProcessingPlanId(plan.id);
-      const data = await createPaymentUrl(plan.id, plan.name, null );
-      console.log("Create payment response: ", data);
+      const data = await createPaymentUrl(plan.id, null);
 
-      if (data && data.paymentUrl) {
+      if (data.paymentUrl) {
         // Redirect browser to VNPay securely
         window.location.href = data.paymentUrl;
       } else {
-        alert("Có lỗi xảy ra khi tạo link thanh toán");
+        setErrorMessage("Có lỗi xảy ra khi tạo link thanh toán");
       }
     } catch (error) {
       console.error("Payment error:", error);
-      alert("Không thể kết nối đến máy chủ thanh toán");
+      const message =
+        typeof error === "object" && error && "message" in error
+          ? String(error.message)
+          : "Không thể kết nối đến máy chủ thanh toán";
+
+      setErrorMessage(message);
     } finally {
       setProcessingPlanId(null);
     }
   };
+
+  const paidPlans = plans.filter((plan) => Number(plan.price) > 0);
 
   if (loading) {
     return (
@@ -64,9 +72,15 @@ export const Upgrade: React.FC = () => {
       </div>
 
       <div className="mt-16 mx-auto max-w-7xl px-0 sm:px-6 lg:px-8">
+        {errorMessage && (
+          <div className="mb-6 rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+            {errorMessage}
+          </div>
+        )}
+
         <div className="grid grid-cols-1 gap-8 md:grid-cols-3 md:gap-8">
-          {plans.map((plan, index) => {
-            const isPopular = index === 1; // Giả sử gói ở giữa là phổ biến
+          {paidPlans.map((plan, index) => {
+            const isPopular = index === 1;
             return (
             <div
               key={plan.id}
@@ -91,7 +105,7 @@ export const Upgrade: React.FC = () => {
                     {Number(plan.price).toLocaleString()}
                   </span>
                   <span className="ml-1 text-xl font-semibold">{plan.currency}</span>
-                  <span className="ml-2 text-gray-500">/ {plan.name} </span>
+                  <span className="ml-2 text-gray-500">/ Tháng </span>
                 </p>
                 <p className="mt-4 text-sm text-gray-500">Nâng cấp tài khoản với tính năng phù hợp</p>
                 

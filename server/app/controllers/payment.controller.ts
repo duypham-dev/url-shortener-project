@@ -1,12 +1,18 @@
-import type { Request, Response } from "express";
-import moment from "moment";
-import crypto from "crypto";
+import type { NextFunction, Request, Response } from "express";
 import {
+  BadRequestError,
+  NotFoundError,
+  UnauthorizedError,
+} from "../errors/app.error.js";
+import {
+  createOrderId,
+  createPaymentMetadata,
+  createPendingPayment,
+  extractAmountFromVnp,
   generateVnPayUrl,
-  verifyVnPayReturn,
-  generatePaymentRecord,
   getPaymentByOrderId,
   processVnpayPayment,
+  verifyVnPayReturn,
 } from "../services/payment.service.js";
 import { getSubscriptionPlanById } from "../services/subscription.service.js";
 import type { VnpParams } from "../services/payment.service.js";
@@ -23,88 +29,73 @@ const normalizeClientRedirect = (
   if (message) {
     params.set("message", message);
   }
+
   return `${FRONTEND_URL}/payment-success?${params.toString()}`;
-};
-
-const extractAmountFromVnp = (params: VnpParams): number => {
-  const raw = params["vnp_Amount"];
-  const amount = raw ? Number(raw) / 100 : 0;
-  return Number.isFinite(amount) ? amount : 0;
-};
-
-
-const createOrderId = (userId: number): string => {
-  const randomHex = crypto.randomBytes(4).toString("hex");
-  return `VNP_${Date.now()}_${userId}_${randomHex}`;
 };
 
 const parseClientIp = (req: Request): string => {
   const rawIpAddr =
     req.headers["x-forwarded-for"] || req.socket.remoteAddress || "127.0.0.1";
 
-  let ipAddr = Array.isArray(rawIpAddr)
+  const parsedIp = Array.isArray(rawIpAddr)
     ? rawIpAddr[0]
     : typeof rawIpAddr === "string"
       ? rawIpAddr.split(",")[0]
       : "127.0.0.1";
 
-  if (!ipAddr) {
-    ipAddr = "127.0.0.1";
+  if (!parsedIp || parsedIp === "::1") {
+    return "127.0.0.1";
   }
 
-  if (ipAddr === "::1") ipAddr = "127.0.0.1";
-  return ipAddr;
+  return parsedIp;
 };
 
-// Tạo URL thanh toán VNPay
-export const createPaymentUrl = async (req: Request, res: Response) => {
-  process.env.TZ = "Asia/Ho_Chi_Minh";
-
-  const userId = req.user?.userId; // Đã được verifyToken middleware gắn vào req
-  if (!userId) {
-    return res.status(401).json({ message: "Unauthorized" });
-  }
-
-  const planId = req.body.planId;
-  if (!planId) {
-    return res.status(400).json({ message: "planId is required" });
-  }
-
-  const planIdNumber = Number(planId);
-  if (!Number.isInteger(planIdNumber) || planIdNumber <= 0) {
-    return res.status(400).json({ message: "planId không hợp lệ" });
-  }
-
-  const plan = await getSubscriptionPlanById(planIdNumber);
-  if (!plan || !plan.is_active) {
-    return res.status(404).json({ message: "Không tìm thấy gói đăng ký đang hoạt động" });
-  }
-
-  const amount = Number(plan.price);
-  if (amount <= 0) {
-    return res.status(400).json({ message: "Gói đăng ký không hợp lệ" });
-  }
-
-  const bankCode = req.body.bankCode;
-  const locale = req.body.language;
-  const orderId = createOrderId(userId);
-  const ipAddr = parseClientIp(req);
-
-  // Khai báo date để đảm bảo tính nhất quán giữa URL trả về VNPay và dữ liệu lưu vào DB
-  const date = new Date();
-  const createDate = moment(date).format("YYYYMMDDHHmmss");
-  const orderInfo = `Thanh toan ${plan.name} - ${orderId}`;
-
+// POST /api/v1/create_payment_url
+export const createPaymentUrl = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
   try {
-    // 1. LƯU DATABASE TRƯỚC (QUAN TRỌNG)
-    await generatePaymentRecord({
+    const userId = req.user?.userId;
+    if (!userId) {
+      throw new UnauthorizedError("Unauthorized");
+    }
+
+    const planId = Number(req.body.planId);
+    if (!Number.isInteger(planId) || planId <= 0) {
+      throw new BadRequestError("planId không hợp lệ");
+    }
+
+    const plan = await getSubscriptionPlanById(planId);
+    if (!plan || !plan.is_active) {
+      throw new NotFoundError("Không tìm thấy gói đăng ký đang hoạt động");
+    }
+
+    const amount = Number(plan.price);
+    if (amount <= 0) {
+      throw new BadRequestError("Gói đăng ký không hợp lệ");
+    }
+
+    const orderId = createOrderId(userId);
+    const ipAddr = parseClientIp(req);
+    const bankCode = req.body.bankCode as string | undefined;
+    const locale = req.body.language as string | undefined;
+
+    const { createDate, orderInfo } = createPaymentMetadata(plan.name, orderId);
+
+    // Lưu thông tin đơn hàng vào DB trước khi redirect để đảm bảo có thể xử lý callback sau này.
+    await createPendingPayment({
       orderId,
       userId,
       planId: plan.id,
       amount,
+      currency: plan.currency,
+      orderInfo,
+      createDate,
     });
 
-    // 2. CHỈ KHI LƯU DB THÀNH CÔNG MỚI TẠO URL VNPAY
+    // Tạo URL thanh toán VNPay
     const paymentUrl = generateVnPayUrl(
       amount,
       bankCode,
@@ -115,23 +106,23 @@ export const createPaymentUrl = async (req: Request, res: Response) => {
       orderInfo,
     );
 
-    // 3. TRẢ VỀ URL CHO FRONTEND
-    res.status(200).json({
+    return res.status(200).json({
       success: true,
       message: "Tạo link thanh toán thành công.",
-      paymentUrl,
-      orderId,
+      data: {
+        paymentUrl,
+        orderId,
+      },
     });
   } catch (error) {
-    console.error("Lỗi khi tạo giao dịch hoặc tạo URL VNPay:", error);
-    // Trả về lỗi 500 nếu DB lỗi hoặc hàm generateVnPayUrl lỗi
-    res.status(500).json({ message: "Lỗi hệ thống, không thể tạo giao dịch lúc này" });
+    next(error);
   }
 };
 
+// GET /api/v1/vnpay_return
 export const vnpayReturn = async (req: Request, res: Response) => {
-  const vnp_Params = req.query as unknown as VnpParams;
-  const orderId = String(vnp_Params["vnp_TxnRef"] ?? "");
+  const vnpParams = req.query as unknown as VnpParams;
+  const orderId = String(vnpParams["vnp_TxnRef"] ?? "");
 
   if (!orderId) {
     return res.redirect(
@@ -139,16 +130,15 @@ export const vnpayReturn = async (req: Request, res: Response) => {
     );
   }
 
-  const isValid = verifyVnPayReturn(vnp_Params);
-  if (!isValid) {
+  if (!verifyVnPayReturn(vnpParams)) {
     return res.redirect(
       normalizeClientRedirect(orderId, "error", "97", "Invalid checksum"),
     );
   }
 
   try {
-    // Return URL only validates checksum and displays result to customer.
-    // Transaction state updates are handled by IPN callback.
+    // Return URL chỉ hiển thị kết quả cho người dùng.
+    // Trạng thái DB chỉ được cập nhật bởi IPN callback.
     const payment = await getPaymentByOrderId(orderId);
     if (!payment) {
       return res.redirect(
@@ -156,24 +146,22 @@ export const vnpayReturn = async (req: Request, res: Response) => {
       );
     }
 
-    const vnpAmount = extractAmountFromVnp(vnp_Params);
-    if (Number(payment.amount) !== vnpAmount) {
+    const vnpAmount = extractAmountFromVnp(vnpParams);
+    const dbAmount = Math.round(Number(payment.amount) * 100);
+    const callbackAmount = Math.round(vnpAmount * 100);
+    if (dbAmount !== callbackAmount) {
       return res.redirect(
         normalizeClientRedirect(orderId, "error", "04", "Amount invalid"),
       );
     }
 
-    const responseCode = String(vnp_Params["vnp_ResponseCode"] ?? "99");
-    const transactionStatus = String(vnp_Params["vnp_TransactionStatus"] ?? "");
+    const responseCode = String(vnpParams["vnp_ResponseCode"] ?? "99");
+    const transactionStatus = String(vnpParams["vnp_TransactionStatus"] ?? "");
     const isGatewaySuccess =
       responseCode === "00" && (!transactionStatus || transactionStatus === "00");
 
     return res.redirect(
-      normalizeClientRedirect(
-        orderId,
-        isGatewaySuccess ? "success" : "error",
-        responseCode,
-      ),
+      normalizeClientRedirect(orderId, isGatewaySuccess ? "success" : "error", responseCode),
     );
   } catch (error) {
     console.error("vnpayReturn processing failed", error);
@@ -183,24 +171,22 @@ export const vnpayReturn = async (req: Request, res: Response) => {
   }
 };
 
+// GET /api/v1/vnpay_ipn
 export const vnpayIpn = async (req: Request, res: Response) => {
-  const vnp_Params = req.query as unknown as VnpParams;
+  const vnpParams = req.query as unknown as VnpParams;
 
-  // Try-catch chống lỗi IPN nếu params nil
   try {
-    const isValid = verifyVnPayReturn(vnp_Params);
-
-    if (!isValid) {
+    if (!verifyVnPayReturn(vnpParams)) {
       return res.status(200).json({ RspCode: "97", Message: "Fail checksum" });
     }
 
-    const orderId = String(vnp_Params["vnp_TxnRef"] ?? "");
+    const orderId = String(vnpParams["vnp_TxnRef"] ?? "");
     if (!orderId) {
       return res.status(200).json({ RspCode: "01", Message: "Order not found" });
     }
 
-    const vnpAmount = extractAmountFromVnp(vnp_Params);
-    const result = await processVnpayPayment(orderId, vnpAmount, vnp_Params);
+    const vnpAmount = extractAmountFromVnp(vnpParams);
+    const result = await processVnpayPayment(orderId, vnpAmount, vnpParams);
 
     if (result.outcome === "not_found") {
       return res.status(200).json({ RspCode: "01", Message: "Order not found" });
@@ -217,55 +203,64 @@ export const vnpayIpn = async (req: Request, res: Response) => {
     }
 
     return res.status(200).json({ RspCode: "00", Message: "Confirm Success" });
-  } catch (err) {
-    console.error("IPN verify failed", err);
+  } catch (error) {
+    console.error("IPN verify failed", error);
     return res.status(200).json({ RspCode: "99", Message: "Unknown error" });
   }
 };
 
-export const getPaymentResult = async (req: Request, res: Response) => {
-  const orderId = String(req.params.orderId || "");
-  const userId = req.user?.userId;
+// GET /api/v1/payments/:orderId
+export const getPaymentResult = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  try {
+    const orderId = String(req.params.orderId || "");
+    const userId = req.user?.userId;
 
-  if (!userId) {
-    return res.status(401).json({ success: false, message: "Unauthorized" });
+    if (!userId) {
+      throw new UnauthorizedError("Unauthorized");
+    }
+
+    if (!orderId) {
+      throw new BadRequestError("orderId is required");
+    }
+
+    const payment = await getPaymentByOrderId(orderId);
+    if (!payment || payment.user_id !== userId) {
+      throw new NotFoundError("Không tìm thấy giao dịch");
+    }
+
+    const payloadObject =
+      payment.provider_payload && typeof payment.provider_payload === "object"
+        ? (payment.provider_payload as Record<string, unknown>)
+        : null;
+
+    const orderInfo =
+      payloadObject && typeof payloadObject.vnp_OrderInfo === "string"
+        ? payloadObject.vnp_OrderInfo
+        : null;
+
+    return res.status(200).json({
+      success: true,
+      data: {
+        orderId: payment.id,
+        amount: Number(payment.amount),
+        currency: payment.currency,
+        paymentStatus: payment.status,
+        status:
+          payment.status === "completed"
+            ? "success"
+            : payment.status === "pending"
+              ? "pending"
+              : "error",
+        orderInfo,
+        planName: payment.subscriptions?.subscription_plans?.name || null,
+        paidAt: payment.paid_at,
+      },
+    });
+  } catch (error) {
+    next(error);
   }
-
-  if (!orderId) {
-    return res.status(400).json({ success: false, message: "orderId is required" });
-  }
-
-  const payment = await getPaymentByOrderId(orderId);
-  if (!payment || payment.user_id !== userId) {
-    return res.status(404).json({ success: false, message: "Không tìm thấy giao dịch" });
-  }
-
-  const payloadObject =
-    payment.provider_payload && typeof payment.provider_payload === "object"
-      ? (payment.provider_payload as Record<string, unknown>)
-      : null;
-
-  const orderInfo =
-    payloadObject && typeof payloadObject.vnp_OrderInfo === "string"
-      ? payloadObject.vnp_OrderInfo
-      : null;
-
-  return res.status(200).json({
-    success: true,
-    data: {
-      orderId: payment.id,
-      amount: Number(payment.amount),
-      currency: payment.currency,
-      paymentStatus: payment.status,
-      status:
-        payment.status === "completed"
-          ? "success"
-          : payment.status === "pending"
-            ? "pending"
-            : "error",
-      orderInfo,
-      planName: payment.subscriptions?.subscription_plans?.name || null,
-      paidAt: payment.paid_at,
-    },
-  });
 };

@@ -1,9 +1,8 @@
 import config from "config";
-import qs from "qs";
 import crypto from "crypto";
-import moment from "moment";
-import { prisma } from "../libs/prisma.js";
+import qs from "qs";
 import { PaymentStatus } from "../../generated/prisma/enums";
+import { prisma } from "../libs/prisma";
 
 export interface VnpParams {
   [key: string]: string | number | undefined;
@@ -21,15 +20,58 @@ export interface ProcessPaymentResult {
   paymentStatus?: PaymentStatus;
 }
 
-export interface CreatePaymentRecordInput {
+export interface CreatePendingPaymentInput {
   orderId: string;
   userId: number;
   planId: number;
   amount: number;
+  currency: string;
+  orderInfo: string;
+  createDate: string;
 }
 
+const toVnpDate = (date: Date): string => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  const hour = String(date.getHours()).padStart(2, "0");
+  const minute = String(date.getMinutes()).padStart(2, "0");
+  const second = String(date.getSeconds()).padStart(2, "0");
+  return `${year}${month}${day}${hour}${minute}${second}`;
+};
 
-// Hàm tạo URL thanh toán VNPay
+const addDays = (date: Date, days: number): Date => {
+  const result = new Date(date);
+  result.setDate(result.getDate() + days);
+  return result;
+};
+
+const normalizeAmount = (value: number): number => {
+  return Math.round(value * 100) / 100;
+};
+
+const isAmountMatched = (dbAmount: number, vnpAmount: number): boolean => {
+  return normalizeAmount(dbAmount) === normalizeAmount(vnpAmount);
+};
+
+const isGatewaySuccess = (vnpParams: VnpParams): boolean => {
+  const responseCode = String(vnpParams["vnp_ResponseCode"] ?? "");
+  const transactionStatus = String(vnpParams["vnp_TransactionStatus"] ?? "");
+  return responseCode === "00" && (!transactionStatus || transactionStatus === "00");
+};
+
+export const createOrderId = (userId: number): string => {
+  const randomHex = crypto.randomBytes(4).toString("hex");
+  return `VNP_${Date.now()}_${userId}_${randomHex}`;
+};
+
+export const createPaymentMetadata = (planName: string, orderId: string, date = new Date()) => {
+  return {
+    createDate: toVnpDate(date),
+    orderInfo: `Thanh toan ${planName} - ${orderId}`,
+  };
+};
+
 export const generateVnPayUrl = (
   amount: number,
   bankCode: string | undefined,
@@ -46,46 +88,45 @@ export const generateVnPayUrl = (
 
   const lang = !locale || locale === "" ? "vn" : locale;
   const currCode = "VND";
-  let vnp_Params: VnpParams = {};
+  let vnpParams: VnpParams = {};
 
-  vnp_Params["vnp_Version"] = "2.1.0";
-  vnp_Params["vnp_Command"] = "pay";
-  vnp_Params["vnp_TmnCode"] = tmnCode;
-  vnp_Params["vnp_Locale"] = lang;
-  vnp_Params["vnp_CurrCode"] = currCode;
-  vnp_Params["vnp_TxnRef"] = orderId;
-  vnp_Params["vnp_OrderInfo"] = orderInfo;
-  vnp_Params["vnp_OrderType"] = "other";
-  vnp_Params["vnp_Amount"] = Math.round(amount * 100);
-  vnp_Params["vnp_ReturnUrl"] = returnUrl;
-  vnp_Params["vnp_IpAddr"] = ipAddr;
-  vnp_Params["vnp_CreateDate"] = createDate;
+  vnpParams["vnp_Version"] = "2.1.0";
+  vnpParams["vnp_Command"] = "pay";
+  vnpParams["vnp_TmnCode"] = tmnCode;
+  vnpParams["vnp_Locale"] = lang;
+  vnpParams["vnp_CurrCode"] = currCode;
+  vnpParams["vnp_TxnRef"] = orderId;
+  vnpParams["vnp_OrderInfo"] = orderInfo;
+  vnpParams["vnp_OrderType"] = "other";
+  vnpParams["vnp_Amount"] = Math.round(amount * 100);
+  vnpParams["vnp_ReturnUrl"] = returnUrl;
+  vnpParams["vnp_IpAddr"] = ipAddr;
+  vnpParams["vnp_CreateDate"] = createDate;
 
   if (bankCode) {
-    vnp_Params["vnp_BankCode"] = bankCode;
+    vnpParams["vnp_BankCode"] = bankCode;
   }
 
-  vnp_Params = sortObject(vnp_Params);
+  vnpParams = sortObject(vnpParams);
 
-  const signData = qs.stringify(vnp_Params, { encode: false });
+  const signData = qs.stringify(vnpParams, { encode: false });
   const hmac = crypto.createHmac("sha512", secretKey);
   const signed = hmac.update(Buffer.from(signData, "utf-8")).digest("hex");
 
-  vnp_Params["vnp_SecureHash"] = signed;
-  vnpUrl += "?" + qs.stringify(vnp_Params, { encode: false });
+  vnpParams["vnp_SecureHash"] = signed;
+  vnpUrl += `?${qs.stringify(vnpParams, { encode: false })}`;
 
   return vnpUrl;
 };
 
-// Hàm xác thực dữ liệu trả về từ VNPay
 export const verifyVnPayReturn = (rawParams: VnpParams): boolean => {
-  const vnp_Params: VnpParams = { ...rawParams };
-  const secureHash = vnp_Params["vnp_SecureHash"]?.toString() ?? "";
+  const vnpParams: VnpParams = { ...rawParams };
+  const secureHash = vnpParams["vnp_SecureHash"]?.toString() ?? "";
 
-  delete vnp_Params["vnp_SecureHash"];
-  delete vnp_Params["vnp_SecureHashType"];
+  delete vnpParams["vnp_SecureHash"];
+  delete vnpParams["vnp_SecureHashType"];
 
-  const sortedParams = sortObject(vnp_Params);
+  const sortedParams = sortObject(vnpParams);
 
   const secretKey = config.get("vnp_HashSecret") as string;
   const signData = qs.stringify(sortedParams, { encode: false });
@@ -95,17 +136,24 @@ export const verifyVnPayReturn = (rawParams: VnpParams): boolean => {
   return secureHash === signed;
 };
 
-export const generatePaymentRecord = async (
-  input: CreatePaymentRecordInput,
+export const extractAmountFromVnp = (params: VnpParams): number => {
+  const raw = params["vnp_Amount"];
+  const amount = raw ? Number(raw) / 100 : 0;
+  return Number.isFinite(amount) ? amount : 0;
+};
+
+export const createPendingPayment = async (
+  input: CreatePendingPaymentInput,
 ): Promise<{ subscriptionId: string }> => {
-  const { orderId, userId, planId, amount } = input;
+  const { orderId, userId, planId, amount, currency, orderInfo, createDate } = input;
 
   return prisma.$transaction(async (tx) => {
-    const newSub = await tx.subscriptions.create({
+    const pendingSubscription = await tx.subscriptions.create({
       data: {
         user_id: userId,
         plan_id: planId,
         status: "pending",
+        started_at: new Date(),
         expires_at: new Date(),
       },
     });
@@ -114,14 +162,19 @@ export const generatePaymentRecord = async (
       data: {
         id: orderId,
         user_id: userId,
-        subscription_id: newSub.id,
+        subscription_id: pendingSubscription.id,
         amount,
+        currency,
         provider: "VNPay",
         status: "pending",
+        provider_payload: {
+          vnp_OrderInfo: orderInfo,
+          vnp_CreateDate: createDate,
+        },
       },
     });
 
-    return { subscriptionId: newSub.id };
+    return { subscriptionId: pendingSubscription.id };
   });
 };
 
@@ -138,114 +191,101 @@ export const getPaymentByOrderId = async (orderId: string) => {
   });
 };
 
-export const processVnpayPayment = async (
-  orderId: string,
-  vnpAmount: number,
-  vnp_Params: VnpParams,
-): Promise<ProcessPaymentResult> => {
-  const payment = await getPaymentByOrderId(orderId);
-  if (!payment) {
-    return { outcome: "not_found" };
-  }
-
-  const dbAmount = Number(payment.amount);
-  if (dbAmount !== vnpAmount) {
-    return { outcome: "amount_mismatch", paymentStatus: payment.status };
-  }
-
-  if (payment.status !== "pending") {
-    return { outcome: "already_processed", paymentStatus: payment.status };
-  }
-
-  const responseCode = String(vnp_Params["vnp_ResponseCode"] ?? "");
-  const transactionStatus = String(vnp_Params["vnp_TransactionStatus"] ?? "");
-  const isSuccess = responseCode === "00" && (!transactionStatus || transactionStatus === "00");
-
-  if (isSuccess) {
-    const durationDays = payment.subscriptions?.subscription_plans?.duration_days ?? 30;
-    await handleSuccessfulPayment(
-      payment.id,
-      payment.user_id,
-      payment.subscription_id,
-      durationDays,
-      vnp_Params,
-    );
-    return { outcome: "success", paymentStatus: "completed" };
-  }
-
-  await handleFailedPayment(payment.id, payment.subscription_id, vnp_Params);
-  return { outcome: "failed", paymentStatus: "failed" };
-};
-
-const handleSuccessfulPayment = async (
+const activateSubscriptionAfterSuccess = async (
   orderId: string,
   userId: number,
   subscriptionId: string | null,
   durationDays: number,
-  vnp_Params: VnpParams,
+  vnpParams: VnpParams,
 ) => {
-  const date = new Date();
-
-  const user = await prisma.users.findUnique({
-    where: { id: userId },
-    select: { is_vip: true, vip_expires_at: true },
-  });
-
-  let newVipExpiresAt = moment(date).add(durationDays, "days").toDate();
-  if (user?.is_vip && user.vip_expires_at && moment(user.vip_expires_at).isAfter(date)) {
-    newVipExpiresAt = moment(user.vip_expires_at).add(durationDays, "days").toDate();
-  }
+  const now = new Date();
 
   await prisma.$transaction(async (tx) => {
-    await tx.payments.update({
-      where: { id: orderId },
+    const paymentUpdateCount = await tx.payments.updateMany({
+      where: {
+        id: orderId,
+        status: "pending",
+      },
       data: {
         status: "completed",
-        provider_tx_id: vnp_Params["vnp_TransactionNo"]?.toString() ?? null,
-        paid_at: date,
-        provider_payload: vnp_Params,
+        provider_tx_id: vnpParams["vnp_TransactionNo"]?.toString() ?? null,
+        paid_at: now,
+        provider_payload: vnpParams,
       },
     });
 
+    // Idempotency guard: another process might have already confirmed this order.
+    if (paymentUpdateCount.count === 0) {
+      return;
+    }
+
     if (subscriptionId) {
+      const latestActiveSubscription = await tx.subscriptions.findFirst({
+        where: {
+          user_id: userId,
+          status: "active",
+          expires_at: {
+            gt: now,
+          },
+          id: {
+            not: subscriptionId,
+          },
+        },
+        orderBy: {
+          expires_at: "desc",
+        },
+        select: {
+          expires_at: true,
+        },
+      });
+
+      const baseDate =
+        latestActiveSubscription?.expires_at && latestActiveSubscription.expires_at > now
+          ? latestActiveSubscription.expires_at
+          : now;
+
       await tx.subscriptions.update({
-        where: { id: subscriptionId },
+        where: {
+          id: subscriptionId,
+        },
         data: {
           status: "active",
-          started_at: date,
-          expires_at: newVipExpiresAt,
+          started_at: now,
+          expires_at: addDays(baseDate, durationDays),
         },
       });
     }
-
-    await tx.users.update({
-      where: { id: userId },
-      data: {
-        is_vip: true,
-        vip_expires_at: newVipExpiresAt,
-      },
-    });
   });
 };
 
-const handleFailedPayment = async (
+const markPaymentAsFailed = async (
   orderId: string,
   subscriptionId: string | null,
-  vnp_Params: VnpParams,
+  vnpParams: VnpParams,
 ) => {
   await prisma.$transaction(async (tx) => {
-    await tx.payments.update({
-      where: { id: orderId },
+    const paymentUpdateCount = await tx.payments.updateMany({
+      where: {
+        id: orderId,
+        status: "pending",
+      },
       data: {
         status: "failed",
-        provider_tx_id: vnp_Params["vnp_TransactionNo"]?.toString() ?? null,
-        provider_payload: vnp_Params,
+        provider_tx_id: vnpParams["vnp_TransactionNo"]?.toString() ?? null,
+        provider_payload: vnpParams,
       },
     });
 
+    if (paymentUpdateCount.count === 0) {
+      return;
+    }
+
     if (subscriptionId) {
-      await tx.subscriptions.update({
-        where: { id: subscriptionId },
+      await tx.subscriptions.updateMany({
+        where: {
+          id: subscriptionId,
+          status: "pending",
+        },
         data: {
           status: "cancelled",
         },
@@ -254,22 +294,86 @@ const handleFailedPayment = async (
   });
 };
 
+export const processVnpayPayment = async (
+  orderId: string,
+  vnpAmount: number,
+  vnpParams: VnpParams,
+): Promise<ProcessPaymentResult> => {
+  const payment = await getPaymentByOrderId(orderId);
+  if (!payment) {
+    return { outcome: "not_found" };
+  }
+
+  const dbAmount = Number(payment.amount);
+  if (!isAmountMatched(dbAmount, vnpAmount)) {
+    return { outcome: "amount_mismatch", paymentStatus: payment.status };
+  }
+
+  if (payment.status !== "pending") {
+    return { outcome: "already_processed", paymentStatus: payment.status };
+  }
+
+  if (isGatewaySuccess(vnpParams)) {
+    const durationDays = payment.subscriptions?.subscription_plans?.duration_days ?? 30;
+    await activateSubscriptionAfterSuccess(
+      payment.id,
+      payment.user_id,
+      payment.subscription_id,
+      durationDays,
+      vnpParams,
+    );
+
+    const latestPayment = await prisma.payments.findUnique({
+      where: { id: payment.id },
+      select: { status: true },
+    });
+
+    if (latestPayment?.status !== "completed") {
+      return latestPayment?.status
+        ? { outcome: "already_processed", paymentStatus: latestPayment.status }
+        : { outcome: "already_processed" };
+    }
+
+    return { outcome: "success", paymentStatus: "completed" };
+  }
+
+  await markPaymentAsFailed(payment.id, payment.subscription_id, vnpParams);
+
+  const latestPayment = await prisma.payments.findUnique({
+    where: { id: payment.id },
+    select: { status: true },
+  });
+
+  if (latestPayment?.status !== "failed") {
+    return latestPayment?.status
+      ? { outcome: "already_processed", paymentStatus: latestPayment.status }
+      : { outcome: "already_processed" };
+  }
+
+  return { outcome: "failed", paymentStatus: "failed" };
+};
+
 // Hàm sắp xếp object theo key (dùng để tạo chuỗi ký)
 export const sortObject = (obj: VnpParams): { [key: string]: string } => {
-  const global: { [key: string]: string } = {};
-  const str: string[] = [];
+  const sorted: { [key: string]: string } = {};
+  const keys: string[] = [];
+
   for (const key in obj) {
     if (Object.prototype.hasOwnProperty.call(obj, key)) {
-      str.push(encodeURIComponent(key));
+      keys.push(encodeURIComponent(key));
     }
   }
-  str.sort();
-  for (let key = 0; key < str.length; key++) {
-    const strKey = decodeURIComponent(str[key] || '');
-    const value = obj[strKey];
+
+  keys.sort();
+
+  for (let index = 0; index < keys.length; index += 1) {
+    const decodedKey = decodeURIComponent(keys[index] || "");
+    const value = obj[decodedKey];
+
     if (value !== undefined && value !== null && value !== "") {
-      global[strKey] = encodeURIComponent(String(value)).replace(/%20/g, "+");
+      sorted[decodedKey] = encodeURIComponent(String(value)).replace(/%20/g, "+");
     }
   }
-  return global;
+
+  return sorted;
 };

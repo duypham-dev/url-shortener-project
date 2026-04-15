@@ -1,4 +1,4 @@
-import redis from "../libs/redis.js";
+import redis from "../libs/redis";
 
 export async function cacheLink(shortCode: string, longUrl: string) {
   try {

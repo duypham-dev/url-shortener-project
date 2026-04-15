@@ -4,7 +4,7 @@ import {
 	vnpayReturn,
 	vnpayIpn,
 	getPaymentResult,
-} from "../controllers/payment.controller.js";
+} from "../controllers/payment.controller";
 import { verifyToken } from "../middlewares/verifyToken.middleware.js";
 const paymentRouter = Router(); 
 

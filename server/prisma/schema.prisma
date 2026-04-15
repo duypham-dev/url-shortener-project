@@ -9,20 +9,21 @@ datasource db {
 }
 
 model click_logs {
-  id           BigInt        @id @default(autoincrement())
-  short_code   String?       @db.VarChar(10)
-  clicked_at   DateTime?     @default(now()) @db.Timestamptz(6)
-  ip_address   String?       @db.Inet
+  id           BigInt       @id @default(autoincrement())
+  short_code   String       @db.VarChar(10)
+  clicked_at   DateTime?    @default(now()) @db.Timestamptz(6)
+  ip_address   String?      @db.Inet
   user_agent   String?
-  referrer     String?       @db.VarChar(255)
-  country      String?       @db.VarChar(100)
-  url_mappings url_mappings? @relation(fields: [short_code], references: [short_code], onDelete: Cascade, onUpdate: NoAction, map: "fk_click_logs_shortlink")
+  referrer     String?      @db.VarChar(255)
+  country      String?      @db.VarChar(100)
+  url_mappings url_mappings @relation(fields: [short_code], references: [short_code], onDelete: Cascade, onUpdate: NoAction)
 
-  @@index([short_code], map: "idx_click_logs_short_code")
+  @@index([clicked_at(sort: Desc)], map: "idx_click_clicked_at")
+  @@index([short_code], map: "idx_click_short_code")
 }
 
 model payments {
-  id               String         @id @default(dbgenerated("nextval('payments_id_seq'::regclass)")) @db.VarChar(255)
+  id               String         @id @default(dbgenerated("('pay_'::text || (nextval('payments_id_seq'::regclass))::text)")) @db.VarChar(255)
   user_id          Int
   subscription_id  String?        @db.VarChar(255)
   amount           Decimal        @db.Decimal(10, 2)
@@ -33,32 +34,37 @@ model payments {
   provider_payload Json?
   paid_at          DateTime?      @db.Timestamptz(6)
   created_at       DateTime?      @default(now()) @db.Timestamptz(6)
-  subscriptions    subscriptions? @relation(fields: [subscription_id], references: [id], onUpdate: NoAction, map: "fk_payments_subscription")
-  users            users          @relation(fields: [user_id], references: [id], onUpdate: NoAction, map: "fk_payments_user")
+  subscriptions    subscriptions? @relation(fields: [subscription_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  users            users          @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
   @@index([created_at(sort: Desc)], map: "idx_payments_created")
-  @@index([provider_tx_id], map: "idx_payments_provider_tx", where: raw("(provider_tx_id IS NOT NULL)"))
+  @@index([provider_tx_id], map: "idx_payments_provider", where: raw("(provider_tx_id IS NOT NULL)"))
   @@index([status], map: "idx_payments_status")
   @@index([user_id], map: "idx_payments_user")
 }
 
 model subscription_plans {
-  id               Int             @id @default(autoincrement())
-  name             String          @db.VarChar(100)
-  duration_days    Int
-  price            Decimal         @db.Decimal(10, 2)
-  currency         String          @default("VND") @db.VarChar(10)
-  max_links        Int             @default(50)
-  max_custom_links Int             @default(10)
-  allow_analytics  Boolean         @default(true)
-  allow_expiry     Boolean         @default(true)
-  is_active        Boolean         @default(true)
-  created_at       DateTime?       @default(now()) @db.Timestamptz(6)
-  subscriptions    subscriptions[]
+  id                  Int             @id @default(autoincrement())
+  name                String          @db.VarChar(100)
+  tier                PlanTier        @default(basic)
+  duration_days       Int             @default(30)
+  price               Decimal         @default(0) @db.Decimal(10, 2)
+  currency            String          @default("VND") @db.VarChar(10)
+  max_links           Int             @default(5)
+  max_custom_links    Int             @default(0)
+  reset_period        ResetPeriod     @default(monthly)
+  allow_analytics     Boolean         @default(false)
+  allow_expiry        Boolean         @default(false)
+  allow_custom_domain Boolean         @default(false)
+  allow_qr_code       Boolean         @default(true)
+  is_active           Boolean         @default(true)
+  sort_order          Int             @default(0)
+  created_at          DateTime?       @default(now()) @db.Timestamptz(6)
+  subscriptions       subscriptions[]
 }
 
 model subscriptions {
-  id                 String             @id @default(dbgenerated("nextval('subscriptions_id_seq'::regclass)")) @db.VarChar(255)
+  id                 String             @id @default(dbgenerated("('sub_'::text || (nextval('subscriptions_id_seq'::regclass))::text)")) @db.VarChar(255)
   user_id            Int
   plan_id            Int
   status             SubscriptionStatus @default(pending)
@@ -66,8 +72,8 @@ model subscriptions {
   expires_at         DateTime           @db.Timestamptz(6)
   created_at         DateTime?          @default(now()) @db.Timestamptz(6)
   payments           payments[]
-  subscription_plans subscription_plans @relation(fields: [plan_id], references: [id], onUpdate: NoAction, map: "fk_subscriptions_plan")
-  users              users              @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_subscriptions_user")
+  subscription_plans subscription_plans @relation(fields: [plan_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  users              users              @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
   @@index([expires_at], map: "idx_subscriptions_expires", where: raw("(status = 'active'::\"SubscriptionStatus\")"))
   @@index([user_id, status], map: "idx_subscriptions_user_status")
@@ -76,34 +82,43 @@ model subscriptions {
 model url_mappings {
   short_code  String       @id @db.VarChar(10)
   long_url    String
-  user_id     Int?
+  user_id     Int
   title       String?      @db.VarChar(255)
   is_custom   Boolean?     @default(false)
   is_active   Boolean?     @default(true)
+  click_count Int?         @default(0)
   created_at  DateTime?    @default(now()) @db.Timestamptz(6)
   expires_at  DateTime?    @db.Timestamptz(6)
-  click_count Int?         @default(0)
   click_logs  click_logs[]
-  users       users?       @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_url_mappings_user")
+  users       users        @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
-  @@index([expires_at], map: "idx_expires_at")
-  @@index([long_url, user_id], map: "idx_long_url_user", where: raw("((is_custom = false) AND (is_active = true))"))
-  @@index([user_id], map: "idx_user_id")
+  @@index([expires_at], map: "idx_url_expires_at")
+  @@index([long_url, user_id], map: "idx_url_long_url", where: raw("((is_custom = false) AND (is_active = true))"))
+  @@index([user_id], map: "idx_url_user_id")
+}
+
+model user_link_monthly_usage {
+  user_id           Int
+  year_month        String @db.Char(7)
+  link_count        Int    @default(0)
+  custom_link_count Int    @default(0)
+  users             users  @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@id([user_id, year_month])
 }
 
 model users {
-  id             Int             @id @default(autoincrement())
-  email          String          @unique @db.VarChar(255)
-  password_hash  String
-  role           String?         @default("user") @db.VarChar(50)
-  created_at     DateTime?       @default(now()) @db.Timestamptz(6)
-  updated_at     DateTime?       @default(now()) @db.Timestamptz(6)
-  full_name      String          @db.VarChar(255)
-  is_vip         Boolean         @default(false)
-  vip_expires_at DateTime?       @db.Timestamptz(6)
-  payments       payments[]
-  subscriptions  subscriptions[]
-  url_mappings   url_mappings[]
+  id                      Int                       @id @default(autoincrement())
+  email                   String                    @unique @db.VarChar(255)
+  password_hash           String                    @db.VarChar
+  full_name               String                    @db.VarChar(255)
+  role                    String?                   @default("user") @db.VarChar(50)
+  created_at              DateTime?                 @default(now()) @db.Timestamptz(6)
+  updated_at              DateTime?                 @default(now()) @db.Timestamptz(6)
+  payments                payments[]
+  subscriptions           subscriptions[]
+  url_mappings            url_mappings[]
+  user_link_monthly_usage user_link_monthly_usage[]
 }
 
 enum PaymentStatus {
@@ -111,6 +126,19 @@ enum PaymentStatus {
   completed
   failed
   refunded
+}
+
+enum PlanTier {
+  free
+  basic
+  premium
+  enterprise
+}
+
+enum ResetPeriod {
+  never
+  monthly
+  yearly
 }
 
 enum SubscriptionStatus {

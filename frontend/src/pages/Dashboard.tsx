@@ -1,22 +1,52 @@
-import React, { useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { Link as LinkIcon, QrCode, Lock, HelpCircle } from 'lucide-react';
 import { createShortenUrl } from '../api/shortUrl.api';
 import { SuccessModal } from '../components/SuccessModal';
+import { getMyPlanAccess } from '../api/subscription.api';
 
 export const Dashboard: React.FC = () => {
   const [url, setUrl] = useState('');
   const [createQrCode, setCreateQrCode] = useState(false);
   const [activeTab, setActiveTab] = useState<'link' | 'qr'>('link');
+  const [remainingLinks, setRemainingLinks] = useState<number | null>(null);
+  const [planName, setPlanName] = useState('Free');
+  const [isPlanLoading, setIsPlanLoading] = useState(true);
+  const [createError, setCreateError] = useState<string | null>(null);
   
   // Modal state
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [generatedShortUrl, setGeneratedShortUrl] = useState('');
 
+  const hydratePlanAccess = useCallback(async () => {
+    try {
+      setIsPlanLoading(true);
+      const planAccess = await getMyPlanAccess();
+      setRemainingLinks(planAccess.usage.remainingLinks);
+      setPlanName(planAccess.plan.name);
+    } catch (error) {
+      console.error('Failed to load plan access:', error);
+    } finally {
+      setIsPlanLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    hydratePlanAccess();
+  }, [hydratePlanAccess]);
+
+  const isQuotaExceeded = remainingLinks !== null && remainingLinks <= 0;
+
   const handleCreate = async () => {
     // Handling create shortlink
     if (!url) return;
-    console.log('Creating shortlink for:', url, 'with QR:', createQrCode);
+
+    if (isQuotaExceeded) {
+      setCreateError('Bạn đã hết quota tạo link trong tháng này. Vui lòng nâng cấp gói.');
+      return;
+    }
+
     try {
+      setCreateError(null);
       const response = await createShortenUrl(url);
       
       // Handle nested backend data structure based on the controller `genShortLink`
@@ -26,16 +56,23 @@ export const Dashboard: React.FC = () => {
         setGeneratedShortUrl(actualShortUrl);
         setIsModalOpen(true);
         setUrl(''); // Opt: Clear the input after success
+        hydratePlanAccess();
       }
     } catch (error) {
       console.error('Error creating shortlink:', error);
+      const message =
+        typeof error === 'object' && error && 'message' in error
+          ? String(error.message)
+          : 'Không thể tạo short link. Vui lòng thử lại.';
+      setCreateError(message);
+      hydratePlanAccess();
     }
   };
 
   return (
     <>
       <div className="flex items-center justify-center mt-0 mx-auto">
-        <div className="w-full max-w-[800px]">
+        <div className="w-full max-w-200">
           
           {/* Tabs switch */}
           <div className="relative flex items-center p-1 max-w-fit mx-auto mb-8">
@@ -72,7 +109,11 @@ export const Dashboard: React.FC = () => {
                 Quick create: {activeTab === 'link' ? 'Short link' : 'QR Code'}
               </h2>
               <div className="flex items-center gap-1 text-sm text-gray-600">
-                You can create <span className="font-semibold px-1">4</span> more links this month.
+                {isPlanLoading
+                  ? 'Đang tải quota...'
+                  : remainingLinks === null
+                    ? `Gói ${planName}: tạo link không giới hạn.`
+                    : `Gói ${planName}: còn ${remainingLinks} link trong tháng này.`}
                 <HelpCircle size={16} className="text-gray-400" />
               </div>
             </div>
@@ -106,12 +147,18 @@ export const Dashboard: React.FC = () => {
                   </div>
                   <button 
                     onClick={handleCreate}
-                    disabled={!url}
+                    disabled={!url || isQuotaExceeded}
                     className="whitespace-nowrap px-6 py-3 bg-blue-600 text-white font-medium rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                   >
-                    Create your Bitly link
+                    {isQuotaExceeded ? 'Đã hết quota' : 'Create your Bitly link'}
                   </button>
                 </div>
+
+                {createError && (
+                  <div className="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                    {createError}
+                  </div>
+                )}
               </div>
 
               {/* Checkbox Options */}

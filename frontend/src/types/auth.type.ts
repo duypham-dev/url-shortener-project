@@ -5,6 +5,7 @@ export interface User {
   userId: number;
   fullName: string;
   email: string;
+  isVip: boolean;
   role: string;
 }
 
@@ -57,6 +58,7 @@ export interface MeApiResponse {
       userId: number;
       email: string;
       role: string;
+      isVip: boolean;
     };
   };
 }

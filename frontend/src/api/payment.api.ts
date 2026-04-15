@@ -1,10 +1,14 @@
 import { axiosClient } from "../config/axiosClient";
 
-export interface PaymentUrlResponse {
-  success?: boolean;
+interface ApiEnvelope<T> {
+  success: boolean;
   message?: string;
-  paymentUrl?: string;
-  orderId?: string;
+  data: T;
+}
+
+export interface CreatePaymentUrlData {
+  paymentUrl: string;
+  orderId: string;
 }
 
 export interface PaymentResultResponse {
@@ -19,21 +23,26 @@ export interface PaymentResultResponse {
 }
 
 export const createPaymentUrl = async (
-  planId: number | null = null,
-  planName: string,
+  planId: number,
   bankCode: string | null = null,
-): Promise<PaymentUrlResponse> => {
-  const response = await axiosClient.post("/create_payment_url", {
-    planId,
-    planName,
-    bankCode,
-  });
-  return (response.data || response) as PaymentUrlResponse;
+): Promise<CreatePaymentUrlData> => {
+  const response = (await axiosClient.post(
+    "/create_payment_url",
+    {
+      planId,
+      bankCode,
+    },
+  )) as ApiEnvelope<CreatePaymentUrlData>;
+
+  return response.data;
 };
 
 export const getPaymentResult = async (
   orderId: string,
 ): Promise<PaymentResultResponse> => {
-  const response = await axiosClient.get(`/payments/${orderId}`);
-  return (response.data || response) as PaymentResultResponse;
+  const response = (await axiosClient.get(
+    `/payments/${orderId}`,
+  )) as ApiEnvelope<PaymentResultResponse>;
+
+  return response.data;
 };

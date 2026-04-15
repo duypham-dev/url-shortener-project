@@ -1,4 +1,4 @@
-import type { Request, Response } from "express";
+import type { NextFunction, Request, Response } from "express";
 import generateShortLink from "../utils/generateShortLink";
 import { ApiResponse } from "../utils/response";
 import { saveLink } from "../services/saveLink.service";
@@ -27,6 +27,7 @@ function isValidUrl(url: string): boolean {
 const genShortLink = async (
   req: Request<{}, ShortenResponseBody, ShortenRequestBody>,
   res: Response,
+  next: NextFunction,
 ): Promise<void> => {
 
   const { originalUrl} = req.body;
@@ -42,8 +43,6 @@ const genShortLink = async (
     return;
   }
 
-  console.log("Received URL:", originalUrl, "from user:", userId);
-
   if (!isValidUrl(originalUrl)) {
     res
       .status(422)
@@ -57,19 +56,18 @@ const genShortLink = async (
 
   try {
     await saveLink(originalUrl, shortUrl.split("/").pop()!, userId);
+    ApiResponse.created(
+      res,
+      {
+        shortUrl,
+        originalUrl,
+        createdAt: new Date().toISOString(),
+      },
+      "Short URL created successfully.",
+    );
   } catch (error) {
-    res.status(500).json({ message: "Failed to save link." });
-    return;
+    next(error);
   }
-  res.status(201).json({
-    success: true,
-    message: "Short URL created successfully.",
-    data: {
-      shortUrl,
-      originalUrl,
-      createdAt: new Date().toISOString(),
-    },
-  });
 };
 
 export default genShortLink;
