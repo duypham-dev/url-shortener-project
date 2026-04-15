@@ -14,7 +14,6 @@ import {
 export const Links: React.FC = () => {
   const { links, isLoading, error } = useLinks();
   const [searchTerm, setSearchTerm] = useState("");
-  const activeLinksCount = links.filter((l) => true).length; // assuming all are active for now
 
   return (
     <div className="w-full max-w-6xl mx-auto py-2 font-sans text-gray-900 pb-20">
@@ -60,7 +59,7 @@ export const Links: React.FC = () => {
           <label className="flex items-center gap-3 text-sm font-medium text-gray-700 cursor-pointer">
             <input
               type="checkbox"
-              className="w-4 h-4 mt-[1px] border border-gray-300 rounded text-blue-600 focus:ring-blue-500"
+              className="w-4 h-4 mt-px border border-gray-300 rounded text-blue-600 focus:ring-blue-500"
             />
             0 selected
           </label>
@@ -99,7 +98,7 @@ export const Links: React.FC = () => {
           <div className="h-6 w-px bg-gray-300"></div>
 
           {/* Active filter toggle */}
-          <button className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-gray-200 rounded bg-white hover:bg-gray-50 transition-colors text-sm font-bold text-gray-800 shadow-sm shrink-0 leading-none">
+          <button className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-gray-200 rounded hover:bg-gray-50 transition-colors text-sm font-bold text-gray-800 shadow-sm shrink-0 leading-none">
             Show: Active
             <ChevronDown size={16} strokeWidth={2.5} className="ml-1 text-gray-500" />
           </button>

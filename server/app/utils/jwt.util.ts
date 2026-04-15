@@ -13,6 +13,7 @@ export interface JwtPayload {
   userId: number;
   fullName: string;
   email: string;
+  is_vip: boolean;
   role: string;
 }
 
@@ -30,7 +31,7 @@ const getSecret = (key: string): string => {
 // ----------------------------------------------------------------
 export const signAccessToken = (payload: JwtPayload): string => {
   return jwt.sign(payload, getSecret("JWT_ACCESS_SECRET"), {
-    expiresIn: "1m",
+    expiresIn: "15m",
     algorithm: "HS256",
   });
 };

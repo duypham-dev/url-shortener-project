@@ -56,6 +56,7 @@ export const findOrCreateOAuthUser = async (
       full_name: true,
       email: true,
       role: true,
+      is_vip: true,
     },
   });
 
@@ -64,6 +65,7 @@ export const findOrCreateOAuthUser = async (
       userId: user?.id || 0,
       fullName: user?.full_name || "",
       email,
+      is_vip: user?.is_vip || false,
       role: user?.role || "user",
     }
     return issueTokens(payload, user);
@@ -77,14 +79,16 @@ export const findOrCreateOAuthUser = async (
       email: email,
       password_hash: generateSecureRandomPassword(),
       role: "user",
+      is_vip: false,
     },
-    select: { id: true, full_name: true, email: true,password_hash: true, role: true },
+    select: { id: true, full_name: true, email: true, is_vip: true, password_hash: true, role: true },
   });
 
   const payload: JwtPayload = {
     userId: user.id,
     fullName: user.full_name,
     email: user.email,
+    is_vip: user.is_vip,
     role: user.role || "user",
   };
 
@@ -107,6 +111,7 @@ export interface AuthResult {
     id: number;
     full_name: string;
     email: string;
+    is_vip: boolean;
     role: string;
   };
 }
@@ -137,7 +142,7 @@ export const register = async (input: RegisterInput): Promise<AuthResult> => {
   // 4. Tạo user trong database
   const newUser = await prisma.users.create({
     data: { full_name, email, password_hash },
-    select: { id: true, full_name: true, email: true, role: true },
+    select: { id: true, full_name: true, email: true, is_vip: true, role: true },
   });
 
   // 5. Phát hành tokens
@@ -145,6 +150,7 @@ export const register = async (input: RegisterInput): Promise<AuthResult> => {
     userId: newUser.id,
     fullName: newUser.full_name,
     email: newUser.email,
+    is_vip: newUser.is_vip,
     role: newUser.role ?? "user",
   };
 
@@ -176,6 +182,7 @@ export const login = async (input: LoginInput): Promise<AuthResult> => {
       full_name: true,
       email: true,
       role: true,
+      is_vip: true,
       password_hash: true,
     },
   });
@@ -196,6 +203,7 @@ export const login = async (input: LoginInput): Promise<AuthResult> => {
     userId: user.id,
     fullName: user.full_name,
     email: user.email,
+    is_vip: user.is_vip,
     role: user.role ?? "user",
   };
 
@@ -239,7 +247,7 @@ export const refreshTokens = async (
   // 3. Lấy user hiện tại để cập nhật role (đề phòng role thay đổi)
   const user = await prisma.users.findUnique({
     where: { id: payload.userId },
-    select: { id: true, full_name: true, email: true, role: true },
+    select: { id: true, full_name: true, email: true, is_vip: true, role: true },
   });
   if (!user) {
     throw new UnauthorizedError("Tài khoản không tồn tại.");
@@ -250,6 +258,7 @@ export const refreshTokens = async (
     userId: user.id,
     fullName: user.full_name,
     email: user.email,
+    is_vip: user.is_vip,
     role: user.role ?? "user",
   };
 
@@ -302,7 +311,7 @@ export const isTokenBlacklisted = async (token: string): Promise<boolean> => {
 // ================================================================
 async function issueTokens(
   payload: JwtPayload,
-  user: { id: number; full_name: string; email: string; role: string | null },
+  user: { id: number; full_name: string; email: string; is_vip: boolean; role: string | null },
 ): Promise<AuthResult> {
   const accessToken = signAccessToken(payload);
   const refreshToken = signRefreshToken(payload);
@@ -321,6 +330,7 @@ async function issueTokens(
       id: user.id,
       full_name: user.full_name,
       email: user.email,
+      is_vip: user.is_vip,
       role: user.role ?? "user",
     },
   };

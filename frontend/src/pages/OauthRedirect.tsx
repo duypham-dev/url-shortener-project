@@ -47,7 +47,7 @@ const OAuthRedirect = () => {
         await getUserProfile();
         setStatus("success");
         // Redirect to home after brief success message
-          navigate("/", { replace: true });
+          navigate("/dashboard", { replace: true });
       } catch {
         setStatus("error");
         setErrorMessage("Lỗi xác thực. Vui lòng thử lại.");

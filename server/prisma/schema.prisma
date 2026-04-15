@@ -8,59 +8,33 @@ datasource db {
   provider = "postgresql"
 }
 
-model url_mappings {
-  short_code  String    @id @db.VarChar(10)
-  long_url    String
-  user_id     Int?
-  title       String?   @db.VarChar(255)
-  is_custom   Boolean?  @default(false)
-  is_active   Boolean?  @default(true)
-  created_at  DateTime? @default(now()) @db.Timestamptz(6)
-  expires_at  DateTime? @db.Timestamptz(6)
-  click_count Int?      @default(0)
-
-  @@index([long_url, user_id], map: "idx_long_url_user", where: raw("((is_custom = false) AND (is_active = true))"))
-  @@index([expires_at], map: "idx_expires_at")
-  @@index([user_id], map: "idx_user_id")
-}
-
 model click_logs {
-  id         BigInt    @id @default(autoincrement())
-  short_code String?   @db.VarChar(10)
-  clicked_at DateTime? @default(now()) @db.Timestamptz(6)
-  ip_address String?   @db.Inet
-  user_agent String?
-  referrer   String?   @db.VarChar(255)
-  country    String?   @db.VarChar(100)
+  id           BigInt        @id @default(autoincrement())
+  short_code   String?       @db.VarChar(10)
+  clicked_at   DateTime?     @default(now()) @db.Timestamptz(6)
+  ip_address   String?       @db.Inet
+  user_agent   String?
+  referrer     String?       @db.VarChar(255)
+  country      String?       @db.VarChar(100)
+  url_mappings url_mappings? @relation(fields: [short_code], references: [short_code], onDelete: Cascade, onUpdate: NoAction, map: "fk_click_logs_shortlink")
 
   @@index([short_code], map: "idx_click_logs_short_code")
 }
 
-model users {
-  id             Int       @id @default(autoincrement())
-  email          String    @unique @db.VarChar(255)
-  password_hash  String
-  role           String?   @default("user") @db.VarChar(50)
-  created_at     DateTime? @default(now()) @db.Timestamptz(6)
-  updated_at     DateTime? @default(now()) @db.Timestamptz(6)
-  full_name      String    @db.VarChar(255)
-  is_vip         Boolean   @default(false)
-  vip_expires_at DateTime? @db.Timestamptz(6)
-}
-
-/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 model payments {
-  id               BigInt        @id @default(autoincrement())
+  id               String         @id @default(dbgenerated("nextval('payments_id_seq'::regclass)")) @db.VarChar(255)
   user_id          Int
-  subscription_id  Int?
-  amount           Decimal       @db.Decimal(10, 2)
-  currency         String        @default("VND") @db.VarChar(10)
-  status           PaymentStatus @default(pending)
-  provider         String        @db.VarChar(50)
-  provider_tx_id   String?       @unique @db.VarChar(255)
+  subscription_id  String?        @db.VarChar(255)
+  amount           Decimal        @db.Decimal(10, 2)
+  currency         String         @default("VND") @db.VarChar(10)
+  status           PaymentStatus  @default(pending)
+  provider         String         @db.VarChar(50)
+  provider_tx_id   String?        @unique @db.VarChar(255)
   provider_payload Json?
-  paid_at          DateTime?     @db.Timestamptz(6)
-  created_at       DateTime?     @default(now()) @db.Timestamptz(6)
+  paid_at          DateTime?      @db.Timestamptz(6)
+  created_at       DateTime?      @default(now()) @db.Timestamptz(6)
+  subscriptions    subscriptions? @relation(fields: [subscription_id], references: [id], onUpdate: NoAction, map: "fk_payments_subscription")
+  users            users          @relation(fields: [user_id], references: [id], onUpdate: NoAction, map: "fk_payments_user")
 
   @@index([created_at(sort: Desc)], map: "idx_payments_created")
   @@index([provider_tx_id], map: "idx_payments_provider_tx", where: raw("(provider_tx_id IS NOT NULL)"))
@@ -69,32 +43,67 @@ model payments {
 }
 
 model subscription_plans {
-  id               Int       @id @default(autoincrement())
-  name             String    @db.VarChar(100)
+  id               Int             @id @default(autoincrement())
+  name             String          @db.VarChar(100)
   duration_days    Int
-  price            Decimal   @db.Decimal(10, 2)
-  currency         String    @default("VND") @db.VarChar(10)
-  max_links        Int       @default(50)
-  max_custom_links Int       @default(10)
-  allow_analytics  Boolean   @default(true)
-  allow_expiry     Boolean   @default(true)
-  is_active        Boolean   @default(true)
-  created_at       DateTime? @default(now()) @db.Timestamptz(6)
+  price            Decimal         @db.Decimal(10, 2)
+  currency         String          @default("VND") @db.VarChar(10)
+  max_links        Int             @default(50)
+  max_custom_links Int             @default(10)
+  allow_analytics  Boolean         @default(true)
+  allow_expiry     Boolean         @default(true)
+  is_active        Boolean         @default(true)
+  created_at       DateTime?       @default(now()) @db.Timestamptz(6)
+  subscriptions    subscriptions[]
 }
 
-/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 model subscriptions {
-  id         Int                @id @default(autoincrement())
-  user_id    Int
-  plan_id    Int
-  status     SubscriptionStatus @default(pending)
-  started_at DateTime           @default(now()) @db.Timestamptz(6)
-  expires_at DateTime           @db.Timestamptz(6)
-  auto_renew Boolean            @default(false)
-  created_at DateTime?          @default(now()) @db.Timestamptz(6)
+  id                 String             @id @default(dbgenerated("nextval('subscriptions_id_seq'::regclass)")) @db.VarChar(255)
+  user_id            Int
+  plan_id            Int
+  status             SubscriptionStatus @default(pending)
+  started_at         DateTime           @default(now()) @db.Timestamptz(6)
+  expires_at         DateTime           @db.Timestamptz(6)
+  created_at         DateTime?          @default(now()) @db.Timestamptz(6)
+  payments           payments[]
+  subscription_plans subscription_plans @relation(fields: [plan_id], references: [id], onUpdate: NoAction, map: "fk_subscriptions_plan")
+  users              users              @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_subscriptions_user")
 
   @@index([expires_at], map: "idx_subscriptions_expires", where: raw("(status = 'active'::\"SubscriptionStatus\")"))
   @@index([user_id, status], map: "idx_subscriptions_user_status")
+}
+
+model url_mappings {
+  short_code  String       @id @db.VarChar(10)
+  long_url    String
+  user_id     Int?
+  title       String?      @db.VarChar(255)
+  is_custom   Boolean?     @default(false)
+  is_active   Boolean?     @default(true)
+  created_at  DateTime?    @default(now()) @db.Timestamptz(6)
+  expires_at  DateTime?    @db.Timestamptz(6)
+  click_count Int?         @default(0)
+  click_logs  click_logs[]
+  users       users?       @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_url_mappings_user")
+
+  @@index([expires_at], map: "idx_expires_at")
+  @@index([long_url, user_id], map: "idx_long_url_user", where: raw("((is_custom = false) AND (is_active = true))"))
+  @@index([user_id], map: "idx_user_id")
+}
+
+model users {
+  id             Int             @id @default(autoincrement())
+  email          String          @unique @db.VarChar(255)
+  password_hash  String
+  role           String?         @default("user") @db.VarChar(50)
+  created_at     DateTime?       @default(now()) @db.Timestamptz(6)
+  updated_at     DateTime?       @default(now()) @db.Timestamptz(6)
+  full_name      String          @db.VarChar(255)
+  is_vip         Boolean         @default(false)
+  vip_expires_at DateTime?       @db.Timestamptz(6)
+  payments       payments[]
+  subscriptions  subscriptions[]
+  url_mappings   url_mappings[]
 }
 
 enum PaymentStatus {

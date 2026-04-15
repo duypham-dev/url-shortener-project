@@ -7,6 +7,7 @@ import type { SubscriptionPlan } from "../types/subscription.type";
 export const Upgrade: React.FC = () => {
   const [plans, setPlans] = useState<SubscriptionPlan[]>([]);
   const [loading, setLoading] = useState(true);
+  const [processingPlanId, setProcessingPlanId] = useState<number | null>(null);
 
   useEffect(() => {
     const fetchPlans = async () => {
@@ -25,7 +26,8 @@ export const Upgrade: React.FC = () => {
 
   const handleSelectPlan = async (plan: SubscriptionPlan) => {
     try {
-      const data = await createPaymentUrl(plan.id, Number(plan.price), null );
+      setProcessingPlanId(plan.id);
+      const data = await createPaymentUrl(plan.id, plan.name, null );
       console.log("Create payment response: ", data);
 
       if (data && data.paymentUrl) {
@@ -37,6 +39,8 @@ export const Upgrade: React.FC = () => {
     } catch (error) {
       console.error("Payment error:", error);
       alert("Không thể kết nối đến máy chủ thanh toán");
+    } finally {
+      setProcessingPlanId(null);
     }
   };
 
@@ -93,25 +97,25 @@ export const Upgrade: React.FC = () => {
                 
                 <ul className="mt-6 space-y-4">
                     <li className="flex">
-                      <Check className="flex-shrink-0 w-5 h-5 text-[#00a99d]" />
+                      <Check className="shrink-0 w-5 h-5 text-[#00a99d]" />
                       <span className="ml-3 text-gray-600 text-sm">
                         Tạo tối đa {plan.max_links === -1 ? "Không giới hạn" : plan.max_links} link rút gọn
                       </span>
                     </li>
                     <li className="flex">
-                      <Check className="flex-shrink-0 w-5 h-5 text-[#00a99d]" />
+                      <Check className="shrink-0 w-5 h-5 text-[#00a99d]" />
                       <span className="ml-3 text-gray-600 text-sm">
                         Được tạo {plan.max_custom_links === -1 ? "Không giới hạn" : plan.max_custom_links} link Tùy chỉnh (Custom URLs)
                       </span>
                     </li>
                     <li className="flex">
-                      <Check className={`flex-shrink-0 w-5 h-5 ${plan.allow_analytics ? "text-[#00a99d]" : "text-gray-300"}`} />
+                      <Check className={`shrink-0 w-5 h-5 ${plan.allow_analytics ? "text-[#00a99d]" : "text-gray-300"}`} />
                       <span className={`ml-3 text-sm ${plan.allow_analytics ? "text-gray-600" : "text-gray-400"}`}>
                         Thống kê {plan.allow_analytics ? "chi tiết & Phân tích truy cập" : "cơ bản"}
                       </span>
                     </li>
                     <li className="flex">
-                      <Check className={`flex-shrink-0 w-5 h-5 ${plan.allow_expiry ? "text-[#00a99d]" : "text-gray-300"}`} />
+                      <Check className={`shrink-0 w-5 h-5 ${plan.allow_expiry ? "text-[#00a99d]" : "text-gray-300"}`} />
                       <span className={`ml-3 text-sm ${plan.allow_expiry ? "text-gray-600" : "text-gray-400"}`}>
                         Cài đặt thời gian hết hạn (Expiry)
                       </span>
@@ -122,13 +126,14 @@ export const Upgrade: React.FC = () => {
               <div className="mt-8">
                 <button
                   onClick={() => handleSelectPlan(plan)}
+                  disabled={processingPlanId === plan.id}
                   className={`w-full py-3 px-4 rounded-md font-medium text-center transition-colors shadow-sm ${
                     isPopular
                       ? "bg-[#00a99d] text-white hover:bg-[#009188]"
                       : "bg-[#e6f6f5] text-[#00a99d] hover:bg-[#ccece9]"
-                  }`}
+                  } disabled:opacity-60 disabled:cursor-not-allowed`}
                 >
-                  Chọn {plan.name}
+                  {processingPlanId === plan.id ? "Đang tạo giao dịch..." : `Chọn ${plan.name}`}
                 </button>
               </div>
             </div>

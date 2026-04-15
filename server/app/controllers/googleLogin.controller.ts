@@ -70,7 +70,7 @@ export const googleLogin = async (req: Request, res: Response) => {
   } catch (error) {
 
     // Determine error type for user-friendly message
-    const errorMessage = error.message?.includes('Token used too late')
+    const errorMessage = error instanceof Error && error.message.includes('Token used too late')
       ? 'token_expired'
       : 'server_error';
 

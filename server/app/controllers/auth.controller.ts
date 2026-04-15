@@ -5,6 +5,20 @@ import {
   validateLoginInput,
 } from "../utils/validate.util";
 
+const toAuthUserDto = (user: {
+  id: number;
+  full_name: string;
+  email: string;
+  is_vip: boolean;
+  role: string;
+}) => ({
+  userId: user.id,
+  fullName: user.full_name,
+  email: user.email,
+  isVip: user.is_vip,
+  role: user.role,
+});
+
 // Cookie tên cho refreshToken
 const REFRESH_TOKEN_COOKIE = "refreshToken";
 
@@ -51,7 +65,7 @@ export const registerHandler = async (
     res.status(201).json({
       success: true,
       message: "Đăng ký thành công.",
-      data: { accessToken, user },
+      data: { accessToken, user: toAuthUserDto(user) },
     });
   } catch (error) {
     next(error); // Chuyển lỗi sang errorHandler middleware
@@ -91,7 +105,7 @@ export const loginHandler = async (
     res.status(200).json({
       success: true,
       message: "Đăng nhập thành công.",
-      data: { accessToken, user },
+      data: { accessToken, user: toAuthUserDto(user) },
     });
   } catch (error) {
     next(error);

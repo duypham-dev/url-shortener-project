@@ -2,8 +2,10 @@
  * Simple Logger Utility
  * Can be replaced with Winston or Pino for production
  */
+type LogLevel = 'info' | 'error' | 'warn' | 'debug';
+
 class Logger {
-  log(level: string, message: string, ...args: unknown[]) {
+  log(level: LogLevel, message: string, ...args: unknown[]) {
     const timestamp = new Date().toISOString();
     console[level](`[${timestamp}] [${level.toUpperCase()}]:`, message, ...args);
   }

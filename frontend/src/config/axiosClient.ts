@@ -112,7 +112,7 @@ axiosClient.interceptors.response.use(
 
       // Redirect về login nếu đang ở protected route
       const currentPath = window.location.pathname;
-      const isPublicPath = ['/', '/login', '/register'].includes(currentPath) ||
+      const isPublicPath = ['/', '/login', '/register', '/payment-success'].includes(currentPath) ||
         currentPath.startsWith('/oauth/');
 
       if (!isPublicPath) {
