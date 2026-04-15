@@ -4,4 +4,4 @@ node_modules
 
 /generated/prisma
 /prisma/migrations
-/app/config/vnpay_config.json
+/config/default.json
