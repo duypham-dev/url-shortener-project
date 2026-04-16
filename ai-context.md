@@ -368,3 +368,46 @@ Payments:
 - POST /api/v1/create_payment_url (protected)
 - GET /api/v1/vnpay_return
 - GET /api/v1/vnpay_ipn
+ - GET /api/v1/payments/:orderId (protected)  # fetch payment result for a user
+
+## 9. Verified Implementation Details (from source code review)
+
+The following are concrete implementation details discovered by reading the repository source code. Keep these in mind when making changes so behavior remains compatible with the running system.
+
+- Tokens & Cookies:
+  - Access token TTL: 15 minutes. Refresh token TTL: 7 days.
+  - Refresh cookie name: `refreshToken` (httpOnly). Cookie options: `secure` in production, `sameSite: 'lax'`, `path: '/'`, `maxAge` 7 days.
+
+- Redis keys & cache:
+  - Refresh tokens are stored under `refresh_token:<userId>`.
+  - Blacklisted access tokens use `blacklist:<token>` with TTL equal to token remaining lifetime.
+  - Short-link cache keys: `link_short:<shortCode>` with TTL ~3600s (1 hour).
+
+- Short code generation:
+  - Short codes are generated from a SHA-256 based value and encoded using a base62 alphabet.
+  - Code length is 10 characters (base62). `generateShortLink` returns a full short URL using `SHORT_LINK_BASE_URL` (fallback `https://short.ly`); controllers extract the short code by taking the last path segment.
+
+- Kafka & click tracking:
+  - Kafka topic: `click-events` (created at app startup by `kafka.service` if missing).
+  - Producer is initialized in `initKafka()` called during server bootstrap.
+  - Consumer group: `click-tracking-group` (consumer in `app/consumers/consumer.ts`) subscribes `fromBeginning: true` and persists events to `click_logs` table.
+
+- Prisma & DB layout:
+  - Prisma schema: `server/prisma/schema.prisma`.
+  - Generated client output: `server/generated/prisma` (Prisma generator configured to output here).
+
+- API mounting and routing:
+  - Base API mount path comes from `process.env.BASE_URL` (default `/api/v1`).
+  - Payment routes include `POST /create_payment_url`, `GET /vnpay_return`, `GET /vnpay_ipn`, and `GET /payments/:orderId`.
+
+- Axios + frontend behavior:
+  - `axiosClient` unwraps `response.data` in the response interceptor; many API wrappers expect this envelope.
+  - Token refresh uses a direct `axios.post` call to avoid interceptor recursion; refresh relies on the httpOnly refresh cookie (`withCredentials: true`).
+
+- Quota & subscription checks:
+  - Link creation quota enforced by `enforceCreateLinkQuota` middleware which calls `subscriptionAccess.service` to assert limits and active plan context.
+
+- Dev & tooling:
+  - Root `package.json` `dev` script runs the server dev, Kafka consumer (watch), and frontend dev concurrently.
+
+If you want, I can normalize or expand any part of this guide (e.g., add environment variable names, Redis/Prisma connection examples, or a short on-boarding checklist for local development).
