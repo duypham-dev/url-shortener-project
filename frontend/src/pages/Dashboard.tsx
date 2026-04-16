@@ -1,43 +1,28 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { Link as LinkIcon, QrCode, Lock, HelpCircle } from 'lucide-react';
 import { createShortenUrl } from '../api/shortUrl.api';
 import { SuccessModal } from '../components/SuccessModal';
-import { getMyPlanAccess } from '../api/subscription.api';
+import { usePlanStore, selectPlanName, selectRemainingLinks } from '../store/usePlanStore';
 
 export const Dashboard: React.FC = () => {
   const [url, setUrl] = useState('');
   const [createQrCode, setCreateQrCode] = useState(false);
   const [activeTab, setActiveTab] = useState<'link' | 'qr'>('link');
-  const [remainingLinks, setRemainingLinks] = useState<number | null>(null);
-  const [planName, setPlanName] = useState('Free');
-  const [isPlanLoading, setIsPlanLoading] = useState(true);
   const [createError, setCreateError] = useState<string | null>(null);
   
   // Modal state
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [generatedShortUrl, setGeneratedShortUrl] = useState('');
 
-  const hydratePlanAccess = useCallback(async () => {
-    try {
-      setIsPlanLoading(true);
-      const planAccess = await getMyPlanAccess();
-      setRemainingLinks(planAccess.usage.remainingLinks);
-      setPlanName(planAccess.plan.name);
-    } catch (error) {
-      console.error('Failed to load plan access:', error);
-    } finally {
-      setIsPlanLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    hydratePlanAccess();
-  }, [hydratePlanAccess]);
+  // Plan data from shared store (fetched once in DashboardLayout)
+  const planName = usePlanStore(selectPlanName);
+  const remainingLinks = usePlanStore(selectRemainingLinks);
+  const isPlanLoading = usePlanStore((s) => s.isLoading);
+  const refreshUsage = usePlanStore((s) => s.refreshUsage);
 
   const isQuotaExceeded = remainingLinks !== null && remainingLinks <= 0;
 
   const handleCreate = async () => {
-    // Handling create shortlink
     if (!url) return;
 
     if (isQuotaExceeded) {
@@ -49,14 +34,14 @@ export const Dashboard: React.FC = () => {
       setCreateError(null);
       const response = await createShortenUrl(url);
       
-      // Handle nested backend data structure based on the controller `genShortLink`
       const actualShortUrl = response?.shortUrl || "";
       
       if (actualShortUrl) {
         setGeneratedShortUrl(actualShortUrl);
         setIsModalOpen(true);
-        setUrl(''); // Opt: Clear the input after success
-        hydratePlanAccess();
+        setUrl('');
+        // Refresh only the usage/quota data after link creation
+        refreshUsage();
       }
     } catch (error) {
       console.error('Error creating shortlink:', error);
@@ -65,7 +50,7 @@ export const Dashboard: React.FC = () => {
           ? String(error.message)
           : 'Không thể tạo short link. Vui lòng thử lại.';
       setCreateError(message);
-      hydratePlanAccess();
+      refreshUsage();
     }
   };
 

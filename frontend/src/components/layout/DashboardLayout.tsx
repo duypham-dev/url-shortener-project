@@ -1,14 +1,22 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import type { ReactNode } from 'react';
 import { Outlet } from 'react-router-dom';
 import { Sidebar } from './Sidebar';
 import { Header } from './Header';
+import { usePlanStore } from '../../store/usePlanStore';
 
 interface DashboardLayoutProps {
   children?: ReactNode;
 }
 
 export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
+  // Fetch plan data once when the dashboard layout mounts.
+  // This persists across all sub-routes (/dashboard, /dashboard/links, etc.)
+  // and avoids redundant API calls on navigation.
+  useEffect(() => {
+    usePlanStore.getState().fetchPlan();
+  }, []);
+
   return (
     <div className="flex h-screen bg-gray-50 overflow-hidden font-sans">
       <Sidebar />

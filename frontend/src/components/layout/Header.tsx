@@ -2,9 +2,12 @@ import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Search, HelpCircle, Zap } from 'lucide-react';
 import { useAuthStore } from '../../store/useAuthStore';
+import { usePlanStore, selectIsVip, selectPlanName } from '../../store/usePlanStore';
 
 export const Header: React.FC = () => {
   const { user, logout } = useAuthStore();
+  const isVip = usePlanStore(selectIsVip);
+  const planName = usePlanStore(selectPlanName);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
@@ -43,12 +46,15 @@ export const Header: React.FC = () => {
 
       {/* Right section */}
       <div className="flex-1 flex items-center justify-end gap-4 ml-6">
-        <button 
-          onClick={() => navigate('/dashboard/upgrade')}
-          className="hidden sm:inline-flex bg-[#00a99d] hover:bg-[#009188] text-white text-sm font-medium px-4 py-2 rounded shadow-sm transition-colors"
-        >
-          Upgrade
-        </button>
+        {/* Only show Upgrade button for free-tier users */}
+        {!isVip && (
+          <button 
+            onClick={() => navigate('/dashboard/upgrade')}
+            className="hidden sm:inline-flex bg-[#00a99d] hover:bg-[#009188] text-white text-sm font-medium px-4 py-2 rounded shadow-sm transition-colors"
+          >
+            Upgrade
+          </button>
+        )}
         
         <div className="flex items-center gap-3 text-gray-500">
           <button className="p-1.5 hover:bg-gray-100 rounded-full transition-colors hidden sm:block">
@@ -58,7 +64,7 @@ export const Header: React.FC = () => {
             <Zap size={20} />
           </button>
 
-          {/* User UserDropdown */}
+          {/* User Dropdown */}
           <div className="relative ml-2" ref={dropdownRef}>
             <div 
               className="flex items-center gap-2 cursor-pointer p-1 rounded hover:bg-gray-50"
@@ -88,17 +94,25 @@ export const Header: React.FC = () => {
                 <div className="p-4 border-b border-gray-100 flex items-center justify-between">
                    <div className="overflow-hidden pr-2">
                      <div className="font-medium text-base truncate">{user?.fullName || 'o_34h76e8osl'}</div>
-                     <div className="text-sm text-gray-500">Free account</div>
+                     <div className="text-sm text-gray-500">{planName} account</div>
                    </div>
-                   <button 
-                     onClick={() => {
-                        setIsDropdownOpen(false);
-                        navigate('/dashboard/upgrade');
-                     }}
-                     className="bg-[#00a99d] hover:bg-[#009188] text-white text-sm font-medium px-3 py-1.5 rounded transition-colors shrink-0"
-                   >
-                     Upgrade
-                   </button>
+                   {!isVip && (
+                     <button 
+                       onClick={() => {
+                          setIsDropdownOpen(false);
+                          navigate('/dashboard/upgrade');
+                       }}
+                       className="bg-[#00a99d] hover:bg-[#009188] text-white text-sm font-medium px-3 py-1.5 rounded transition-colors shrink-0"
+                     >
+                       Upgrade
+                     </button>
+                   )}
+                   {isVip && (
+                     <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-emerald-50 text-emerald-700 text-xs font-semibold rounded-full border border-emerald-200">
+                       <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" /></svg>
+                       Active
+                     </span>
+                   )}
                 </div>
 
                 <div className="py-2 border-b border-gray-100">

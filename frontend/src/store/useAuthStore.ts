@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import { getMeApi, logoutApi } from '../api/auth.api';
 import type { User } from "../types/auth.type";
+import { usePlanStore } from './usePlanStore';
 
 
 export interface AuthState {
@@ -47,6 +48,7 @@ export const useAuthStore = create<AuthState>((set) => ({
       // Dù server lỗi vẫn phải clear local session
     } finally {
       clearSession();
+      usePlanStore.getState().reset();
       set({ isAuthenticated: false, user: null });
     }
   },

@@ -1,8 +1,10 @@
 import React from "react";
+import { useNavigate } from "react-router-dom";
 import type { LinkItem } from "../types/url.type";
 import { Copy, Edit2, Share2, BarChart2, MoreHorizontal, Calendar, Tag, Lock } from "lucide-react";
 import { formatDate } from "../utils/date";
 import { useCopyToClipboard } from "../hooks/useCopyToClipboard";
+import { getShortUrlDisplay } from "../utils/url";
 
 interface LinkCardProps {
   link: LinkItem;
@@ -10,10 +12,14 @@ interface LinkCardProps {
 
 export const LinkCard: React.FC<LinkCardProps> = React.memo(({ link }) => {
   const [copiedValue, copy] = useCopyToClipboard();
-  const shortDomain = import.meta.env.VITE_API_BASE_URL || "localhost:3000/api/v1/";
-  const shortUrlDisplay = `${shortDomain}/${link.short_code}`;
+  const navigate = useNavigate();
+  const shortUrlDisplay = getShortUrlDisplay(link.short_code);
 
   const defaultFavicon = "https://t3.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=" + link.long_url + "&size=64";
+
+  const navigateToAnalytics = (link: LinkItem) => {
+    navigate(`/dashboard/links/${link.short_code}/analytics`, { state: { link } });
+  }
 
   return (
     <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 mb-4 hover:shadow-md transition-shadow">
@@ -25,7 +31,7 @@ export const LinkCard: React.FC<LinkCardProps> = React.memo(({ link }) => {
             className="w-4 h-4 mt-1 border-gray-300 rounded text-blue-600 focus:ring-blue-500 cursor-pointer"
           />
           <div className="hidden sm:block mt-1 w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center overflow-hidden shrink-0 border border-gray-200">
-             <img src={defaultFavicon} alt="" className="w-5 h-5 object-contain" />
+             <img src={defaultFavicon} alt="" className="w-full h-full object-contain" />
           </div>
         </div>
 
@@ -33,13 +39,21 @@ export const LinkCard: React.FC<LinkCardProps> = React.memo(({ link }) => {
         <div className="flex-1 w-full overflow-hidden">
           {/* Top Title & Right Actions */}
           <div className="flex justify-between items-start gap-4">
-            <h3 className="font-bold text-gray-900 text-lg truncate">
+            <h3 className="font-bold text-gray-900 text-lg truncate hover:underline cursor-pointer"
+              onClick={() => navigateToAnalytics(link)}
+            >
               {link.title || link.long_url.substring(0, 50) + "..."}
             </h3>
             <div className="flex items-center text-gray-500 gap-3">
               <button className="p-1 hover:bg-gray-100 rounded-md transition-colors"><Edit2 size={16} /></button>
               <button className="p-1 hover:bg-gray-100 rounded-md transition-colors"><Share2 size={16} /></button>
-              <button className="p-1 hover:bg-gray-100 rounded-md transition-colors"><BarChart2 size={16} /></button>
+              <button
+                onClick={() => navigateToAnalytics(link)}
+                className="p-1 hover:bg-gray-100 rounded-md transition-colors"
+                title="Xem phân tích"
+              >
+                <BarChart2 size={16} />
+              </button>
               <button className="p-1 hover:bg-gray-100 rounded-md transition-colors"><MoreHorizontal size={16} /></button>
             </div>
           </div>
@@ -72,10 +86,13 @@ export const LinkCard: React.FC<LinkCardProps> = React.memo(({ link }) => {
 
           {/* Bottom stats row */}
           <div className="flex flex-wrap items-center gap-4 mt-4 text-xs font-medium text-gray-500">
-             <div className="px-2 py-1 bg-gray-50 border border-gray-200 rounded flex items-center gap-1.5 shadow-sm text-gray-700 cursor-pointer hover:bg-gray-100 transition-colors">
+             <button
+               onClick={() => navigate(`/dashboard/links/${link.short_code}/analytics`)}
+               className="px-2 py-1 bg-gray-50 border border-gray-200 rounded flex items-center gap-1.5 shadow-sm text-gray-700 cursor-pointer hover:bg-gray-100 transition-colors"
+             >
                <Lock size={12} className="text-gray-400" />
                Click data
-             </div>
+             </button>
              
              <div className="flex items-center gap-1.5 text-gray-600 ml-1">
                <Calendar size={14} strokeWidth={2.5} />
