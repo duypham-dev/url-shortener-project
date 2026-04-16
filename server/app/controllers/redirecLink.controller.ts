@@ -1,83 +1,59 @@
-import {prisma} from "../libs/prisma"
+/**
+ * redirecLink.controller.ts
+ *
+ * Refactor Notes:
+ * - Phase 5: Replaced direct prisma.url_mappings.findUnique() and Kafka
+ *   producer.send() with service layer calls (getLongUrlByShortCode,
+ *   publishClickEvent from link.service.ts). Controller no longer imports
+ *   Prisma or Kafka directly.
+ * - Phase 4: Replaced inline catch → res.status(500) with next(error)
+ *   so all errors flow through the global errorHandler middleware.
+ * - Phase 6: Removed debug console.log("Cached URL:", cachedUrl).
+ */
 import { logger } from '../utils/logger';
-import type {Request, Response} from "express";
+import type { Request, Response, NextFunction } from "express";
 import { getCachedLink, cacheLink } from '../services/linkCache.service';
-import { Kafka } from 'kafkajs';
-import { producer } from '../services/kafka.service';
+import { getLongUrlByShortCode, publishClickEvent } from '../services/link.service.js';
+import type { ClickEventMessage } from '../services/link.service.js';
 
-const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:5173';
+const buildClickMessage = (req: Request, shortCode: string, longUrl: string): ClickEventMessage => ({
+  shortCode,
+  longUrl,
+  ip: req.ip as string,
+  userAgent: req.get('User-Agent') as string,
+  timestamp: new Date().toISOString(),
+});
 
-interface MessageInput {
-  shortCode: string;
-  longUrl: string;
-  ip: string;
-  userAgent: string;
-  timestamp: string;
-}
-
-const redirectLink = async (req: Request, res: Response) => {
+const redirectLink = async (req: Request, res: Response, next: NextFunction) => {
   const { shortCode } = req.params as { shortCode: string };
   logger.info('Received short code for redirection', { shortCode });
 
   try {
     // Check cache first before querying the database
-    let cachedUrl: string | null = null;
-    cachedUrl = await getCachedLink(shortCode);
-    console.log("Cached URL:", cachedUrl);
+    const cachedUrl = await getCachedLink(shortCode);
     if (cachedUrl) {
-      const message: MessageInput = {
-        shortCode,
-        longUrl: cachedUrl,
-        ip: req.ip as string,
-        userAgent: req.get('User-Agent') as string,
-        timestamp: new Date().toISOString()
-      };
-      // Push click event to Kafka for analytics
-      await pushMessage(message);
-
+      await publishClickEvent(buildClickMessage(req, shortCode, cachedUrl));
       logger.info('Cache hit for short code', { shortCode });
       return res.redirect(cachedUrl);
     }
 
     logger.info('Cache miss for short code, querying database', { shortCode });
 
-    const url = await prisma.url_mappings.findUnique({
-      where: {
-        short_code: shortCode 
-      }
-    });
+    // Fetch from DB via service layer (only selects long_url)
+    const longUrl = await getLongUrlByShortCode(shortCode);
 
-    if (!url) {
+    if (!longUrl) {
       return res.status(404).json({ error: 'URL not found' });
     }
+
     // Cache the result for future requests
-    await cacheLink(shortCode, url.long_url);
+    await cacheLink(shortCode, longUrl);
 
-    const message: MessageInput = {
-      shortCode,
-      longUrl: url.long_url,
-      ip: req.ip as string,
-      userAgent: req.get('User-Agent') as string,
-      timestamp: new Date().toISOString()
-    };
-    await pushMessage(message);
+    await publishClickEvent(buildClickMessage(req, shortCode, longUrl));
 
-    res.redirect(url.long_url);
+    res.redirect(longUrl);
   } catch (error) {
-    logger.error('Error occurred while redirecting link', { error });
-    res.status(500).json({ error: 'Internal server error' });
-  }
-};
-
-const pushMessage = async (message: MessageInput) => {
-  try{
-    logger.info('Sending message to Kafka', { message });
-    await producer.send({
-      topic: 'click-events',
-      messages: [{ value: JSON.stringify(message) }],
-    });
-  } catch (error) {
-    logger.error('Error sending message to Kafka', { error });
+    next(error);
   }
 };
 

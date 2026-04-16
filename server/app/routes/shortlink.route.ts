@@ -1,5 +1,11 @@
+/**
+ * shortlink.route.ts
+ *
+ * Refactor Notes:
+ * - Phase 6: Removed unused `import { prisma }` (was imported but never used).
+ * - Phase 6: Removed debug route `GET /duy/:id` (test/dev artifact).
+ */
 import express from 'express'
-import { prisma } from '../libs/prisma.js';
 const router = express.Router()
 import genShortLink from '../controllers/generateLink.controller.js';
 import redirectLink from '../controllers/redirecLink.controller.js';
@@ -13,15 +19,7 @@ router.get('/links', verifyToken, getLinks);
 // POST /api/shorten - create a short URL
 router.post('/shorten', verifyToken, enforceCreateLinkQuota, genShortLink);
 
-// GET /api/shorten - simple example response for quick testing
+// GET /api/v1/:shortCode - redirect to long URL
 router.get('/:shortCode', redirectLink);
-
-router.get('/duy/:id', async (req, res) => {
-  const { id } = req.params;
-  console.log("Received ID:", id);
-res.status(200).json({ message: `Received ID: ${id}` });
-})
-
-
 
 export default router

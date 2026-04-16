@@ -1,7 +1,21 @@
+/**
+ * generateLink.controller.ts
+ *
+ * Refactor Notes:
+ * - Phase 4: Replaced inline res.status(401/400/422) responses with
+ *   throw UnauthorizedError/BadRequestError/ValidationError.
+ *   All errors now flow through the global errorHandler middleware
+ *   via try/catch → next(error), ensuring consistent error response format.
+ */
 import type { NextFunction, Request, Response } from "express";
 import generateShortLink from "../utils/generateShortLink";
 import { ApiResponse } from "../utils/response";
 import { saveLink } from "../services/saveLink.service";
+import {
+  BadRequestError,
+  UnauthorizedError,
+  ValidationError,
+} from "../errors/app.error.js";
 
 interface ShortenRequestBody {
   originalUrl: string;
@@ -29,32 +43,26 @@ const genShortLink = async (
   res: Response,
   next: NextFunction,
 ): Promise<void> => {
-
-  const { originalUrl} = req.body;
-  const userId = req.user?.userId || null;
-
-  if (!userId) {
-    res.status(401).json({ message: "Unauthorized." });
-    return;
-  }
-
-  if (!originalUrl?.trim()) {
-    res.status(400).json({ message: "URL is required." });
-    return;
-  }
-
-  if (!isValidUrl(originalUrl)) {
-    res
-      .status(422)
-      .json({
-        message: "Invalid URL format. Must start with http:// or https://.",
-      });
-    return;
-  }
-
-  const shortUrl = await generateShortLink(originalUrl, userId);
-
   try {
+    const { originalUrl } = req.body;
+    const userId = req.user?.userId || null;
+
+    if (!userId) {
+      throw new UnauthorizedError("Unauthorized.");
+    }
+
+    if (!originalUrl?.trim()) {
+      throw new BadRequestError("URL is required.");
+    }
+
+    if (!isValidUrl(originalUrl)) {
+      throw new ValidationError(
+        "Invalid URL format. Must start with http:// or https://.",
+      );
+    }
+
+    const shortUrl = await generateShortLink(originalUrl, userId);
+
     await saveLink(originalUrl, shortUrl.split("/").pop()!, userId);
     ApiResponse.created(
       res,

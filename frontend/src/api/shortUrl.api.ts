@@ -1,11 +1,6 @@
 import { axiosClient } from "../config/axiosClient";
+import type { ApiEnvelope } from "../types/api.type";
 import type { LinkItem, ShortenResponse } from "../types/url.type";
-
-interface ApiEnvelope<T> {
-  success: boolean;
-  message?: string;
-  data: T;
-}
 
 export const createShortenUrl = async (
   originalUrl: string,

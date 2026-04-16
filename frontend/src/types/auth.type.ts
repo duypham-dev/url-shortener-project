@@ -5,7 +5,6 @@ export interface User {
   userId: number;
   fullName: string;
   email: string;
-  isVip: boolean;
   role: string;
 }
 
@@ -48,7 +47,7 @@ export interface RefreshApiResponse {
 
 // ============================================================
 // Response trả về từ /auth/me
-// JWT payload chứa userId (không phải id), nên cần map lại
+// JWT payload — session identity only, no subscription data
 // ============================================================
 export interface MeApiResponse {
   success: boolean;
@@ -58,7 +57,6 @@ export interface MeApiResponse {
       userId: number;
       email: string;
       role: string;
-      isVip: boolean;
     };
   };
 }

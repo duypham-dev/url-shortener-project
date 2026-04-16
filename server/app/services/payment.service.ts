@@ -1,3 +1,16 @@
+/**
+ * payment.service.ts
+ *
+ * Refactor Notes:
+ * - Phase 3: Split monolithic getPaymentByOrderId (which used nested `include`
+ *   fetching ALL columns from payments + subscriptions + subscription_plans)
+ *   into three purpose-specific query functions:
+ *     • getPaymentForVerification — minimal fields for signature/amount checks
+ *     • getPaymentForProcessing — adds subscription + plan duration for IPN flow
+ *     • getPaymentForDisplay — shaped fields for the API response
+ *   Each fetches only what its caller needs, avoiding large JSONB payloads
+ *   and unnecessary JOINs.
+ */
 import config from "config";
 import crypto from "crypto";
 import qs from "qs";
@@ -178,13 +191,73 @@ export const createPendingPayment = async (
   });
 };
 
-export const getPaymentByOrderId = async (orderId: string) => {
+// ----------------------------------------------------------------
+// Purpose-specific payment queries (replaces monolithic getPaymentByOrderId)
+// ----------------------------------------------------------------
+
+/**
+ * Minimal query for signature/amount verification (vnpay_return flow).
+ * Only fetches the fields needed to validate the payment.
+ */
+export const getPaymentForVerification = async (orderId: string) => {
   return prisma.payments.findUnique({
     where: { id: orderId },
-    include: {
+    select: {
+      id: true,
+      amount: true,
+      status: true,
+      user_id: true,
+    },
+  });
+};
+
+/**
+ * Query for IPN processing — includes subscription + plan duration.
+ * Avoids fetching large provider_payload JSONB.
+ */
+export const getPaymentForProcessing = async (orderId: string) => {
+  return prisma.payments.findUnique({
+    where: { id: orderId },
+    select: {
+      id: true,
+      amount: true,
+      status: true,
+      user_id: true,
+      subscription_id: true,
       subscriptions: {
-        include: {
-          subscription_plans: true,
+        select: {
+          subscription_plans: {
+            select: {
+              duration_days: true,
+            },
+          },
+        },
+      },
+    },
+  });
+};
+
+/**
+ * Query for the payment result API response — includes display-friendly fields.
+ */
+export const getPaymentForDisplay = async (orderId: string) => {
+  return prisma.payments.findUnique({
+    where: { id: orderId },
+    select: {
+      id: true,
+      amount: true,
+      currency: true,
+      status: true,
+      user_id: true,
+      paid_at: true,
+      provider_payload: true,
+      subscriptions: {
+        select: {
+          subscription_plans: {
+            select: {
+              name: true,
+            },
+          },
         },
       },
     },
@@ -299,7 +372,7 @@ export const processVnpayPayment = async (
   vnpAmount: number,
   vnpParams: VnpParams,
 ): Promise<ProcessPaymentResult> => {
-  const payment = await getPaymentByOrderId(orderId);
+  const payment = await getPaymentForProcessing(orderId);
   if (!payment) {
     return { outcome: "not_found" };
   }

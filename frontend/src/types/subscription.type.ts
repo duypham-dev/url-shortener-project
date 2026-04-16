@@ -38,5 +38,4 @@ export interface ActivePlanAccess {
   subscription: ActiveSubscription | null;
   usage: UsageSnapshot;
   hasPendingPayment: boolean;
-  isVip: boolean;
 }

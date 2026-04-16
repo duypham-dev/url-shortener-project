@@ -1,35 +1,36 @@
+/**
+ * auth.controller.ts
+ *
+ * Refactor Notes:
+ * - Phase 7: Replaced duplicated REFRESH_TOKEN_COOKIE / COOKIE_OPTIONS with
+ *   imports from shared cookie.util.ts.
+ * - Phase 2 (Option A): getMeHandler remains JWT-only for fast response.
+ *   Updated comment to clarify the design tradeoff: speed over freshness.
+ *   Frontend uses /subscriptions/me/plan when authoritative subscription data is needed.
+ */
 import type { Request, Response, NextFunction } from "express";
 import * as authService from "../services/auth.service";
 import {
   validateRegisterInput,
   validateLoginInput,
 } from "../utils/validate.util";
+import {
+  REFRESH_TOKEN_COOKIE,
+  setRefreshTokenCookie,
+  clearRefreshTokenCookie,
+} from "../utils/cookie.util";
 
 const toAuthUserDto = (user: {
   id: number;
   full_name: string;
   email: string;
-  is_vip: boolean;
   role: string;
 }) => ({
   userId: user.id,
   fullName: user.full_name,
   email: user.email,
-  isVip: user.is_vip,
   role: user.role,
 });
-
-// Cookie tên cho refreshToken
-const REFRESH_TOKEN_COOKIE = "refreshToken";
-
-// Options cho httpOnly cookie - tập trung tại đây để dễ maintain
-const COOKIE_OPTIONS = {
-  httpOnly: true,
-  secure: process.env.NODE_ENV === "production", // HTTPS only trong prod
-  sameSite: "lax" as const,
-  maxAge: 7 * 24 * 60 * 60 * 1000, // 7 ngày (milliseconds)
-  path: "/",
-};
 
 // ================================================================
 // POST /api/v1/auth/register
@@ -59,7 +60,7 @@ export const registerHandler = async (
     });
 
     // 3. Set refreshToken vào httpOnly cookie
-    res.cookie(REFRESH_TOKEN_COOKIE, refreshToken, COOKIE_OPTIONS);
+    setRefreshTokenCookie(res, refreshToken);
 
     // 4. Trả về accessToken và thông tin user qua JSON
     res.status(201).json({
@@ -99,7 +100,7 @@ export const loginHandler = async (
     });
 
     // 3. Set refreshToken vào httpOnly cookie
-    res.cookie(REFRESH_TOKEN_COOKIE, refreshToken, COOKIE_OPTIONS);
+    setRefreshTokenCookie(res, refreshToken);
 
     // 4. Trả về accessToken
     res.status(200).json({
@@ -138,7 +139,7 @@ export const refreshHandler = async (
     // 2. Gọi service - sẽ rotate token (phát hành cặp mới, invalidate cũ)
     const { accessToken, refreshToken: newRefreshToken } = await authService.refreshTokens(incomingRefreshToken);
     // 3. Cập nhật cookie với refreshToken mới
-    res.cookie(REFRESH_TOKEN_COOKIE, newRefreshToken, COOKIE_OPTIONS);
+    setRefreshTokenCookie(res, newRefreshToken);
 
     // 4. Trả về accessToken mới
     res.status(200).json({
@@ -170,7 +171,7 @@ export const logoutHandler = async (
     await authService.logout(userId, accessToken);
 
     // Xóa cookie
-    res.clearCookie(REFRESH_TOKEN_COOKIE, { path: "/" });
+    clearRefreshTokenCookie(res);
 
     res.status(200).json({
       success: true,
@@ -183,7 +184,10 @@ export const logoutHandler = async (
 
 // ================================================================
 // GET /api/v1/auth/me  [Protected - cần verifyToken]
-// Lấy thông tin user hiện tại từ token (không query DB)
+// Returns the JWT payload directly — no DB query.
+// Design tradeoff (Option A): speed over freshness.
+// isVip/role may be up to 15 min stale (until next token refresh).
+// For authoritative subscription data, frontend uses /subscriptions/me/plan.
 // ================================================================
 export const getMeHandler = (req: Request, res: Response): void => {
   // req.user đã được verifyToken middleware gắn vào

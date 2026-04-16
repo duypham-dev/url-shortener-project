@@ -13,7 +13,6 @@ export interface JwtPayload {
   userId: number;
   fullName: string;
   email: string;
-  is_vip: boolean;
   role: string;
 }
 

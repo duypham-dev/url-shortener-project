@@ -22,7 +22,6 @@ export const getActiveSubscriptionPlans = async () => {
       allow_expiry: true,
       allow_custom_domain: true,
       allow_qr_code: true,
-      sort_order: true,
     },
   });
 };

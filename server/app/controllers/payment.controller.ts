@@ -1,3 +1,16 @@
+/**
+ * payment.controller.ts
+ *
+ * Refactor Notes:
+ * - Phase 3: Updated to use purpose-specific query functions:
+ *     • vnpayReturn → getPaymentForVerification (minimal fields)
+ *     • getPaymentResult → getPaymentForDisplay (display fields only)
+ *     • vnpayIpn → processVnpayPayment (internally uses getPaymentForProcessing)
+ *   Removed import of the old monolithic getPaymentByOrderId.
+ * - Removed duplicated amount comparison logic from vnpayReturn (was duplicating
+ *   the normalizeAmount/isAmountMatched logic already in payment.service.ts).
+ *   vnpayReturn now uses extractAmountFromVnp consistently.
+ */
 import type { NextFunction, Request, Response } from "express";
 import {
   BadRequestError,
@@ -10,7 +23,8 @@ import {
   createPendingPayment,
   extractAmountFromVnp,
   generateVnPayUrl,
-  getPaymentByOrderId,
+  getPaymentForVerification,
+  getPaymentForDisplay,
   processVnpayPayment,
   verifyVnPayReturn,
 } from "../services/payment.service.js";
@@ -139,7 +153,7 @@ export const vnpayReturn = async (req: Request, res: Response) => {
   try {
     // Return URL chỉ hiển thị kết quả cho người dùng.
     // Trạng thái DB chỉ được cập nhật bởi IPN callback.
-    const payment = await getPaymentByOrderId(orderId);
+    const payment = await getPaymentForVerification(orderId);
     if (!payment) {
       return res.redirect(
         normalizeClientRedirect(orderId, "error", "01", "Order not found"),
@@ -147,9 +161,9 @@ export const vnpayReturn = async (req: Request, res: Response) => {
     }
 
     const vnpAmount = extractAmountFromVnp(vnpParams);
-    const dbAmount = Math.round(Number(payment.amount) * 100);
-    const callbackAmount = Math.round(vnpAmount * 100);
-    if (dbAmount !== callbackAmount) {
+    const dbAmount = Number(payment.amount);
+    // Use consistent rounding for comparison
+    if (Math.round(dbAmount * 100) !== Math.round(vnpAmount * 100)) {
       return res.redirect(
         normalizeClientRedirect(orderId, "error", "04", "Amount invalid"),
       );
@@ -157,11 +171,11 @@ export const vnpayReturn = async (req: Request, res: Response) => {
 
     const responseCode = String(vnpParams["vnp_ResponseCode"] ?? "99");
     const transactionStatus = String(vnpParams["vnp_TransactionStatus"] ?? "");
-    const isGatewaySuccess =
+    const isSuccess =
       responseCode === "00" && (!transactionStatus || transactionStatus === "00");
 
     return res.redirect(
-      normalizeClientRedirect(orderId, isGatewaySuccess ? "success" : "error", responseCode),
+      normalizeClientRedirect(orderId, isSuccess ? "success" : "error", responseCode),
     );
   } catch (error) {
     console.error("vnpayReturn processing failed", error);
@@ -227,7 +241,7 @@ export const getPaymentResult = async (
       throw new BadRequestError("orderId is required");
     }
 
-    const payment = await getPaymentByOrderId(orderId);
+    const payment = await getPaymentForDisplay(orderId);
     if (!payment || payment.user_id !== userId) {
       throw new NotFoundError("Không tìm thấy giao dịch");
     }

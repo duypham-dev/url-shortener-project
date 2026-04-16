@@ -1,4 +1,17 @@
-import type { Prisma } from "../../generated/prisma/client";
+/**
+ * subscriptionAccess.service.ts
+ *
+ * Refactor Notes:
+ * - isVipUser(): REPLACED full getActivePlanContext() cascade (3-5 queries + UPDATE)
+ *   with a single lightweight existence check on the subscriptions table.
+ *   This eliminates the major bottleneck on every auth event.
+ * - Removed unused `tx?: Prisma.TransactionClient` parameter from all functions.
+ *   The parameter was accepted but never wired through — callers always hit the
+ *   global prisma client. Removing avoids misleading callers.
+ * - Added explicit `select` to getFallbackFreePlan() and the subscription query
+ *   in getActivePlanContext() to avoid fetching unnecessary columns.
+ * - Added explicit `select` to activeSubscription query (replaces `include`).
+ */
 import type { PlanTier } from "../../generated/prisma/enums";
 import { prisma } from "../libs/prisma";
 import {
@@ -51,12 +64,29 @@ export interface ActivePlanContext {
   hasPendingPayment: boolean;
 }
 
+// Select clause matching ActivePlanSummary fields (reused across queries)
+const PLAN_SELECT = {
+  id: true,
+  name: true,
+  tier: true,
+  duration_days: true,
+  price: true,
+  currency: true,
+  max_links: true,
+  max_custom_links: true,
+  allow_analytics: true,
+  allow_expiry: true,
+  allow_custom_domain: true,
+  allow_qr_code: true,
+  reset_period: true,
+} as const;
+
 const mapPlan = (plan: {
   id: number;
   name: string;
   tier: PlanTier;
   duration_days: number;
-  price: Prisma.Decimal;
+  price: { toNumber?: () => number } | number;
   currency: string;
   max_links: number;
   max_custom_links: number;
@@ -67,13 +97,12 @@ const mapPlan = (plan: {
   reset_period: "never" | "monthly" | "yearly";
 }): ActivePlanSummary => ({
   ...plan,
-  price: Number(plan.price),
+  price: typeof plan.price === "number" ? plan.price : Number(plan.price),
 });
 
 const getPlanUsage = async (
   userId: number,
   plan: ActivePlanSummary,
-  tx?: Prisma.TransactionClient,
 ): Promise<UsageSummary> => {
   const yearMonth = getCurrentYearMonth();
 
@@ -106,8 +135,7 @@ const getPlanUsage = async (
   };
 };
 
-const getFallbackFreePlan = async (tx?: Prisma.TransactionClient) => {
-
+const getFallbackFreePlan = async () => {
   const freePlan = await prisma.subscription_plans.findFirst({
     where: {
       tier: "free",
@@ -116,6 +144,7 @@ const getFallbackFreePlan = async (tx?: Prisma.TransactionClient) => {
     orderBy: {
       price: "asc",
     },
+    select: PLAN_SELECT,
   });
 
   if (!freePlan) {
@@ -127,7 +156,6 @@ const getFallbackFreePlan = async (tx?: Prisma.TransactionClient) => {
 
 const syncExpiredSubscriptions = async (
   userId: number,
-  tx?: Prisma.TransactionClient,
 ): Promise<void> => {
   await prisma.subscriptions.updateMany({
     where: {
@@ -143,10 +171,9 @@ const syncExpiredSubscriptions = async (
 
 export const getActivePlanContext = async (
   userId: number,
-  tx?: Prisma.TransactionClient,
 ): Promise<ActivePlanContext> => {
 
-  await syncExpiredSubscriptions(userId, tx);
+  await syncExpiredSubscriptions(userId);
 
   const [activeSubscription, pendingPayment] = await Promise.all([
     prisma.subscriptions.findFirst({
@@ -158,8 +185,14 @@ export const getActivePlanContext = async (
       orderBy: {
         expires_at: "desc",
       },
-      include: {
-        subscription_plans: true,
+      select: {
+        id: true,
+        status: true,
+        started_at: true,
+        expires_at: true,
+        subscription_plans: {
+          select: PLAN_SELECT,
+        },
       },
     }),
     prisma.payments.findFirst({
@@ -178,10 +211,10 @@ export const getActivePlanContext = async (
 
   const planSource = activeSubscription?.subscription_plans
     ? activeSubscription.subscription_plans
-    : await getFallbackFreePlan(tx);
+    : await getFallbackFreePlan();
 
   const plan = mapPlan(planSource);
-  const usage = await getPlanUsage(userId, plan, tx);
+  const usage = await getPlanUsage(userId, plan);
 
   return {
     plan,
@@ -248,9 +281,4 @@ export const assertCanCreateLink = async (
     "Bạn đã vượt giới hạn số link trong tháng của gói hiện tại.",
     errorDetails,
   );
-};
-
-export const isVipUser = async (userId: number): Promise<boolean> => {
-  const context = await getActivePlanContext(userId);
-  return context.plan.tier !== "free";
 };

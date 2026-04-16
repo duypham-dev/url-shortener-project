@@ -13,12 +13,13 @@ export const getSubscriptionPlans = async (
 ) => {
   try {
     const plans = await getActiveSubscriptionPlans();
-    return res.status(200).json(
-      plans.map((plan) => ({
+    return res.status(200).json({
+      success: true,
+      data: plans.map((plan) => ({
         ...plan,
         price: Number(plan.price),
       })),
-    );
+    });
   } catch (error) {
     next(error);
   }
@@ -48,7 +49,6 @@ export const getMyPlanAccess = async (
         subscription: context.subscription,
         usage: context.usage,
         hasPendingPayment: context.hasPendingPayment,
-        isVip: context.plan.tier !== "free",
       },
     });
   } catch (error) {

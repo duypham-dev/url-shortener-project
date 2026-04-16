@@ -1,7 +1,15 @@
+/**
+ * googleLogin.controller.ts
+ *
+ * Refactor Notes:
+ * - Phase 7: Replaced duplicated REFRESH_TOKEN_COOKIE / COOKIE_OPTIONS with
+ *   import from shared cookie.util.ts (single source of truth).
+ */
 import { OAuth2Client } from 'google-auth-library';
 import { logger } from '../utils/logger';
 import type {Request, Response} from "express";
 import * as oauthService from '../services/auth.service';
+import { setRefreshTokenCookie } from '../utils/cookie.util';
 
 const googleOAuthClient = new OAuth2Client({
   clientId: process.env.GOOGLE_WEB_CLIENT_ID as string,
@@ -10,18 +18,6 @@ const googleOAuthClient = new OAuth2Client({
 
 /** Frontend URL for OAuth redirects */
 const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:5173';
-
-// Cookie tên cho refreshToken
-const REFRESH_TOKEN_COOKIE = "refreshToken";
-
-// Options cho httpOnly cookie - tập trung tại đây để dễ maintain
-const COOKIE_OPTIONS = {
-  httpOnly: true,
-  secure: process.env.NODE_ENV === "production", // HTTPS only trong prod
-  sameSite: "lax" as const,
-  maxAge: 7 * 24 * 60 * 60 * 1000, // 7 ngày (milliseconds)
-  path: "/",
-};
 
 export const googleLogin = async (req: Request, res: Response) => {
   try {
@@ -61,7 +57,7 @@ export const googleLogin = async (req: Request, res: Response) => {
 
     // Find existing user or create new account
     const { accessToken, refreshToken} = await oauthService.findOrCreateOAuthUser(googleProfile);
-    res.cookie(REFRESH_TOKEN_COOKIE, refreshToken, COOKIE_OPTIONS);
+    setRefreshTokenCookie(res, refreshToken);
     // Redirect to frontend OAuth callback page
     // Access token passed via URL (short-lived, acceptable for redirect)
     // Refresh token is in HttpOnly cookie

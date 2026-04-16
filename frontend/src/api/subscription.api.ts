@@ -1,17 +1,16 @@
 import { axiosClient } from "../config/axiosClient";
+import type { ApiEnvelope } from "../types/api.type";
 import type {
   ActivePlanAccess,
   SubscriptionPlan,
 } from "../types/subscription.type";
 
-interface ApiEnvelope<T> {
-  success: boolean;
-  message?: string;
-  data: T;
-}
-
 export const getSubscriptionPlans = async (): Promise<SubscriptionPlan[]> => {
-  return axiosClient.get("/subscriptions/plans");
+  const response = (await axiosClient.get(
+    "/subscriptions/plans",
+  )) as ApiEnvelope<SubscriptionPlan[]>;
+
+  return response.data;
 };
 
 export const getMyPlanAccess = async (): Promise<ActivePlanAccess> => {

@@ -1,7 +1,16 @@
-import type { Request, Response } from "express";
-import { prisma } from "../libs/prisma.js";
+/**
+ * getLinks.controller.ts
+ *
+ * Refactor Notes:
+ * - Phase 5: Replaced direct prisma.url_mappings.findMany() call with
+ *   getUserLinks() from the service layer. Controller no longer imports Prisma.
+ * - Phase 4: Replaced inline catch → res.status(500) with next(error)
+ *   so all errors flow through the global errorHandler middleware.
+ */
+import type { Request, Response, NextFunction } from "express";
+import { getUserLinks } from "../services/link.service.js";
 
-const getLinks = async (req: Request, res: Response): Promise<void> => {
+const getLinks = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     const userId = req.user?.userId;
 
@@ -10,22 +19,11 @@ const getLinks = async (req: Request, res: Response): Promise<void> => {
       return;
     }
 
-    const links = await prisma.url_mappings.findMany({
-      where: { user_id: Number(userId), is_active: true },
-      orderBy: { created_at: "desc" },
-      select: {
-        short_code: true,
-        long_url: true,
-        title: true,
-        created_at: true,
-        click_count: true,
-      },
-    });
+    const links = await getUserLinks(userId);
 
     res.status(200).json({ success: true, data: links });
   } catch (error) {
-    console.error("Error fetching links:", error);
-    res.status(500).json({ success: false, message: "Failed to fetch links." });
+    next(error);
   }
 };
 

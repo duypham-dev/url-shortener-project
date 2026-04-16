@@ -36,16 +36,6 @@ const validate = (form: RegisterForm): FieldErrors => {
 
   if (!form.password) {
     errors.password = 'Mật khẩu là bắt buộc.';
-  }
-
-  if (!form.email.trim()) {
-    errors.email = 'Email là bắt buộc.';
-  } else if (!isValidEmail(form.email)) {
-    errors.email = 'Email không đúng định dạng.';
-  }
-
-  if (!form.password) {
-    errors.password = 'Mật khẩu là bắt buộc.';
   } else if (form.password.length < 8) {
     errors.password = 'Mật khẩu phải có ít nhất 8 ký tự.';
   } else if (!/(?=.*[A-Z])(?=.*[0-9])/.test(form.password)) {

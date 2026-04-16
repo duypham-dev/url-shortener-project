@@ -1,10 +1,5 @@
 import { axiosClient } from "../config/axiosClient";
-
-interface ApiEnvelope<T> {
-  success: boolean;
-  message?: string;
-  data: T;
-}
+import type { ApiEnvelope } from "../types/api.type";
 
 export interface CreatePaymentUrlData {
   paymentUrl: string;
