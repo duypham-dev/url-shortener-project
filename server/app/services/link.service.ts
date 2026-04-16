@@ -41,6 +41,22 @@ export const getUserLinks = async (userId: number) => {
 };
 
 // ----------------------------------------------------------------
+// Get a specific link's info by shortCode (used by getLinkInfo controller)
+// ----------------------------------------------------------------
+export const getLinkInfoByShortCode = async (shortCode: string, userId: number) => {
+  return prisma.url_mappings.findFirst({
+    where: { short_code: shortCode, user_id: userId, is_active: true },
+    select: {
+      short_code: true,
+      long_url: true,
+      title: true,
+      created_at: true,
+      click_count: true,
+    },
+  });
+};
+
+// ----------------------------------------------------------------
 // Resolve a short code to its long URL (used by redirect controller)
 // Only fetches the long_url column — no need for other fields.
 // ----------------------------------------------------------------

@@ -16,9 +16,6 @@ const LinkCardDetail: React.FC<{ link: LinkItem }> = ({ link }) => {
   const [copiedValue, copy] = useCopyToClipboard();
   const shortUrlDisplay = getShortUrlDisplay(link.short_code);
 
-  const handleCopy = () => {
-    copy(shortUrlDisplay);
-  };
 
   return (
     <div className="w-full bg-white rounded-xl p-6 font-sans border border-gray-100">
@@ -52,7 +49,7 @@ const LinkCardDetail: React.FC<{ link: LinkItem }> = ({ link }) => {
           {/* Short URL Section */}
           <div className="flex items-center gap-2 mb-2">
             <a
-              href={`https://${link.short_code}`}
+              href={`${shortUrlDisplay}`}
               className="text-blue-600 hover:underline font-medium text-[15px]"
               target="_blank"
               rel="noreferrer"
@@ -60,7 +57,7 @@ const LinkCardDetail: React.FC<{ link: LinkItem }> = ({ link }) => {
               {shortUrlDisplay}
             </a>
             <button
-              onClick={() => handleCopy(link.short_code)}
+              onClick={() => copy(shortUrlDisplay)}
               className="p-1 text-blue-600 hover:bg-blue-50 rounded transition-colors"
               title="Copy"
             >

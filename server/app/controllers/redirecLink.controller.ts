@@ -27,7 +27,8 @@ const buildClickMessage = (req: Request, shortCode: string, longUrl: string): Cl
 const redirectLink = async (req: Request, res: Response, next: NextFunction) => {
   const { shortCode } = req.params as { shortCode: string };
   logger.info('Received short code for redirection', { shortCode });
-
+  console.log("REQUEST INFO: ", req)
+  console.log("REQUEST REFERRER: ", req.get('Referrer'))
   try {
     // Check cache first before querying the database
     const cachedUrl = await getCachedLink(shortCode);

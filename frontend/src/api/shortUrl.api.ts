@@ -16,3 +16,8 @@ export const getUserLinks = async (): Promise<LinkItem[]> => {
   const response = (await axiosClient.get("/links")) as ApiEnvelope<LinkItem[]>;
   return response.data || [];
 };
+
+export const getLinkInfo = async (shortCode: string): Promise<LinkItem> => {
+  const response = (await axiosClient.get(`/links/${shortCode}`)) as ApiEnvelope<LinkItem>;
+  return response.data;
+};

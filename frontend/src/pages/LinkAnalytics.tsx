@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { useParams, useNavigate, Link, useLocation } from 'react-router-dom';
+import { useParams, useNavigate, Link } from 'react-router-dom';
 import { ArrowLeft, ChevronLeft, BarChart2, TrendingUp, MousePointerClick, Lock, Crown } from 'lucide-react';
 import {
   AreaChart,
@@ -14,17 +14,18 @@ import type { LinkItem } from '../types/url.type';
 import LinkCardDetail from '../components/LinkCardDetail';
 import LinkQRCode from '../components/LinkQRCode';
 import { getLinkAnalytics } from '../api/analytics.api';
+import { getLinkInfo } from '../api/shortUrl.api';
 import type { LinkAnalyticsData } from '../types/analytics.type';
 import { usePlanStore, selectIsVip } from '../store/usePlanStore';
 
 export const LinkAnalytics: React.FC = () => {
   const { shortCode } = useParams<{ shortCode: string }>();
   
-  const link = useLocation().state?.link as LinkItem ;
   const navigate = useNavigate();
   const isVip = usePlanStore(selectIsVip);
   const isLoaded = usePlanStore((s) => s.isLoaded);
 
+  const [link, setLink] = useState<LinkItem | null>(null);
   const [analytics, setAnalytics] = useState<LinkAnalyticsData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -33,31 +34,44 @@ export const LinkAnalytics: React.FC = () => {
   useEffect(() => {
     if (!shortCode || !isLoaded) return;
 
-    // If free user, show gate immediately without calling API
-    if (!isVip) {
-      setIsPlanGated(true);
-      setIsLoading(false);
-      return;
-    }
+    let isMounted = true;
 
-    const fetchAnalytics = async () => {
+    const loadData = async () => {
+      setIsLoading(true);
+      setError(null);
+      
       try {
-        setIsLoading(true);
-        setError(null);
-        const data = await getLinkAnalytics(shortCode);
-        setAnalytics(data);
+        // 1. Fetch link details
+        const linkData = await getLinkInfo(shortCode);
+        if (!isMounted) return;
+        setLink(linkData);
+
+        // 2. Fetch analytics if VIP
+        if (!isVip) {
+          setIsPlanGated(true);
+          setIsLoading(false);
+          return;
+        }
+
+        const analyticsData = await getLinkAnalytics(shortCode);
+        if (!isMounted) return;
+        setAnalytics(analyticsData);
       } catch (err: any) {
+        if (!isMounted) return;
+        
         if (err?.code === 'PLAN_REQUIRED') {
           setIsPlanGated(true);
         } else {
-          setError(err?.message || 'Không thể tải dữ liệu phân tích.');
+          setError(err?.response?.data?.message || err?.message || 'Không thể tải dữ liệu phân tích.');
         }
       } finally {
-        setIsLoading(false);
+        if (isMounted) setIsLoading(false);
       }
     };
 
-    fetchAnalytics();
+    loadData();
+
+    return () => { isMounted = false; };
   }, [shortCode, isVip, isLoaded]);
 
   // Format date for chart labels (e.g., "15/04")
@@ -150,6 +164,8 @@ export const LinkAnalytics: React.FC = () => {
       </div>
     );
   }
+
+  if (!link) return null;
 
   // Success state — show analytics
   return (

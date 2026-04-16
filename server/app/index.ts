@@ -22,7 +22,6 @@ import {
   errorHandler,
   notFoundHandler,
 } from "./middlewares/errorHandler.middleware.js";
-import { initKafka } from "./services/kafka.service.js";
 
 const app = express();
 
@@ -36,11 +35,11 @@ const corsOptions = {
 };
 
 // ---- Security ----
-app.use(
-  helmet({
-    referrerPolicy: { policy: "no-referrer" },
-  })
-);
+// app.use(
+//   helmet({
+//     referrerPolicy: { policy: "no-referrer" },
+//   })
+// );
 app.use(cors(corsOptions));
 
 // ---- Logging ----
@@ -50,6 +49,7 @@ app.use(morgan("common"));
 app.use(cookieParser()); // Cần thiết để đọc httpOnly cookie chứa refreshToken
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
+
 // Ensure responses are not cached by browsers or intermediate proxies
 app.use((req, res, next) => {
   res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
@@ -57,6 +57,7 @@ app.use((req, res, next) => {
   res.setHeader('Expires', '0');
   next();
 });
+
 // ---- Routes ----
 app.use(`${baseUrl}/auth`, authRouter);     // /api/v1/auth/*
 app.use(`${baseUrl}/subscriptions`, subscriptionRouter);
