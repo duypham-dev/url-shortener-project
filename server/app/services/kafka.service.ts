@@ -1,39 +1,66 @@
-import { Kafka } from 'kafkajs';
+import { Kafka, type Producer } from 'kafkajs';
 import { logger } from '../utils/logger';
 
-const kafka = new Kafka({
-  clientId: 'short-link-app',
-  brokers: process.env.KAFKA_BROKERS?.split(',') || ['localhost:9092']
+// ----------------------------------------------------------------
+// Config — sourced from env so deployments can override without code changes
+// ----------------------------------------------------------------
+export const CLICK_EVENTS_TOPIC = process.env.KAFKA_CLICK_TOPIC ?? 'click-events';
+const KAFKA_BROKERS = process.env.KAFKA_BROKERS?.split(',') ?? ['localhost:9092'];
+const KAFKA_CLIENT_ID = process.env.KAFKA_CLIENT_ID ?? 'short-link-app';
+
+// ----------------------------------------------------------------
+// Shared Kafka client — exported so consumer.ts can reuse it
+// instead of spinning up a second independent connection.
+// ----------------------------------------------------------------
+export const kafka = new Kafka({
+  clientId: KAFKA_CLIENT_ID,
+  brokers: KAFKA_BROKERS,
 });
 
-export const producer = kafka.producer();
-const admin = kafka.admin();
+export const producer: Producer = kafka.producer();
 
-// Gọi hàm này lúc ứng dụng Node.js bắt đầu chạy (VD: trong index.ts)
-export const initKafka = async () => {
+// ----------------------------------------------------------------
+// initKafka — called once at server startup.
+//
+// Design intent:
+//   - Click tracking is a non-critical side-effect; the HTTP server
+//     must NOT refuse to boot just because Kafka is temporarily down.
+//   - Therefore init failures are logged as warnings, not re-thrown.
+//   - Admin uses try/finally to guarantee disconnect even on error.
+// ----------------------------------------------------------------
+export const initKafka = async (): Promise<void> => {
+  const admin = kafka.admin();
+
   try {
-    // 1. Kết nối Admin để kiểm tra và tạo Topic
+    // 1. Ensure topic exists
     await admin.connect();
+
     const existingTopics = await admin.listTopics();
-    
-    if (!existingTopics.includes('click-events')) {
-      logger.info('Topic "click-events" không tồn tại. Đang tạo mới...');
+    if (!existingTopics.includes(CLICK_EVENTS_TOPIC)) {
+      logger.info(`Kafka: topic "${CLICK_EVENTS_TOPIC}" not found — creating...`);
       await admin.createTopics({
         topics: [{
-          topic: 'click-events',
-          numPartitions: 1,     // Số partition (bạn có thể tăng lên nếu hệ thống lớn)
-          replicationFactor: 1  // Vì bạn chạy 1 node kafka trên docker nên để là 1
-        }]
+          topic: CLICK_EVENTS_TOPIC,
+          numPartitions: Number(process.env.KAFKA_PARTITIONS ?? 1),
+          replicationFactor: Number(process.env.KAFKA_REPLICATION_FACTOR ?? 1),
+        }],
       });
-      logger.info('Đã tạo topic "click-events" thành công!');
+      logger.info(`Kafka: topic "${CLICK_EVENTS_TOPIC}" created successfully.`);
     }
-    await admin.disconnect();
 
-    // 2. Kết nối Producer sẵn sàng chờ gửi tin nhắn
+    // 2. Connect producer
     await producer.connect();
-    logger.info('Kafka Producer đã kết nối thành công!');
+    logger.info('Kafka: producer connected successfully.');
 
   } catch (error) {
-    logger.error('Lỗi khởi tạo Kafka:', error);
+    // Non-fatal: log a warning so ops can investigate, but let the server start.
+    logger.warn('Kafka: initialization failed — click events will not be tracked until Kafka recovers.', { error });
+  } finally {
+    // Always disconnect admin, regardless of success or failure.
+    try {
+      await admin.disconnect();
+    } catch {
+      // best-effort
+    }
   }
 };

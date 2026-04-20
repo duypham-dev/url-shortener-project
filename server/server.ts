@@ -1,19 +1,20 @@
-import 'dotenv/config'
-import app from './app/index.js'
+import 'dotenv/config';
+import app from './app/index.js';
 import { initKafka } from './app/services/kafka.service.js';
+import { logger } from './app/utils/logger.js';
 
-const port = 3000
-
+const PORT = Number(process.env.PORT ?? 3000);
 
 async function startServer() {
-  try {
-    await initKafka();
-    app.listen(port, () => {
-      console.log(`Server is running on http://localhost:${port}`)
-    })
-  } catch (error) {
-    console.error('Error starting server:', error)
-  }
+  // initKafka is non-fatal — server boots even if Kafka is temporarily unavailable.
+  await initKafka();
+
+  app.listen(PORT, () => {
+    logger.info(`Server running on http://localhost:${PORT}`);
+  });
 }
 
-startServer()
+startServer().catch((error) => {
+  logger.error('Fatal error during server startup.', { error });
+  process.exit(1);
+});

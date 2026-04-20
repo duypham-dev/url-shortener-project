@@ -21,7 +21,7 @@ export const Links: React.FC = () => {
       {/* Page Header */}
       <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mb-6">
         <h1 className="text-3xl font-extrabold tracking-tight text-gray-900">
-          Bitly Links
+          Short Links
         </h1>
         <button className="bg-[#0f34a3] hover:bg-[#0c2a86] text-white font-medium py-2 px-5 rounded-md transition-colors shadow-sm focus:ring-2 focus:ring-offset-2 focus:ring-blue-600">
           Create link
@@ -110,11 +110,11 @@ export const Links: React.FC = () => {
       <div className="space-y-4 relative bg-gray-50 pt-4 p-4 min-h-screen">
         
         {/* Mock Promo Banner */}
-        <div className="bg-[#eafafa] text-[#0f34a3] px-4 py-3 rounded-md text-sm font-medium flex-wrap flex items-center gap-2 mb-4">
+        {/* <div className="bg-[#eafafa] text-[#0f34a3] px-4 py-3 rounded-md text-sm font-medium flex-wrap flex items-center gap-2 mb-4">
           <span className="text-teal-500 font-bold ml-1 mr-1">✦</span>
           Change a link's destination, even after you've shared it. Get redirects with every plan.
           <a href="#" className="underline hover:text-blue-800 ml-1">View plans</a>
-        </div>
+        </div> */}
 
         {isLoading && (
           <div className="py-20 flex justify-center text-gray-400">Loading links...</div>

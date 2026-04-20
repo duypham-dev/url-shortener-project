@@ -68,7 +68,7 @@ export const LinkCard: React.FC<LinkCardProps> = React.memo(({ link }) => {
               {shortUrlDisplay}
             </a>
             <button
-              onClick={() => copy(`https://${shortUrlDisplay}`)}
+              onClick={() => copy(`${shortUrlDisplay}`)}
               className="p-1 rounded text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors"
               title="Copy"
             >

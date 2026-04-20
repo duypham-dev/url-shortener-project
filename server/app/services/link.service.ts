@@ -9,7 +9,7 @@
  * - publishClickEvent: moved pushMessage() from redirecLink.controller.ts.
  */
 import { prisma } from "../libs/prisma";
-import { producer } from "./kafka.service.js";
+import { producer, CLICK_EVENTS_TOPIC } from "./kafka.service.js";
 import { logger } from "../utils/logger";
 
 // ----------------------------------------------------------------
@@ -20,6 +20,7 @@ export interface ClickEventMessage {
   longUrl: string;
   ip: string;
   userAgent: string;
+  referrer: string | null;
   timestamp: string;
 }
 
@@ -70,16 +71,18 @@ export const getLongUrlByShortCode = async (shortCode: string): Promise<string |
 };
 
 // ----------------------------------------------------------------
-// Publish click event to Kafka for analytics processing
+// Publish click event to Kafka for analytics processing.
+// Fire-and-forget: errors are logged but never propagated to the
+// caller — a Kafka failure must NOT break the redirect response.
 // ----------------------------------------------------------------
 export const publishClickEvent = async (message: ClickEventMessage): Promise<void> => {
   try {
-    logger.info("Sending click event to Kafka", { shortCode: message.shortCode });
+    logger.info('Kafka: publishing click event', { shortCode: message.shortCode });
     await producer.send({
-      topic: "click-events",
+      topic: CLICK_EVENTS_TOPIC,
       messages: [{ value: JSON.stringify(message) }],
     });
   } catch (error) {
-    logger.error("Error sending click event to Kafka", { error });
+    logger.error('Kafka: failed to publish click event', { error });
   }
 };

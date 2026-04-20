@@ -1,80 +1,132 @@
-import { Kafka } from 'kafkajs';
+/**
+ * consumer.ts — Kafka click-event consumer (standalone process)
+ *
+ * Run:  npx tsx watch app/consumers/consumer.ts
+ *
+ * Responsibilities:
+ *   - Subscribe to the click-events topic.
+ *   - Validate and persist each event to click_logs.
+ *   - Shutdown gracefully on SIGINT / SIGTERM.
+ *
+ * Design decisions:
+ *   - Reuses the shared `kafka` client from kafka.service to avoid
+ *     opening a second independent connection with the same clientId.
+ *   - `fromBeginning: false` — Kafka tracks offsets per consumer group.
+ *     On first run the group has no committed offset, so Kafka will
+ *     start from the latest message (default). Setting this to `true`
+ *     would replay all historical events on every restart, duplicating
+ *     click_logs rows.
+ *   - Malformed messages are logged and skipped (dead-letter handling
+ *     can be added later if a DLQ topic is introduced).
+ */
 import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
-type PrismaInstance = (typeof import('../libs/prisma.js'))['prisma'];
-
-interface ClickEventMessage {
-  shortCode?: string;
-  ip?: string;
-  userAgent?: string;
-  timestamp?: string;
-}
-
-// npx tsx watch app/consumers/consumer.ts để chạy consumer và tự động reload khi có thay đổi
-
+// Load env before importing any module that reads process.env
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 dotenv.config({ path: path.resolve(__dirname, '../../.env') });
 
-const kafka = new Kafka({
-  clientId: 'short-link-app',
-  brokers: process.env.KAFKA_BROKERS?.split(',') || ['localhost:9092']
-});
+import { kafka, CLICK_EVENTS_TOPIC } from '../services/kafka.service.js';
+import type { ClickEventMessage } from '../services/link.service.js';
+import { logger } from '../utils/logger.js';
 
-// Khởi tạo consumer thuộc một consumer group
+type PrismaInstance = (typeof import('../libs/prisma.js'))['prisma'];
+
+// ----------------------------------------------------------------
+// Consumer group — all instances of this process share offsets.
+// ----------------------------------------------------------------
 const consumer = kafka.consumer({ groupId: 'click-tracking-group' });
 
+// ----------------------------------------------------------------
+// Message validation
+// ----------------------------------------------------------------
+function isValidClickEvent(data: unknown): data is ClickEventMessage {
+  if (typeof data !== 'object' || data === null) return false;
+  const d = data as Record<string, unknown>;
+  return (
+    typeof d.shortCode === 'string' && d.shortCode.length > 0 &&
+    typeof d.longUrl === 'string' &&
+    typeof d.timestamp === 'string'
+  );
+}
+
+// ----------------------------------------------------------------
+// Main
+// ----------------------------------------------------------------
 let prisma: PrismaInstance;
 
 const startConsumer = async () => {
-  // Load prisma after env is available
-  const prismaModule = await import('../libs/prisma');
+  const prismaModule = await import('../libs/prisma.js');
   prisma = prismaModule.prisma;
 
   await consumer.connect();
-  console.log('Kafka Consumer đã kết nối thành công.');
+  logger.info('Kafka consumer connected.');
 
-  // Đăng ký nghe từ topic 'click-events', từ lúc bắt đầu nếu chưa có offset
-  await consumer.subscribe({ topic: 'click-events', fromBeginning: true });
+  await consumer.subscribe({ topic: CLICK_EVENTS_TOPIC, fromBeginning: false });
+  logger.info(`Kafka consumer subscribed to topic "${CLICK_EVENTS_TOPIC}".`);
 
   await consumer.run({
-    eachMessage: async ({ topic, partition, message }) => {
+    eachMessage: async ({ partition, message }) => {
+      if (!message.value) return;
+
+      let clickData: unknown;
       try {
-        if (!message.value) {
-          return;
-        }
+        clickData = JSON.parse(message.value.toString());
+      } catch {
+        logger.warn('Kafka consumer: received non-JSON message — skipping.', { partition });
+        return;
+      }
 
-        const clickData = JSON.parse(message.value.toString()) as ClickEventMessage;
-        if (!clickData.shortCode) {
-          return;
-        }
+      if (!isValidClickEvent(clickData)) {
+        logger.warn('Kafka consumer: malformed click event — skipping.', { partition, clickData });
+        return;
+      }
 
-        const clickedAt = clickData.timestamp ? new Date(clickData.timestamp) : new Date();
-        
-        console.log(` Đã nhận sự kiện từ partition ${partition}:`);
-        console.log(clickData);
+      logger.info('Kafka consumer: persisting click event.', {
+        shortCode: clickData.shortCode,
+        partition,
+      });
+
+      try {
         await prisma.click_logs.create({
           data: {
             short_code: clickData.shortCode,
             ip_address: clickData.ip ?? null,
             user_agent: clickData.userAgent ?? null,
-            clicked_at: clickedAt,
-          }
+            referrer: clickData.referrer ?? null,
+            clicked_at: new Date(clickData.timestamp),
+          },
         });
-
       } catch (error) {
-        console.error('Lỗi khi xử lý message:', error);
+        logger.error('Kafka consumer: DB insert failed.', { error, shortCode: clickData.shortCode });
       }
     },
   });
 };
 
-startConsumer().catch(console.error);
+// ----------------------------------------------------------------
+// Graceful shutdown — handles both SIGINT (Ctrl+C) and SIGTERM
+// (Docker / Kubernetes stop signals).
+// ----------------------------------------------------------------
+const shutdown = async (signal: string) => {
+  logger.info(`Received ${signal} — disconnecting Kafka consumer...`);
+  try {
+    await consumer.disconnect();
+    await prisma.$disconnect();
+    logger.info('Kafka consumer disconnected cleanly. Exiting.');
+  } catch (error) {
+    logger.error('Error during shutdown.', { error });
+  } finally {
+    process.exit(0);
+  }
+};
 
-// Xử lý ngắt kết nối an toàn
-process.on('SIGINT', async () => {
-  await consumer.disconnect();
-  process.exit(0);
+process.on('SIGINT', () => shutdown('SIGINT'));
+process.on('SIGTERM', () => shutdown('SIGTERM'));
+
+startConsumer().catch((error) => {
+  logger.error('Kafka consumer failed to start.', { error });
+  process.exit(1);
 });
