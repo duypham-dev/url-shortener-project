@@ -1,6 +1,10 @@
 import React, { useState } from "react";
 import { LinkCard } from "../components/LinkCard";
+import { useNavigate } from "react-router-dom";
 import { useLinks } from "../hooks/useLinks";
+import { createShortenUrl } from "../api/shortUrl.api";
+
+
 import {
   Search,
   Calendar,
@@ -14,6 +18,7 @@ import {
 
 export const Links: React.FC = () => {
   const { links, isLoading, error } = useLinks();
+  const Navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState("");
 
   return (
@@ -23,7 +28,12 @@ export const Links: React.FC = () => {
         <h1 className="text-3xl font-extrabold tracking-tight text-gray-900">
           Short Links
         </h1>
-        <button className="bg-[#0f34a3] hover:bg-[#0c2a86] text-white font-medium py-2 px-5 rounded-md transition-colors shadow-sm focus:ring-2 focus:ring-offset-2 focus:ring-blue-600">
+        <button 
+        onClick={() => {
+          // Handle create link logic
+          Navigate("/dashboard/links/create");
+        }}
+        className="bg-[#0f34a3] hover:bg-[#0c2a86] text-white font-medium py-2 px-5 rounded-md transition-colors shadow-sm focus:ring-2 focus:ring-offset-2 focus:ring-blue-600">
           Create link
         </button>
       </div>

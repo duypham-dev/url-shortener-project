@@ -17,6 +17,7 @@ import { Links } from "./pages/Links";
 import { Upgrade } from "./pages/Upgrade";
 import { PaymentResult } from "./pages/PaymentSuccess";
 import { LinkAnalytics } from "./pages/LinkAnalytics";
+import CreateLink from "./pages/CreateLink/CreateLink";
 
 const App: React.FC = () => {
   // Kiểm tra trạng thái đăng nhập ngay khi ứng dụng mount (F5)
@@ -74,6 +75,7 @@ const App: React.FC = () => {
         >
           <Route index element={<Dashboard />} />
           <Route path="links" element={<Links />} />
+           <Route path="links/create" element={<CreateLink />} />
           <Route path="links/:shortCode/analytics" element={<LinkAnalytics />} />
           <Route path="qr" element={<p>qr page</p>} />
           <Route path="pages" element={<p>pages page</p>} />
