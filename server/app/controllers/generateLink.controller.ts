@@ -8,9 +8,9 @@
  *   via try/catch → next(error), ensuring consistent error response format.
  */
 import type { NextFunction, Request, Response } from "express";
-import generateShortLink from "../utils/generateShortLink";
 import { ApiResponse } from "../utils/response";
-import { saveLink } from "../services/saveLink.service";
+import generateShortLink from "../services/generateLink.service";
+
 import {
   BadRequestError,
   UnauthorizedError,
@@ -62,8 +62,7 @@ const genShortLink = async (
     }
 
     const shortUrl = await generateShortLink(originalUrl, userId);
-
-    await saveLink(originalUrl, shortUrl.split("/").pop()!, userId);
+   
     ApiResponse.created(
       res,
       {
