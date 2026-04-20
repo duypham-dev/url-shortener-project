@@ -79,9 +79,19 @@ export const createOrderId = (userId: number): string => {
 };
 
 export const createPaymentMetadata = (planName: string, orderId: string, date = new Date()) => {
+  // Lược bỏ dấu tiếng Việt và ký tự đặc biệt (chỉ giữ chữ/số) để tránh lỗi Fail Checksum của VNPay
+  const safePlanName = planName
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/đ/g, "d")
+    .replace(/Đ/g, "D")
+    .replace(/[^a-zA-Z0-9\s-]/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+
   return {
     createDate: toVnpDate(date),
-    orderInfo: `Thanh toan ${planName} - ${orderId}`,
+    orderInfo: `Thanh toan ${safePlanName} - ${orderId}`,
   };
 };
 

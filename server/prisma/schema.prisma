@@ -9,21 +9,23 @@ datasource db {
 }
 
 model click_logs {
-  id           BigInt       @id @default(autoincrement())
-  short_code   String       @db.VarChar(10)
-  clicked_at   DateTime?    @default(now()) @db.Timestamptz(6)
-  ip_address   String?      @db.Inet
-  user_agent   String?
-  referrer     String?      @db.VarChar(255)
-  country      String?      @db.VarChar(100)
-  url_mappings url_mappings @relation(fields: [short_code], references: [short_code], onDelete: Cascade, onUpdate: NoAction)
+  id         BigInt    @id @default(autoincrement())
+  short_code String    @db.VarChar(10)
+  clicked_at DateTime? @default(now()) @db.Timestamptz(6)
+  ip_address String?   @db.Inet
+  user_agent String?
+  referrer   String?   @db.VarChar(255)
+  country    String?   @db.VarChar(100)
+
+  // Cập nhật thành url_mappings? (tùy chọn) vì short_code bên bảng kia giờ có thể là null
+  url_mappings url_mappings? @relation(fields: [short_code], references: [short_code], onDelete: Cascade, onUpdate: NoAction)
 
   @@index([clicked_at(sort: Desc)], map: "idx_click_clicked_at")
   @@index([short_code], map: "idx_click_short_code")
 }
-Có 
+
 model payments {
-  id               String         @id @default(dbgenerated("('pay_'::text || (nextval('payments_id_seq'::regclass))::text)")) @db.VarChar(255)
+  id              String         @id @default(cuid()) @db.VarChar(255)
   user_id          Int
   subscription_id  String?        @db.VarChar(255)
   amount           Decimal        @db.Decimal(10, 2)
@@ -64,7 +66,7 @@ model subscription_plans {
 }
 
 model subscriptions {
-  id                 String             @id @default(dbgenerated("('sub_'::text || (nextval('subscriptions_id_seq'::regclass))::text)")) @db.VarChar(255)
+  id                 String             @id @default(cuid()) @db.VarChar(255)
   user_id            Int
   plan_id            Int
   status             SubscriptionStatus @default(pending)
@@ -80,7 +82,12 @@ model subscriptions {
 }
 
 model url_mappings {
-  short_code  String       @id @db.VarChar(10)
+  // 1. Thêm ID tự tăng làm khóa chính
+  id BigInt @id @default(autoincrement())
+
+  // 2. Chuyển short_code thành unique và cho phép null
+  short_code String? @unique @db.VarChar(10)
+
   long_url    String
   user_id     Int
   title       String?      @db.VarChar(255)

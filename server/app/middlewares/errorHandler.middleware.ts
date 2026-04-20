@@ -1,8 +1,4 @@
 /**
- * errorHandler.middleware.ts
- * Global Error Handling Middleware - luôn đặt CUỐI cùng trong app.
- * Bắt tất cả lỗi được next(err) truyền lên và chuẩn hóa response.
- *
  * Phân loại lỗi:
  * - App errors (AppError): dùng statusCode + code của lỗi nghiệp vụ
  * - Prisma errors: xử lý riêng cho các lỗi DB phổ biến
@@ -88,7 +84,6 @@ export const errorHandler = (
   }
 
   // ---- 4. Fallback: 500 Internal Server Error ----
-  // Không lộ chi tiết lỗi ra bên ngoài trong production
   const isDev = process.env.NODE_ENV === "development";
   res.status(500).json({
     ...errorResponse,

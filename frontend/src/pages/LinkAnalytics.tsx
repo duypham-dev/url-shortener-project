@@ -20,7 +20,6 @@ import { usePlanStore, selectIsVip } from '../store/usePlanStore';
 
 export const LinkAnalytics: React.FC = () => {
   const { shortCode } = useParams<{ shortCode: string }>();
-  
   const navigate = useNavigate();
   const isVip = usePlanStore(selectIsVip);
   const isLoaded = usePlanStore((s) => s.isLoaded);
