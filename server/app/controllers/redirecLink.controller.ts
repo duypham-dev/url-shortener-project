@@ -12,13 +12,20 @@ import type { Request, Response, NextFunction } from 'express';
 import { getCachedLink, cacheLink } from '../services/linkCache.service';
 import { getLongUrlByShortCode, publishClickEvent } from '../services/link.service.js';
 import type { ClickEventMessage } from '../services/link.service.js';
+import redis from '../libs/redis.js';
 
-const buildClickMessage = (req: Request, shortCode: string, longUrl: string): ClickEventMessage => ({
+const getClientIp = (req: Request): string => {
+  const forwarded = req.headers['x-forwarded-for'];
+  const ipStr = Array.isArray(forwarded) ? forwarded[0] : forwarded;
+  return (ipStr?.split(',')[0].trim()) || req.ip || req.socket.remoteAddress || 'unknown';
+};
+
+const buildClickMessage = (req: Request, shortCode: string, longUrl: string, ip: string): ClickEventMessage => ({
   shortCode,
   longUrl,
-  ip: req.ip as string,
+  ip,
   userAgent: req.get('User-Agent') ?? '',
-  referrer: req.get('Referrer') ?? null,
+  referrer: req.get('Referrer') ?? 'Direct',
   timestamp: new Date().toISOString(),
 });
 
@@ -27,12 +34,30 @@ const redirectLink = async (req: Request, res: Response, next: NextFunction) => 
   logger.info('Redirect requested', { shortCode });
 
   try {
+    const ip = getClientIp(req);
+    console.log(`Redirect request for ${shortCode} from IP: ${ip}`); // Debug log for incoming requests
+    // 1. Rate Limiting: Max 60 requests per minute per IP to prevent spam
+    const rateLimitKey = `rate_limit:redirect:${ip}`;
+    const currentCount = await redis.incr(rateLimitKey);
+    if (currentCount === 1) {
+      await redis.expire(rateLimitKey, 60); // Expire in 60 seconds
+    }
+    if (currentCount > 60) {
+      logger.warn('Rate limit exceeded', { ip, shortCode });
+      return res.status(429).send('Too Many Requests. Please try again later.');
+    }
+
+    // 2. Track unique IP (if `isUnique === 1`, it's a new unique IP for this shortCode)
+    const uniqueIpKey = `unique_clicks:${shortCode}`;
+    const isUnique = await redis.sadd(uniqueIpKey, ip);
+
     // Check Redis cache first — avoids DB query on hot paths
     const cachedUrl = await getCachedLink(shortCode);
     if (cachedUrl) {
       logger.info('Cache hit', { shortCode });
-      // Fire-and-forget: do not await so redirect is not delayed by Kafka
-      publishClickEvent(buildClickMessage(req, shortCode, cachedUrl));
+      if (isUnique === 1) {
+        publishClickEvent(buildClickMessage(req, shortCode, cachedUrl, ip));
+      }
       return res.redirect(cachedUrl);
     }
 
@@ -46,8 +71,9 @@ const redirectLink = async (req: Request, res: Response, next: NextFunction) => 
     // Populate cache for subsequent requests (fire-and-forget)
     cacheLink(shortCode, longUrl);
 
-    // Publish click event to Kafka (fire-and-forget)
-    publishClickEvent(buildClickMessage(req, shortCode, longUrl));
+    if (isUnique === 1) {
+      publishClickEvent(buildClickMessage(req, shortCode, longUrl, ip));
+    }
 
     return res.redirect(longUrl);
   } catch (error) {

@@ -22,6 +22,7 @@ export interface ClickEventMessage {
   userAgent: string;
   referrer: string | null;
   timestamp: string;
+  userId?: number | null;
 }
 
 // ----------------------------------------------------------------
@@ -78,9 +79,26 @@ export const getLongUrlByShortCode = async (shortCode: string): Promise<string |
 export const publishClickEvent = async (message: ClickEventMessage): Promise<void> => {
   try {
     logger.info('Kafka: publishing click event', { shortCode: message.shortCode });
+
+    // Try to enrich the event with the owning userId so we can filter streams per-user.
+    let ownerId: number | null = null;
+    try {
+      const rec = await prisma.url_mappings.findUnique({
+        where: { short_code: message.shortCode },
+        select: { user_id: true },
+      });
+      ownerId = rec?.user_id ?? null;
+    } catch (err) {
+      // best-effort: if this lookup fails, we still publish the event without userId
+      logger.warn('Kafka: failed to lookup owner for shortCode', { shortCode: message.shortCode, err });
+      ownerId = null;
+    }
+
+    const payload = { ...message, userId: ownerId };
+
     await producer.send({
       topic: CLICK_EVENTS_TOPIC,
-      messages: [{ value: JSON.stringify(message) }],
+      messages: [{ value: JSON.stringify(payload) }],
     });
   } catch (error) {
     logger.error('Kafka: failed to publish click event', { error });

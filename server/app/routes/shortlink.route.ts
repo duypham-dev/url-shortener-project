@@ -11,7 +11,8 @@ import genShortLink from '../controllers/generateLink.controller.js';
 import redirectLink from '../controllers/redirecLink.controller.js';
 import getLinks from '../controllers/getLinks.controller.js';
 import getLinkInfo from '../controllers/getLinkInfo.controller.js';
-import { getLinkAnalytics } from '../controllers/analytics.controller.js';
+import { getLinkAnalytics, getLinkClickLogs } from '../controllers/analytics.controller.js';
+import { clickStreamHandler } from '../controllers/stream.controller.js';
 import { verifyToken } from '../middlewares/verifyToken.middleware.js';
 import { enforceCreateLinkQuota } from '../middlewares/quota.middleware.js';
 
@@ -23,11 +24,16 @@ router.get('/links/:shortCode', verifyToken, getLinkInfo);
 
 // GET /api/v1/links/:shortCode/analytics - link click analytics (paid feature)
 router.get('/links/:shortCode/analytics', verifyToken, getLinkAnalytics);
+// GET /api/v1/links/:shortCode/clicks - paginated click logs for a link (paid feature)
+router.get('/links/:shortCode/clicks', verifyToken, getLinkClickLogs);
 
 // POST /api/shorten - create a short URL
 router.post('/shorten', verifyToken, enforceCreateLinkQuota, genShortLink);
 
 // GET /api/v1/:shortCode - redirect to long URL
 router.get('/:shortCode', redirectLink);
+
+// SSE stream for a user's click events (authenticated users)
+router.get('/clicks/stream', clickStreamHandler);
 
 export default router

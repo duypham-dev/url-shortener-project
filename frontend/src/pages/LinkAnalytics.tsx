@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { ArrowLeft, ChevronLeft, BarChart2, TrendingUp, MousePointerClick, Lock, Crown } from 'lucide-react';
 import {
@@ -9,6 +9,10 @@ import {
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
+  PieChart,
+  Pie,
+  Cell,
+  Legend,
 } from 'recharts';
 import type { LinkItem } from '../types/url.type';
 import LinkCardDetail from '../components/LinkCardDetail';
@@ -53,6 +57,7 @@ export const LinkAnalytics: React.FC = () => {
         }
 
         const analyticsData = await getLinkAnalytics(shortCode);
+        console.log('Fetched analytics:', analyticsData);
         if (!isMounted) return;
         setAnalytics(analyticsData);
       } catch (err: any) {
@@ -84,6 +89,16 @@ export const LinkAnalytics: React.FC = () => {
     ...d,
     label: formatDateLabel(d.date),
   })) ?? [];
+
+  // Referrer pie chart data
+  const referrerData = useMemo(() => {
+    const items = analytics?.referrers ?? [];
+    return items.map((r) => ({ name: r.referrer, value: r.clicks }));
+  }, [analytics]);
+
+  const referrerTotal = useMemo(() => referrerData.reduce((s, i) => s + (i.value || 0), 0), [referrerData]);
+
+  const REFERRER_COLORS = ['#3b82f6', '#fb923c', '#a78bfa', '#34d399', '#f472b6', '#60a5fa', '#f43f5e'];
 
   // Loading state
   if (isLoading) {
@@ -227,61 +242,106 @@ export const LinkAnalytics: React.FC = () => {
         </div>
       </div>
 
-      {/* Chart */}
-      <div className="bg-white rounded-xl border border-gray-200 p-6">
-        <h2 className="text-lg font-semibold text-gray-900 mb-6">
-          Click theo ngày
-        </h2>
+      {/* Charts: area + referrer pie */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="md:col-span-2 bg-white rounded-xl border border-gray-200 p-6">
+          <h2 className="text-lg font-semibold text-gray-900 mb-6">Click theo ngày</h2>
 
-        {chartData.length === 0 ? (
-          <div className="flex items-center justify-center py-16 text-gray-400">
-            Chưa có dữ liệu click trong 30 ngày qua.
-          </div>
-        ) : (
-          <ResponsiveContainer width="100%" height={320}>
-            <AreaChart data={chartData} margin={{ top: 5, right: 10, left: -10, bottom: 5 }}>
-              <defs>
-                <linearGradient id="clickGradient" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.15} />
-                  <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
-                </linearGradient>
-              </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-              <XAxis
-                dataKey="label"
-                tick={{ fontSize: 12, fill: '#9ca3af' }}
-                tickLine={false}
-                axisLine={{ stroke: '#e5e7eb' }}
-              />
-              <YAxis
-                tick={{ fontSize: 12, fill: '#9ca3af' }}
-                tickLine={false}
-                axisLine={false}
-                allowDecimals={false}
-              />
-              <Tooltip
-                contentStyle={{
-                  backgroundColor: '#fff',
-                  border: '1px solid #e5e7eb',
-                  borderRadius: '8px',
-                  boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)',
-                  fontSize: '13px',
-                }}
-                labelFormatter={(label) => `Ngày: ${label}`}
-                formatter={(value?: number) => [value?.toLocaleString() ?? '0', 'Clicks']}
-              />
-              <Area
-                type="monotone"
-                dataKey="clicks"
-                stroke="#3b82f6"
-                strokeWidth={2.5}
-                fill="url(#clickGradient)"
-                dot={{ r: 3, fill: '#3b82f6', strokeWidth: 0 }}
-                activeDot={{ r: 5, fill: '#3b82f6', stroke: '#fff', strokeWidth: 2 }}
-              />
-            </AreaChart>
-          </ResponsiveContainer>
-        )}
+          {chartData.length === 0 ? (
+            <div className="flex items-center justify-center py-16 text-gray-400">
+              Chưa có dữ liệu click trong 30 ngày qua.
+            </div>
+          ) : (
+            <ResponsiveContainer width="100%" height={320}>
+              <AreaChart data={chartData} margin={{ top: 5, right: 10, left: -10, bottom: 5 }}>
+                <defs>
+                  <linearGradient id="clickGradient" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.15} />
+                    <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                <XAxis
+                  dataKey="label"
+                  tick={{ fontSize: 12, fill: '#9ca3af' }}
+                  tickLine={false}
+                  axisLine={{ stroke: '#e5e7eb' }}
+                />
+                <YAxis
+                  tick={{ fontSize: 12, fill: '#9ca3af' }}
+                  tickLine={false}
+                  axisLine={false}
+                  allowDecimals={false}
+                />
+                <Tooltip
+                  contentStyle={{
+                    backgroundColor: '#fff',
+                    border: '1px solid #e5e7eb',
+                    borderRadius: '8px',
+                    boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)',
+                    fontSize: '13px',
+                  }}
+                  labelFormatter={(label) => `Ngày: ${label}`}
+                  formatter={(value?: number) => [value?.toLocaleString() ?? '0', 'Clicks']}
+                />
+                <Area
+                  type="monotone"
+                  dataKey="clicks"
+                  stroke="#3b82f6"
+                  strokeWidth={2.5}
+                  fill="url(#clickGradient)"
+                  dot={{ r: 3, fill: '#3b82f6', strokeWidth: 0 }}
+                  activeDot={{ r: 5, fill: '#3b82f6', stroke: '#fff', strokeWidth: 2 }}
+                />
+              </AreaChart>
+            </ResponsiveContainer>
+          )}
+        </div>
+
+        <div className="bg-white rounded-xl border border-gray-200 p-6">
+          <h2 className="text-lg font-semibold text-gray-900 mb-6">Clicks theo referrer</h2>
+
+          {referrerData.length === 0 ? (
+            <div className="flex items-center justify-center py-16 text-gray-400">Chưa có dữ liệu referrer.</div>
+          ) : (
+            <div className="flex flex-col items-center">
+              <ResponsiveContainer width="100%" height={320}>
+                <PieChart>
+                  <Pie
+                    data={referrerData}
+                    dataKey="value"
+                    nameKey="name"
+                    innerRadius={60}
+                    outerRadius={100}
+                    paddingAngle={4}
+                    label={({ name, percent }) => `${name} (${(percent * 100).toFixed(0)}%)`}
+                  >
+                    {referrerData.map((_, idx) => (
+                      <Cell key={`cell-${idx}`} fill={REFERRER_COLORS[idx % REFERRER_COLORS.length]} />
+                    ))}
+                  </Pie>
+                  <Tooltip formatter={(value:number) => [Number(value).toLocaleString(), 'Clicks']} />
+                  <Legend verticalAlign="bottom" height={36} />
+                </PieChart>
+              </ResponsiveContainer>
+
+              <div className="mt-4 w-full">
+                {referrerData.map((r, idx) => (
+                  <div key={r.name} className="flex items-center justify-between gap-3 py-2">
+                    <div className="flex items-center gap-3">
+                      <span className="w-3 h-3 rounded-full" style={{ backgroundColor: REFERRER_COLORS[idx % REFERRER_COLORS.length] }} />
+                      <div className="text-sm text-gray-700 truncate" style={{ maxWidth: 220 }}>{r.name}</div>
+                    </div>
+                    <div className="text-sm font-medium text-gray-900">{r.value.toLocaleString()}</div>
+                  </div>
+                ))}
+                {referrerTotal > 0 && (
+                  <div className="border-t mt-3 pt-3 text-sm text-gray-500">Total: {referrerTotal.toLocaleString()} clicks</div>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
