@@ -19,8 +19,13 @@ export interface LinkAnalyticsResult {
 
 export interface ClickLogRow {
   id: string;
+  urlMappingId: string;
+  userId: number | null;
   clickedAt: string | null;
   ipAddress: string | null;
+  browser: string | null;
+  os: string | null;
+  deviceType: string | null;
   userAgent: string | null;
   referrer: string | null;
   country: string | null;
@@ -50,8 +55,13 @@ export const getClickLogs = async (
       skip,
       select: {
         id: true,
+        url_mapping_id: true,
+        user_id: true,
         clicked_at: true,
         ip_address: true,
+        browser: true,
+        os: true,
+        device_type: true,
         user_agent: true,
         referrer: true,
         country: true,
@@ -62,8 +72,16 @@ export const getClickLogs = async (
 
   const formatted = rows.map((r) => ({
     id: typeof r.id === 'bigint' ? r.id.toString() : String(r.id),
+    urlMappingId:
+      typeof r.url_mapping_id === 'bigint'
+        ? r.url_mapping_id.toString()
+        : String(r.url_mapping_id),
+    userId: r.user_id ?? null,
     clickedAt: r.clicked_at ? r.clicked_at.toISOString() : null,
     ipAddress: r.ip_address ?? null,
+    browser: r.browser ?? null,
+    os: r.os ?? null,
+    deviceType: r.device_type ?? null,
     userAgent: r.user_agent ?? null,
     referrer: r.referrer ?? null,
     country: r.country ?? null,

@@ -30,10 +30,10 @@ router.get('/links/:shortCode/clicks', verifyToken, getLinkClickLogs);
 // POST /api/shorten - create a short URL
 router.post('/shorten', verifyToken, enforceCreateLinkQuota, genShortLink);
 
-// GET /api/v1/:shortCode - redirect to long URL
-router.get('/:shortCode', redirectLink);
-
 // SSE stream for a user's click events (authenticated users)
 router.get('/clicks/stream', clickStreamHandler);
+
+// GET /api/v1/:shortCode - redirect to long URL
+router.get('/:shortCode', redirectLink);
 
 export default router

@@ -3,11 +3,6 @@
  *
  * Run:  npx tsx watch app/consumers/consumer.ts
  *
- * Responsibilities:
- *   - Subscribe to the click-events topic.
- *   - Validate and persist each event to click_logs.
- *   - Shutdown gracefully on SIGINT / SIGTERM.
- *
  * Design decisions:
  *   - Reuses the shared `kafka` client from kafka.service to avoid
  *     opening a second independent connection with the same clientId.
@@ -45,10 +40,30 @@ const consumer = kafka.consumer({ groupId: 'click-tracking-group' });
 function isValidClickEvent(data: unknown): data is ClickEventMessage {
   if (typeof data !== 'object' || data === null) return false;
   const d = data as Record<string, unknown>;
+
+  const hasValidUrlMappingId =
+    typeof d.urlMappingId === 'string' &&
+    /^\d+$/.test(d.urlMappingId);
+
+  const hasValidUserId =
+    typeof d.userId === 'number' && Number.isInteger(d.userId);
+
+  const hasValidBrowser = d.browser === null || typeof d.browser === 'string';
+  const hasValidOs = d.os === null || typeof d.os === 'string';
+  const hasValidReferrer = d.referrer === null || typeof d.referrer === 'string';
+
   return (
     typeof d.shortCode === 'string' && d.shortCode.length > 0 &&
     typeof d.longUrl === 'string' &&
-    typeof d.timestamp === 'string'
+    typeof d.ip === 'string' &&
+    typeof d.userAgent === 'string' &&
+    typeof d.timestamp === 'string' &&
+    typeof d.deviceType === 'string' && d.deviceType.length > 0 &&
+    hasValidReferrer &&
+    hasValidUrlMappingId &&
+    hasValidUserId &&
+    hasValidBrowser &&
+    hasValidOs
   );
 }
 
@@ -86,17 +101,44 @@ const startConsumer = async () => {
 
       logger.info('Kafka consumer: persisting click event.', {
         shortCode: clickData.shortCode,
+        userId: clickData.userId,
+        urlMappingId: clickData.urlMappingId,
         partition,
       });
 
       try {
+        let parsedUrlMappingId: bigint;
+        let clickedAt: Date;
+
+        try {
+          parsedUrlMappingId = BigInt(clickData.urlMappingId);
+        } catch {
+          logger.warn('Kafka consumer: invalid urlMappingId - skipping message.', {
+            urlMappingId: clickData.urlMappingId,
+          });
+          return;
+        }
+
+        clickedAt = new Date(clickData.timestamp);
+        if (Number.isNaN(clickedAt.getTime())) {
+          logger.warn('Kafka consumer: invalid timestamp - skipping message.', {
+            timestamp: clickData.timestamp,
+          });
+          return;
+        }
+
         await prisma.click_logs.create({
           data: {
+            url_mapping_id: parsedUrlMappingId,
             short_code: clickData.shortCode,
+            user_id: clickData.userId,
             ip_address: clickData.ip ?? null,
+            browser: clickData.browser,
+            os: clickData.os,
+            device_type: clickData.deviceType,
             user_agent: clickData.userAgent ?? null,
             referrer: clickData.referrer ?? null,
-            clicked_at: new Date(clickData.timestamp),
+            clicked_at: clickedAt,
           },
         });
       } catch (error) {

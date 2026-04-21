@@ -1,11 +1,14 @@
 import type { Response } from 'express';
 import { kafka, CLICK_EVENTS_TOPIC } from './kafka.service.js';
 import { logger } from '../utils/logger.js';
+import type { ClickEventMessage } from './link.service.js';
 
 type Client = {
   res: Response;
   userId?: number | null;
 };
+
+type StreamPayload = Partial<ClickEventMessage> & Record<string, unknown>;
 
 const clients = new Map<string, Client>();
 let consumer: ReturnType<typeof kafka.consumer> | null = null;
@@ -15,10 +18,10 @@ let pingInterval: NodeJS.Timeout | null = null;
 const startPing = () => {
   if (pingInterval) return;
   pingInterval = setInterval(() => {
-    for (const res of clients.values()) {
+    for (const client of clients.values()) {
       try {
         // SSE comment keeps connection alive
-        res.write(': ping\n\n');
+        client.res.write(': ping\n\n');
       } catch {
         // ignore individual client errors; they'll be cleaned up on close
       }
@@ -62,7 +65,11 @@ export const addSseClient = (res: Response, userId?: number | null): string => {
   res.setHeader('Connection', 'keep-alive');
   res.flushHeaders?.();
 
-  clients.set(id, { res, userId });
+  const client: Client = { res };
+  if (typeof userId === 'number' || userId === null) {
+    client.userId = userId;
+  }
+  clients.set(id, client);
 
   // Remove client on close
   res.on('close', () => {
@@ -81,8 +88,14 @@ export const addSseClient = (res: Response, userId?: number | null): string => {
 
 export const broadcast = (payload: unknown): void => {
   const data = JSON.stringify(payload);
+
   // If the payload contains userId, only send to clients that belong to that user.
-  const targetUserId = (payload && typeof payload === 'object' && 'userId' in payload) ? (payload as any).userId : undefined;
+  const targetUserId =
+    typeof payload === 'object' &&
+    payload !== null &&
+    typeof (payload as StreamPayload).userId === 'number'
+      ? (payload as StreamPayload).userId
+      : undefined;
 
   for (const [id, client] of clients.entries()) {
     try {

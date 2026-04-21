@@ -6,8 +6,14 @@ import { verifyAccessToken } from '../utils/jwt.util.js';
 export const clickStreamHandler = async (req: Request, res: Response, next: NextFunction) => {
   try {
     // Accept token via query `?token=...`, cookie `access_token`, or Authorization header.
-    const tokenFromQuery = typeof req.query.token === 'string' ? req.query.token : Array.isArray(req.query.token) ? req.query.token[0] : undefined;
-    const tokenFromCookie = (req as any).cookies?.access_token;
+    const queryToken = req.query.token;
+    const tokenFromQuery =
+      typeof queryToken === 'string'
+        ? queryToken
+        : Array.isArray(queryToken) && typeof queryToken[0] === 'string'
+          ? queryToken[0]
+          : undefined;
+    const tokenFromCookie = typeof req.cookies?.access_token === 'string' ? req.cookies.access_token : undefined;
     const authHeader = req.headers.authorization;
     const tokenFromHeader = authHeader && authHeader.startsWith('Bearer ') ? authHeader.split(' ')[1] : undefined;
 

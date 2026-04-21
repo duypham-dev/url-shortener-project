@@ -11,21 +11,22 @@ import { logger } from '../utils/logger';
 import type { Request, Response, NextFunction } from 'express';
 import { getCachedLink, cacheLink } from '../services/linkCache.service';
 import { getLongUrlByShortCode, publishClickEvent } from '../services/link.service.js';
-import type { ClickEventMessage } from '../services/link.service.js';
+import type { ClickTrackInput } from '../services/link.service.js';
 import redis from '../libs/redis.js';
 
 const getClientIp = (req: Request): string => {
   const forwarded = req.headers['x-forwarded-for'];
   const ipStr = Array.isArray(forwarded) ? forwarded[0] : forwarded;
-  return (ipStr?.split(',')[0].trim()) || req.ip || req.socket.remoteAddress || 'unknown';
+  const forwardedIp = ipStr?.split(',')[0]?.trim();
+  return forwardedIp || req.ip || req.socket.remoteAddress || 'unknown';
 };
 
-const buildClickMessage = (req: Request, shortCode: string, longUrl: string, ip: string): ClickEventMessage => ({
+const buildClickMessage = (req: Request, shortCode: string, longUrl: string, ip: string): ClickTrackInput => ({
   shortCode,
   longUrl,
   ip,
   userAgent: req.get('User-Agent') ?? '',
-  referrer: req.get('Referrer') ?? 'Direct',
+  referrer: req.get('Referer') ?? 'Direct',
   timestamp: new Date().toISOString(),
 });
 
@@ -35,7 +36,7 @@ const redirectLink = async (req: Request, res: Response, next: NextFunction) => 
 
   try {
     const ip = getClientIp(req);
-    console.log(`Redirect request for ${shortCode} from IP: ${ip}`); // Debug log for incoming requests
+
     // 1. Rate Limiting: Max 60 requests per minute per IP to prevent spam
     const rateLimitKey = `rate_limit:redirect:${ip}`;
     const currentCount = await redis.incr(rateLimitKey);
@@ -56,7 +57,7 @@ const redirectLink = async (req: Request, res: Response, next: NextFunction) => 
     if (cachedUrl) {
       logger.info('Cache hit', { shortCode });
       if (isUnique === 1) {
-        publishClickEvent(buildClickMessage(req, shortCode, cachedUrl, ip));
+        void publishClickEvent(buildClickMessage(req, shortCode, cachedUrl, ip));
       }
       return res.redirect(cachedUrl);
     }
@@ -72,7 +73,7 @@ const redirectLink = async (req: Request, res: Response, next: NextFunction) => 
     cacheLink(shortCode, longUrl);
 
     if (isUnique === 1) {
-      publishClickEvent(buildClickMessage(req, shortCode, longUrl, ip));
+      void publishClickEvent(buildClickMessage(req, shortCode, longUrl, ip));
     }
 
     return res.redirect(longUrl);
