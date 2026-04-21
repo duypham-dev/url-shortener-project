@@ -44,7 +44,7 @@ export const Dashboard: React.FC = () => {
         refreshUsage();
       }
     } catch (error) {
-      console.error('Error creating shortlink:', error);
+      console.error('Error creating shortlink:', error); 
       const message =
         typeof error === 'object' && error && 'message' in error
           ? String(error.message)
@@ -135,7 +135,7 @@ export const Dashboard: React.FC = () => {
                     disabled={!url || isQuotaExceeded}
                     className="whitespace-nowrap px-6 py-3 bg-blue-600 text-white font-medium rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                   >
-                    {isQuotaExceeded ? 'Đã hết quota' : 'Create your Bitly link'}
+                    {isQuotaExceeded ? 'Upgrade for more links' : 'Create your Short link'}
                   </button>
                 </div>
 

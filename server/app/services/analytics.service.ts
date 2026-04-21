@@ -11,6 +11,18 @@ export interface DailyClickRow {
   clicks: number;
 }
 
+export interface AnalyticsBreakdownItem {
+  label: string;
+  clicks: number;
+}
+
+export interface LinkBreakdownAnalyticsResult {
+  deviceBreakdown: AnalyticsBreakdownItem[];
+  browserBreakdown: AnalyticsBreakdownItem[];
+  osBreakdown: AnalyticsBreakdownItem[];
+  countryBreakdown: AnalyticsBreakdownItem[];
+}
+
 export interface LinkAnalyticsResult {
   shortCode: string;
   totalClicks: number;
@@ -96,6 +108,99 @@ export const getClickLogs = async (
   };
 };
 
+type BreakdownQueryRow = {
+  label: string;
+  clicks: bigint;
+};
+
+const mapBreakdownRows = (rows: BreakdownQueryRow[]): AnalyticsBreakdownItem[] =>
+  rows.map((row) => ({
+    label: row.label,
+    clicks: Number(row.clicks),
+  }));
+
+const getLinkBreakdownByDimension = async (
+  shortCode: string,
+  dimension: "device" | "browser" | "os" | "country",
+  take: number = 8,
+): Promise<AnalyticsBreakdownItem[]> => {
+  switch (dimension) {
+    case "device": {
+      const rows = await prisma.$queryRaw<BreakdownQueryRow[]>`
+        SELECT
+          COALESCE(NULLIF(TRIM(device_type), ''), 'Unknown') AS label,
+          COUNT(*)::bigint AS clicks
+        FROM shortlink.click_logs
+        WHERE short_code = ${shortCode}
+        GROUP BY 1
+        ORDER BY clicks DESC
+        LIMIT ${take}
+      `;
+      return mapBreakdownRows(rows);
+    }
+    case "browser": {
+      const rows = await prisma.$queryRaw<BreakdownQueryRow[]>`
+        SELECT
+          COALESCE(NULLIF(TRIM(browser), ''), 'Unknown') AS label,
+          COUNT(*)::bigint AS clicks
+        FROM shortlink.click_logs
+        WHERE short_code = ${shortCode}
+        GROUP BY 1
+        ORDER BY clicks DESC
+        LIMIT ${take}
+      `;
+      return mapBreakdownRows(rows);
+    }
+    case "os": {
+      const rows = await prisma.$queryRaw<BreakdownQueryRow[]>`
+        SELECT
+          COALESCE(NULLIF(TRIM(os), ''), 'Unknown') AS label,
+          COUNT(*)::bigint AS clicks
+        FROM shortlink.click_logs
+        WHERE short_code = ${shortCode}
+        GROUP BY 1
+        ORDER BY clicks DESC
+        LIMIT ${take}
+      `;
+      return mapBreakdownRows(rows);
+    }
+    case "country": {
+      const rows = await prisma.$queryRaw<BreakdownQueryRow[]>`
+        SELECT
+          COALESCE(NULLIF(TRIM(country), ''), 'Unknown') AS label,
+          COUNT(*)::bigint AS clicks
+        FROM shortlink.click_logs
+        WHERE short_code = ${shortCode}
+        GROUP BY 1
+        ORDER BY clicks DESC
+        LIMIT ${take}
+      `;
+      return mapBreakdownRows(rows);
+    }
+    default:
+      return [];
+  }
+};
+
+export const getLinkBreakdownAnalytics = async (
+  shortCode: string,
+): Promise<LinkBreakdownAnalyticsResult> => {
+  const [deviceBreakdown, browserBreakdown, osBreakdown, countryBreakdown] =
+    await Promise.all([
+      getLinkBreakdownByDimension(shortCode, "device"),
+      getLinkBreakdownByDimension(shortCode, "browser"),
+      getLinkBreakdownByDimension(shortCode, "os"),
+      getLinkBreakdownByDimension(shortCode, "country"),
+    ]);
+
+  return {
+    deviceBreakdown,
+    browserBreakdown,
+    osBreakdown,
+    countryBreakdown,
+  };
+};
+
 export const getLinkReferrerAnalytics = async (shortCode: string) => {
   const referrers = await prisma.click_logs.groupBy({
     by: ['referrer'],
@@ -104,12 +209,11 @@ export const getLinkReferrerAnalytics = async (shortCode: string) => {
     orderBy: { _count: { referrer: 'desc' } },
     take: 10,
   });
-  console.log(`Referrer analytics for ${shortCode}:`, referrers);
   return referrers.map(r => ({
     referrer: r.referrer || 'Direct',
     clicks: r._count.referrer,
   }));
-}
+};
 
 /**
  * Verify that a link belongs to the given user.

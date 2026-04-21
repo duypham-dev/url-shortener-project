@@ -8,11 +8,20 @@ export interface ReferrerAnalyticsItem {
   clicks: number;
 }
 
+export interface AnalyticsBreakdownItem {
+  label: string;
+  clicks: number;
+}
+
 export interface LinkAnalyticsData {
   shortCode: string;
   totalClicks: number;
   dailyClicks: DailyClickData[];
   referrers: ReferrerAnalyticsItem[];
+  deviceBreakdown: AnalyticsBreakdownItem[];
+  browserBreakdown: AnalyticsBreakdownItem[];
+  osBreakdown: AnalyticsBreakdownItem[];
+  countryBreakdown: AnalyticsBreakdownItem[];
 }
 
 export interface ClickStreamPayload {

@@ -16,6 +16,7 @@ import {
   isLinkOwnedByUser,
   getDailyClickAnalytics,
   getLinkReferrerAnalytics,
+  getLinkBreakdownAnalytics,
   getClickLogs,
 } from "../services/analytics.service.js";
 import { getActivePlanContext } from "../services/subscriptionAccess.service.js";
@@ -54,13 +55,18 @@ export const getLinkAnalytics = async (
     }
 
     // 3. Get analytics data
-    const analytics = await getDailyClickAnalytics(shortCode, 30);
-    const referrerAnalytics = await getLinkReferrerAnalytics(shortCode);
+    const [analytics, referrerAnalytics, breakdownAnalytics] = await Promise.all([
+      getDailyClickAnalytics(shortCode, 30),
+      getLinkReferrerAnalytics(shortCode),
+      getLinkBreakdownAnalytics(shortCode),
+    ]);
+
     return res.status(200).json({
       success: true,
       data: {
         ...analytics,
         referrers: referrerAnalytics,
+        ...breakdownAnalytics,
       },
     });
   } catch (error) {

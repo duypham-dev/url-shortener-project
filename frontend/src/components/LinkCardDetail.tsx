@@ -13,7 +13,7 @@ import { getShortUrlDisplay } from "../utils/url";
 import { useCopyToClipboard } from "../hooks/useCopyToClipboard";
 
 const LinkCardDetail: React.FC<{ link: LinkItem }> = ({ link }) => {
-  const [copiedValue, copy] = useCopyToClipboard();
+  const [ copy ] = useCopyToClipboard();
   const shortUrlDisplay = getShortUrlDisplay(link.short_code);
 
 

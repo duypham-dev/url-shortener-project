@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useMemo } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, ChevronLeft, BarChart2, TrendingUp, MousePointerClick, Lock, Crown } from 'lucide-react';
 import {
   AreaChart,
@@ -21,6 +21,46 @@ import { getLinkAnalytics } from '../api/analytics.api';
 import { getLinkInfo } from '../api/shortUrl.api';
 import type { LinkAnalyticsData } from '../types/analytics.type';
 import { usePlanStore, selectIsVip } from '../store/usePlanStore';
+import TrafficBreakdownCard from '../components/analytics/TrafficBreakdownCard';
+import CountryBreakdownCard from '../components/analytics/CountryBreakdownCard';
+
+type AnalyticsError = {
+  code?: string;
+  message?: string;
+  response?: {
+    data?: {
+      code?: string;
+      message?: string;
+    };
+  };
+};
+
+const isPlanRequiredError = (value: unknown): boolean => {
+  if (!value || typeof value !== 'object') {
+    return false;
+  }
+
+  const error = value as AnalyticsError;
+  return error.code === 'PLAN_REQUIRED' || error.response?.data?.code === 'PLAN_REQUIRED';
+};
+
+const getAnalyticsErrorMessage = (value: unknown): string => {
+  if (!value || typeof value !== 'object') {
+    return 'Không thể tải dữ liệu phân tích.';
+  }
+
+  const error = value as AnalyticsError;
+  return error.response?.data?.message || error.message || 'Không thể tải dữ liệu phân tích.';
+};
+
+const formatTooltipClicks = (
+  value: number | string | readonly (number | string)[] | undefined,
+): [string, string] => {
+  const rawValue = Array.isArray(value) ? value[0] : value;
+  const parsed = typeof rawValue === 'number' ? rawValue : Number(rawValue ?? 0);
+  const safeValue = Number.isFinite(parsed) ? parsed : 0;
+  return [safeValue.toLocaleString(), 'Clicks'];
+};
 
 export const LinkAnalytics: React.FC = () => {
   const { shortCode } = useParams<{ shortCode: string }>();
@@ -57,16 +97,15 @@ export const LinkAnalytics: React.FC = () => {
         }
 
         const analyticsData = await getLinkAnalytics(shortCode);
-        console.log('Fetched analytics:', analyticsData);
         if (!isMounted) return;
         setAnalytics(analyticsData);
-      } catch (err: any) {
+      } catch (err: unknown) {
         if (!isMounted) return;
         
-        if (err?.code === 'PLAN_REQUIRED') {
+        if (isPlanRequiredError(err)) {
           setIsPlanGated(true);
         } else {
-          setError(err?.response?.data?.message || err?.message || 'Không thể tải dữ liệu phân tích.');
+          setError(getAnalyticsErrorMessage(err));
         }
       } finally {
         if (isMounted) setIsLoading(false);
@@ -97,6 +136,10 @@ export const LinkAnalytics: React.FC = () => {
   }, [analytics]);
 
   const referrerTotal = useMemo(() => referrerData.reduce((s, i) => s + (i.value || 0), 0), [referrerData]);
+  const deviceBreakdown = analytics?.deviceBreakdown ?? [];
+  const browserBreakdown = analytics?.browserBreakdown ?? [];
+  const osBreakdown = analytics?.osBreakdown ?? [];
+  const countryBreakdown = analytics?.countryBreakdown ?? [];
 
   const REFERRER_COLORS = ['#3b82f6', '#fb923c', '#a78bfa', '#34d399', '#f472b6', '#60a5fa', '#f43f5e'];
 
@@ -282,7 +325,7 @@ export const LinkAnalytics: React.FC = () => {
                     fontSize: '13px',
                   }}
                   labelFormatter={(label) => `Ngày: ${label}`}
-                  formatter={(value?: number) => [value?.toLocaleString() ?? '0', 'Clicks']}
+                  formatter={formatTooltipClicks}
                 />
                 <Area
                   type="monotone"
@@ -314,13 +357,13 @@ export const LinkAnalytics: React.FC = () => {
                     innerRadius={60}
                     outerRadius={100}
                     paddingAngle={4}
-                    label={({ name, percent }) => `${name} (${(percent * 100).toFixed(0)}%)`}
+                    label={({ name, percent }) => `${name} (${((percent ?? 0) * 100).toFixed(0)}%)`}
                   >
                     {referrerData.map((_, idx) => (
                       <Cell key={`cell-${idx}`} fill={REFERRER_COLORS[idx % REFERRER_COLORS.length]} />
                     ))}
                   </Pie>
-                  <Tooltip formatter={(value:number) => [Number(value).toLocaleString(), 'Clicks']} />
+                  <Tooltip formatter={formatTooltipClicks} />
                   <Legend verticalAlign="bottom" height={36} />
                 </PieChart>
               </ResponsiveContainer>
@@ -342,6 +385,18 @@ export const LinkAnalytics: React.FC = () => {
             </div>
           )}
         </div>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+        <div className="md:col-span-2">
+          <TrafficBreakdownCard
+            deviceData={deviceBreakdown}
+            browserData={browserBreakdown}
+            osData={osBreakdown}
+          />
+        </div>
+
+        <CountryBreakdownCard data={countryBreakdown} />
       </div>
     </div>
   );
