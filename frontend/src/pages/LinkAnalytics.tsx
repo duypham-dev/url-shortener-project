@@ -1,66 +1,15 @@
-import React, { useEffect, useState, useMemo } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, ChevronLeft, BarChart2, TrendingUp, MousePointerClick, Lock, Crown } from 'lucide-react';
-import {
-  AreaChart,
-  Area,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  PieChart,
-  Pie,
-  Cell,
-  Legend,
-} from 'recharts';
-import type { LinkItem } from '../types/url.type';
-import LinkCardDetail from '../components/LinkCardDetail';
-import LinkQRCode from '../components/LinkQRCode';
-import { getLinkAnalytics } from '../api/analytics.api';
-import { getLinkInfo } from '../api/shortUrl.api';
-import type { LinkAnalyticsData } from '../types/analytics.type';
-import { usePlanStore, selectIsVip } from '../store/usePlanStore';
-import TrafficBreakdownCard from '../components/analytics/TrafficBreakdownCard';
-import CountryBreakdownCard from '../components/analytics/CountryBreakdownCard';
-
-type AnalyticsError = {
-  code?: string;
-  message?: string;
-  response?: {
-    data?: {
-      code?: string;
-      message?: string;
-    };
-  };
-};
-
-const isPlanRequiredError = (value: unknown): boolean => {
-  if (!value || typeof value !== 'object') {
-    return false;
-  }
-
-  const error = value as AnalyticsError;
-  return error.code === 'PLAN_REQUIRED' || error.response?.data?.code === 'PLAN_REQUIRED';
-};
-
-const getAnalyticsErrorMessage = (value: unknown): string => {
-  if (!value || typeof value !== 'object') {
-    return 'Không thể tải dữ liệu phân tích.';
-  }
-
-  const error = value as AnalyticsError;
-  return error.response?.data?.message || error.message || 'Không thể tải dữ liệu phân tích.';
-};
-
-const formatTooltipClicks = (
-  value: number | string | readonly (number | string)[] | undefined,
-): [string, string] => {
-  const rawValue = Array.isArray(value) ? value[0] : value;
-  const parsed = typeof rawValue === 'number' ? rawValue : Number(rawValue ?? 0);
-  const safeValue = Number.isFinite(parsed) ? parsed : 0;
-  return [safeValue.toLocaleString(), 'Clicks'];
-};
+import React, { useMemo } from "react";
+import { useParams, useNavigate } from "react-router-dom";
+import { ArrowLeft, ChevronLeft, Lock, Crown } from "lucide-react";
+import LinkCardDetail from "../components/LinkCardDetail";
+import LinkQRCode from "../components/LinkQRCode";
+import { usePlanStore, selectIsVip } from "../store/usePlanStore";
+import TrafficBreakdownCard from "../components/analytics/TrafficBreakdownCard";
+import CountryBreakdownCard from "../components/analytics/CountryBreakdownCard";
+import AnalyticsSummaryCards from "../components/analytics/AnalyticsSummaryCards";
+import DailyClicksChartCard from "../components/analytics/DailyClicksChartCard";
+import ReferrerPieCard from "../components/analytics/ReferrerPieCard";
+import { useLinkAnalyticsData } from "../hooks/useLinkAnalyticsData";
 
 export const LinkAnalytics: React.FC = () => {
   const { shortCode } = useParams<{ shortCode: string }>();
@@ -68,66 +17,28 @@ export const LinkAnalytics: React.FC = () => {
   const isVip = usePlanStore(selectIsVip);
   const isLoaded = usePlanStore((s) => s.isLoaded);
 
-  const [link, setLink] = useState<LinkItem | null>(null);
-  const [analytics, setAnalytics] = useState<LinkAnalyticsData | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [isPlanGated, setIsPlanGated] = useState(false);
-
-  useEffect(() => {
-    if (!shortCode || !isLoaded) return;
-
-    let isMounted = true;
-
-    const loadData = async () => {
-      setIsLoading(true);
-      setError(null);
-      
-      try {
-        // 1. Fetch link details
-        const linkData = await getLinkInfo(shortCode);
-        if (!isMounted) return;
-        setLink(linkData);
-
-        // 2. Fetch analytics if VIP
-        if (!isVip) {
-          setIsPlanGated(true);
-          setIsLoading(false);
-          return;
-        }
-
-        const analyticsData = await getLinkAnalytics(shortCode);
-        if (!isMounted) return;
-        setAnalytics(analyticsData);
-      } catch (err: unknown) {
-        if (!isMounted) return;
-        
-        if (isPlanRequiredError(err)) {
-          setIsPlanGated(true);
-        } else {
-          setError(getAnalyticsErrorMessage(err));
-        }
-      } finally {
-        if (isMounted) setIsLoading(false);
-      }
-    };
-
-    loadData();
-
-    return () => { isMounted = false; };
-  }, [shortCode, isVip, isLoaded]);
+  const { link, analytics, isLoading, error, isPlanGated } =
+    useLinkAnalyticsData({
+      shortCode,
+      isVip,
+      isPlanLoaded: isLoaded,
+    });
 
   // Format date for chart labels (e.g., "15/04")
   const formatDateLabel = (dateStr: string) => {
-    const parts = dateStr.split('-');
+    const parts = dateStr.split("-");
     return `${parts[2]}/${parts[1]}`;
   };
 
   // Chart data with formatted labels
-  const chartData = analytics?.dailyClicks.map((d) => ({
-    ...d,
-    label: formatDateLabel(d.date),
-  })) ?? [];
+  const chartData = useMemo(
+    () =>
+      analytics?.dailyClicks.map((d) => ({
+        ...d,
+        label: formatDateLabel(d.date),
+      })) ?? [],
+    [analytics],
+  );
 
   // Referrer pie chart data
   const referrerData = useMemo(() => {
@@ -135,13 +46,28 @@ export const LinkAnalytics: React.FC = () => {
     return items.map((r) => ({ name: r.referrer, value: r.clicks }));
   }, [analytics]);
 
-  const referrerTotal = useMemo(() => referrerData.reduce((s, i) => s + (i.value || 0), 0), [referrerData]);
+  const totalClicks = analytics?.totalClicks ?? 0;
+  const averagePerDay =
+    chartData.length > 0 ? Math.round(totalClicks / chartData.length) : 0;
+  const peakDayClicks =
+    chartData.length > 0
+      ? Math.max(...chartData.map((item) => item.clicks))
+      : 0;
+
   const deviceBreakdown = analytics?.deviceBreakdown ?? [];
   const browserBreakdown = analytics?.browserBreakdown ?? [];
   const osBreakdown = analytics?.osBreakdown ?? [];
   const countryBreakdown = analytics?.countryBreakdown ?? [];
 
-  const REFERRER_COLORS = ['#3b82f6', '#fb923c', '#a78bfa', '#34d399', '#f472b6', '#60a5fa', '#f43f5e'];
+  const REFERRER_COLORS = [
+    "#3b82f6",
+    "#fb923c",
+    "#a78bfa",
+    "#34d399",
+    "#f472b6",
+    "#60a5fa",
+    "#f43f5e",
+  ];
 
   // Loading state
   if (isLoading) {
@@ -155,52 +81,75 @@ export const LinkAnalytics: React.FC = () => {
   // Plan gate — free user
   if (isPlanGated) {
     return (
-      <div className="max-w-2xl mx-auto py-8">
-        <button
-          onClick={() => navigate('/dashboard/links')}
-          className="flex items-center gap-2 text-sm text-gray-500 hover:text-gray-700 mb-6 transition-colors"
-        >
-          <ArrowLeft size={16} />
-          Quay lại danh sách link
-        </button>
+      <div className="max-w-2xl mx-auto py-8 px-4 sm:px-0">
+      {/* Nút quay lại */}
+      <button
+        onClick={() => navigate('/dashboard/links')}
+        className="flex items-center gap-2 text-sm font-medium text-slate-500 hover:text-slate-900 mb-6 transition-colors"
+      >
+        <ArrowLeft size={16} strokeWidth={2.5} />
+        Quay lại danh sách link
+      </button>
 
-        <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-          {/* Blurred preview */}
-          <div className="relative">
-            <div className="p-8 filter blur-sm opacity-50 pointer-events-none select-none">
-              <div className="h-8 bg-gray-100 rounded w-48 mb-4"></div>
-              <div className="h-48 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg"></div>
-              <div className="flex gap-4 mt-4">
-                <div className="h-20 bg-gray-50 rounded-lg flex-1"></div>
-                <div className="h-20 bg-gray-50 rounded-lg flex-1"></div>
-                <div className="h-20 bg-gray-50 rounded-lg flex-1"></div>
+      {/* Card chính */}
+      <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+        
+        <div className="relative">
+          {/* Skeleton UI (Background bị làm mờ)
+            Được thiết kế lại để trông giống một dashboard thực thụ với các khối KPI và Chart 
+          */}
+          <div className="p-8 filter blur-[6px] opacity-40 pointer-events-none select-none">
+            {/* Header giả */}
+            <div className="flex justify-between items-center mb-8">
+              <div>
+                <div className="h-6 bg-slate-200 rounded-md w-40 mb-2"></div>
+                <div className="h-4 bg-slate-100 rounded-md w-64"></div>
               </div>
+              <div className="h-10 bg-slate-100 rounded-lg w-28"></div>
             </div>
 
-            {/* Overlay CTA */}
-            <div className="absolute inset-0 flex items-center justify-center bg-white/60 backdrop-blur-[2px]">
-              <div className="text-center max-w-sm px-6">
-                <div className="w-16 h-16 bg-gradient-to-br from-amber-100 to-amber-200 rounded-2xl flex items-center justify-center mx-auto mb-5 shadow-sm">
-                  <Crown size={28} className="text-amber-600" />
-                </div>
-                <h3 className="text-xl font-bold text-gray-900 mb-2">
-                  Nâng cấp để xem phân tích
-                </h3>
-                <p className="text-gray-500 text-sm mb-6 leading-relaxed">
-                  Tính năng phân tích chi tiết với biểu đồ click theo ngày chỉ dành cho tài khoản trả phí.
-                </p>
-                <button
-                  onClick={() => navigate('/dashboard/upgrade')}
-                  className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-semibold rounded-lg hover:from-blue-700 hover:to-indigo-700 transition-all shadow-md shadow-blue-500/25"
-                >
-                  <Lock size={16} />
-                  Xem các gói nâng cấp
-                </button>
+            {/* Khối KPI giả */}
+            <div className="grid grid-cols-3 gap-4 mb-8">
+              <div className="h-24 border border-slate-100 bg-slate-50/50 rounded-lg"></div>
+              <div className="h-24 border border-slate-100 bg-slate-50/50 rounded-lg"></div>
+              <div className="h-24 border border-slate-100 bg-slate-50/50 rounded-lg"></div>
+            </div>
+
+            {/* Chart giả */}
+            <div className="h-56 border border-slate-100 bg-slate-50/50 rounded-lg"></div>
+          </div>
+
+          {/* Overlay CTA (Bảng gọi hành động) */}
+          <div className="absolute inset-0 flex items-center justify-center bg-white/70 backdrop-blur-sm">
+            <div className="text-center max-w-sm px-6 py-8 bg-white border border-slate-200 rounded-2xl shadow-xl shadow-slate-200/50">
+              
+              {/* Icon Box */}
+              <div className="w-14 h-14 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-center mx-auto mb-5 shadow-sm">
+                <Crown size={26} className="text-slate-800" strokeWidth={2} />
               </div>
+              
+              {/* Text Content */}
+              <h3 className="text-lg font-semibold text-slate-900 mb-2">
+                Nâng cấp để xem phân tích
+              </h3>
+              <p className="text-slate-500 text-sm mb-6 leading-relaxed px-4">
+                Mở khóa bảng điều khiển chi tiết, theo dõi lượt click theo thời gian thực và phân tích nguồn truy cập.
+              </p>
+              
+              {/* Nút Action */}
+              <button
+                onClick={() => navigate('/dashboard/upgrade')}
+                className="inline-flex items-center gap-2 px-5 py-2.5 bg-slate-900 text-white text-sm font-medium rounded-lg hover:bg-slate-800 focus:ring-4 focus:ring-slate-200 transition-all w-full justify-center"
+              >
+                <Lock size={16} strokeWidth={2} />
+                Mở khóa tính năng
+              </button>
             </div>
           </div>
+          
         </div>
       </div>
+    </div>
     );
   }
 
@@ -209,7 +158,7 @@ export const LinkAnalytics: React.FC = () => {
     return (
       <div className="max-w-4xl mx-auto py-8">
         <button
-          onClick={() => navigate('/dashboard/links')}
+          onClick={() => navigate("/dashboard/links")}
           className="flex items-center gap-2 text-sm text-gray-500 hover:text-gray-700 mb-6 transition-colors"
         >
           <ArrowLeft size={16} />
@@ -229,7 +178,7 @@ export const LinkAnalytics: React.FC = () => {
     <div className="max-w-[1040px] mx-auto py-8 font-sans">
       {/* Back navigation */}
       <button
-        onClick={() => navigate('/dashboard/links')}
+        onClick={() => navigate("/dashboard/links")}
         className="flex items-center gap-2 text-[15px] font-bold text-[#273144] hover:opacity-80 mb-6 transition-opacity"
       >
         <ChevronLeft size={20} strokeWidth={2.5} />
@@ -242,149 +191,15 @@ export const LinkAnalytics: React.FC = () => {
         <LinkQRCode link={link} />
       </div>
 
-      {/* Stats cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
-        <div className="bg-white rounded-xl border border-gray-200 p-5">
-          <div className="flex items-center gap-3 mb-2">
-            <div className="w-10 h-10 rounded-lg bg-blue-50 flex items-center justify-center">
-              <MousePointerClick size={20} className="text-blue-600" />
-            </div>
-            <span className="text-sm font-medium text-gray-500">Tổng click</span>
-          </div>
-          <div className="text-3xl font-bold text-gray-900">
-            {analytics?.totalClicks.toLocaleString() ?? 0}
-          </div>
-        </div>
+      <AnalyticsSummaryCards
+        totalClicks={totalClicks}
+        averagePerDay={averagePerDay}
+        peakDayClicks={peakDayClicks}
+      />
 
-        <div className="bg-white rounded-xl border border-gray-200 p-5">
-          <div className="flex items-center gap-3 mb-2">
-            <div className="w-10 h-10 rounded-lg bg-emerald-50 flex items-center justify-center">
-              <TrendingUp size={20} className="text-emerald-600" />
-            </div>
-            <span className="text-sm font-medium text-gray-500">Trung bình/ngày</span>
-          </div>
-          <div className="text-3xl font-bold text-gray-900">
-            {chartData.length > 0
-              ? Math.round((analytics?.totalClicks ?? 0) / chartData.length).toLocaleString()
-              : 0}
-          </div>
-        </div>
-
-        <div className="bg-white rounded-xl border border-gray-200 p-5">
-          <div className="flex items-center gap-3 mb-2">
-            <div className="w-10 h-10 rounded-lg bg-purple-50 flex items-center justify-center">
-              <BarChart2 size={20} className="text-purple-600" />
-            </div>
-            <span className="text-sm font-medium text-gray-500">Ngày cao nhất</span>
-          </div>
-          <div className="text-3xl font-bold text-gray-900">
-            {chartData.length > 0
-              ? Math.max(...chartData.map((d) => d.clicks)).toLocaleString()
-              : 0}
-          </div>
-        </div>
-      </div>
-
-      {/* Charts: area + referrer pie */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="md:col-span-2 bg-white rounded-xl border border-gray-200 p-6">
-          <h2 className="text-lg font-semibold text-gray-900 mb-6">Click theo ngày</h2>
-
-          {chartData.length === 0 ? (
-            <div className="flex items-center justify-center py-16 text-gray-400">
-              Chưa có dữ liệu click trong 30 ngày qua.
-            </div>
-          ) : (
-            <ResponsiveContainer width="100%" height={320}>
-              <AreaChart data={chartData} margin={{ top: 5, right: 10, left: -10, bottom: 5 }}>
-                <defs>
-                  <linearGradient id="clickGradient" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.15} />
-                    <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                <XAxis
-                  dataKey="label"
-                  tick={{ fontSize: 12, fill: '#9ca3af' }}
-                  tickLine={false}
-                  axisLine={{ stroke: '#e5e7eb' }}
-                />
-                <YAxis
-                  tick={{ fontSize: 12, fill: '#9ca3af' }}
-                  tickLine={false}
-                  axisLine={false}
-                  allowDecimals={false}
-                />
-                <Tooltip
-                  contentStyle={{
-                    backgroundColor: '#fff',
-                    border: '1px solid #e5e7eb',
-                    borderRadius: '8px',
-                    boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)',
-                    fontSize: '13px',
-                  }}
-                  labelFormatter={(label) => `Ngày: ${label}`}
-                  formatter={formatTooltipClicks}
-                />
-                <Area
-                  type="monotone"
-                  dataKey="clicks"
-                  stroke="#3b82f6"
-                  strokeWidth={2.5}
-                  fill="url(#clickGradient)"
-                  dot={{ r: 3, fill: '#3b82f6', strokeWidth: 0 }}
-                  activeDot={{ r: 5, fill: '#3b82f6', stroke: '#fff', strokeWidth: 2 }}
-                />
-              </AreaChart>
-            </ResponsiveContainer>
-          )}
-        </div>
-
-        <div className="bg-white rounded-xl border border-gray-200 p-6">
-          <h2 className="text-lg font-semibold text-gray-900 mb-6">Clicks theo referrer</h2>
-
-          {referrerData.length === 0 ? (
-            <div className="flex items-center justify-center py-16 text-gray-400">Chưa có dữ liệu referrer.</div>
-          ) : (
-            <div className="flex flex-col items-center">
-              <ResponsiveContainer width="100%" height={320}>
-                <PieChart>
-                  <Pie
-                    data={referrerData}
-                    dataKey="value"
-                    nameKey="name"
-                    innerRadius={60}
-                    outerRadius={100}
-                    paddingAngle={4}
-                    label={({ name, percent }) => `${name} (${((percent ?? 0) * 100).toFixed(0)}%)`}
-                  >
-                    {referrerData.map((_, idx) => (
-                      <Cell key={`cell-${idx}`} fill={REFERRER_COLORS[idx % REFERRER_COLORS.length]} />
-                    ))}
-                  </Pie>
-                  <Tooltip formatter={formatTooltipClicks} />
-                  <Legend verticalAlign="bottom" height={36} />
-                </PieChart>
-              </ResponsiveContainer>
-
-              <div className="mt-4 w-full">
-                {referrerData.map((r, idx) => (
-                  <div key={r.name} className="flex items-center justify-between gap-3 py-2">
-                    <div className="flex items-center gap-3">
-                      <span className="w-3 h-3 rounded-full" style={{ backgroundColor: REFERRER_COLORS[idx % REFERRER_COLORS.length] }} />
-                      <div className="text-sm text-gray-700 truncate" style={{ maxWidth: 220 }}>{r.name}</div>
-                    </div>
-                    <div className="text-sm font-medium text-gray-900">{r.value.toLocaleString()}</div>
-                  </div>
-                ))}
-                {referrerTotal > 0 && (
-                  <div className="border-t mt-3 pt-3 text-sm text-gray-500">Total: {referrerTotal.toLocaleString()} clicks</div>
-                )}
-              </div>
-            </div>
-          )}
-        </div>
+        <DailyClicksChartCard data={chartData} />
+        <ReferrerPieCard data={referrerData} colors={REFERRER_COLORS} />
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">

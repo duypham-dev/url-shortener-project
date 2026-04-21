@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Link as LinkIcon, QrCode, Lock, HelpCircle } from 'lucide-react';
 import { createShortenUrl } from '../api/shortUrl.api';
 import { SuccessModal } from '../components/SuccessModal';
+import { invalidateLinksCache } from '../hooks/useLinks';
 import { usePlanStore, selectPlanName, selectRemainingLinks } from '../store/usePlanStore';
 
 export const Dashboard: React.FC = () => {
@@ -40,6 +41,7 @@ export const Dashboard: React.FC = () => {
         setGeneratedShortUrl(actualShortUrl);
         setIsModalOpen(true);
         setUrl('');
+        invalidateLinksCache();
         // Refresh only the usage/quota data after link creation
         refreshUsage();
       }
