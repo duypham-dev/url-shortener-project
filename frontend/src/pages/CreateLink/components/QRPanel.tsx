@@ -1,5 +1,6 @@
 import React from 'react';
 import { QRCodeSVG } from 'qrcode.react';
+import { QR_COLORS } from '../../../config/qr.constants';
 
 type Props = {
   destination: string;
@@ -7,17 +8,6 @@ type Props = {
   setQrColor: (color: string) => void;
   size?: number;
 };
-
-const QR_COLORS = [
-  '#000000',
-  '#CE3B3D',
-  '#DF8A25',
-  '#418641',
-  '#4FA1E7',
-  '#405AC6',
-  '#7055CE',
-  '#C65089',
-];
 
 const QRPanel: React.FC<Props> = ({ destination, qrColor, setQrColor, size = 180 }) => {
   return (

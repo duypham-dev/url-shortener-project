@@ -1,5 +1,6 @@
 import React, { useMemo } from "react";
 import { Cell, Legend, Pie, PieChart, ResponsiveContainer, Tooltip } from "recharts";
+import { formatTooltipClicks } from "../../utils/chart.utils";
 
 interface ReferrerChartItem {
   name: string;
@@ -11,14 +12,6 @@ interface ReferrerPieCardProps {
   colors: string[];
 }
 
-const formatTooltipClicks = (
-  value: number | string | readonly (number | string)[] | undefined,
-): [string, string] => {
-  const rawValue = Array.isArray(value) ? value[0] : value;
-  const parsed = typeof rawValue === "number" ? rawValue : Number(rawValue ?? 0);
-  const safeValue = Number.isFinite(parsed) ? parsed : 0;
-  return [safeValue.toLocaleString(), "Clicks"];
-};
 
 const ReferrerPieCardComponent: React.FC<ReferrerPieCardProps> = ({ data, colors }) => {
   const totalClicks = useMemo(

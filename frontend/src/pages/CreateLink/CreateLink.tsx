@@ -1,17 +1,8 @@
 import React, { useCallback, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import QRPanel from "./components/QRPanel";
-
-// Danh sách các màu
-const QR_COLORS = [
-  "#000000", // Black
-  "#CE3B3D", // Red
-  "#DF8A25", // Orange
-  "#418641", // Green
-  "#4FA1E7", // Light Blue
-  "#405AC6", // Blue
-  "#7055CE", // Purple
-  "#C65089", // Pink
-];
+import { QR_COLORS } from "../../config/qr.constants";
+import { createShortenUrl } from "../../api/shortUrl.api";
 
 // Reusable Toggle Switch UI
 const Switch = ({
@@ -32,42 +23,45 @@ const Switch = ({
   </button>
 );
 
-const baseURL = import.meta.env.VITE_API_BASE_URL || "http://localhost:3000";
+const baseURL = import.meta.env.VITE_SHORT_LINK_BASE_URL || import.meta.env.VITE_API_BASE_URL || "http://localhost:3000";
 
 const CreateLink: React.FC = () => {
+  const navigate = useNavigate();
   const [destination, setDestination] = useState("");
   const [domain, setDomain] = useState(baseURL);
   const [title, setTitle] = useState("");
 
   const [generateQr, setGenerateQr] = useState(false);
-  const [addToPage, setAddToPage] = useState(false);
   const [expirationEnabled, setExpirationEnabled] = useState(false);
 
-  // Thêm State để lưu màu sắc mã QR, mặc định là màu đen
   const [qrColor, setQrColor] = useState<string>(QR_COLORS[0]);
 
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+
   const onSubmit = useCallback(
-    (e: React.FormEvent) => {
+    async (e: React.FormEvent) => {
       e.preventDefault();
-      console.log("Create link payload", {
-        destination,
-        domain,
-        title,
-        generateQr,
-        qrColor, // Gửi cả màu QR lên backend nếu cần
-        addToPage,
-        expirationEnabled,
-      });
+      if (!destination.trim()) return;
+
+      setIsSubmitting(true);
+      setSubmitError(null);
+
+      try {
+        await createShortenUrl(destination.trim());
+        // Navigate back to links list on success
+        navigate("/dashboard/links");
+      } catch (err: unknown) {
+        const msg =
+          err && typeof err === "object" && "message" in err
+            ? String((err as { message: unknown }).message)
+            : "Failed to create short link. Please try again.";
+        setSubmitError(msg);
+      } finally {
+        setIsSubmitting(false);
+      }
     },
-    [
-      destination,
-      domain,
-      title,
-      generateQr,
-      qrColor,
-      addToPage,
-      expirationEnabled,
-    ],
+    [destination, navigate],
   );
 
   return (
@@ -206,22 +200,30 @@ const CreateLink: React.FC = () => {
             </div>
           </section>
 
-          {/* Footer Actions */}
+          {/* Error message */}
+          {submitError && (
+            <div className="bg-red-50 border border-red-200 rounded-lg px-4 py-3 text-sm text-red-700">
+              {submitError}
+            </div>
+          )}
 
+          {/* Footer Actions */}
           <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100 flex items-center justify-between mt-2">
             <button
               type="button"
               onClick={() => window.history.back()}
-              className="px-4 py-2.5 rounded-md border border-gray-300 bg-white font-semibold text-[#141C3A] hover:bg-gray-50"
+              disabled={isSubmitting}
+              className="px-4 py-2.5 rounded-md border border-gray-300 bg-white font-semibold text-[#141C3A] hover:bg-gray-50 disabled:opacity-50"
             >
               Cancel
             </button>
 
             <button
               type="submit"
-              className="px-6 py-2.5 rounded-md bg-[#2A5BD7] hover:bg-blue-700 text-white font-semibold shadow-sm"
+              disabled={isSubmitting}
+              className="px-6 py-2.5 rounded-md bg-[#2A5BD7] hover:bg-blue-700 text-white font-semibold shadow-sm disabled:opacity-60 disabled:cursor-not-allowed"
             >
-              Create your link
+              {isSubmitting ? "Creating..." : "Create your link"}
             </button>
           </div>
         </form>

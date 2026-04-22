@@ -11,9 +11,9 @@ export const getLinkRateLimit = rateLimit({
     standardHeaders: true,
     legacyHeaders: false,
     keyGenerator: (req) => {
-        // Rate limit by IP
-        const ip = ipKeyGenerator(req);          // Use proper IPv6 handling
-        return `getlink_${ip}`;
+        // Rate limit by IP using express-rate-limit's helper for IPv6 safety
+        const ip = req.ip ?? req.socket.remoteAddress ?? 'unknown';
+        return `getlink_${ipKeyGenerator(ip)}`;
     },
     handler: (req, res) => {
         console.warn('Get links rate limit exceeded', {
@@ -27,4 +27,31 @@ export const getLinkRateLimit = rateLimit({
         });
     },
 
+});
+
+/**
+ * authRateLimit — strict brute-force protection for /auth/login and /auth/register.
+ * 5 attempts per 15 minutes per IP. Only failed (non-2xx) responses count toward the limit.
+ */
+export const authRateLimit = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: 5,
+    message: {
+        success: false,
+        message: 'Too many attempts. Please try again after 15 minutes.',
+        statusCode: 429,
+    },
+    standardHeaders: true,
+    legacyHeaders: false,
+    skipSuccessfulRequests: true,
+    keyGenerator: (req) => {
+        const ip = req.ip ?? req.socket.remoteAddress ?? 'unknown';
+        return `auth_${ipKeyGenerator(ip)}`;
+    },
+    handler: (_req, res) => {
+        return res.status(429).json({
+            success: false,
+            message: 'Too many login attempts. Please try again after 15 minutes.',
+        });
+    },
 });

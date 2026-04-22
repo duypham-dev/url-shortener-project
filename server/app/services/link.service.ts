@@ -9,9 +9,15 @@
  * - publishClickEvent: moved pushMessage() from redirecLink.controller.ts.
  */
 import { UAParser } from 'ua-parser-js';
-import { prisma } from "../libs/prisma";
 import { producer, CLICK_EVENTS_TOPIC } from "./kafka.service.js";
 import { logger } from "../utils/logger";
+import {
+  getUserLinksRepo,
+  getLinkInfoByShortCodeRepo,
+  getLongUrlByShortCodeRepo,
+  getUrlOwnerContextRepo,
+  type GetUserLinksOptions,
+} from "../repositories/link.repo";
 
 // ----------------------------------------------------------------
 // Types
@@ -34,11 +40,27 @@ export interface ClickEventMessage extends ClickTrackInput {
 }
 
 export interface UserLinkSummary {
+  id: string;           // base-10 string of the BigInt PK — used as cursor
   short_code: string | null;
   long_url: string;
   title: string | null;
   created_at: Date | null;
   click_count: number;
+}
+
+/** Single-link detail — no id needed (not used as a pagination cursor). */
+export interface LinkInfoSummary {
+  short_code: string | null;
+  long_url: string;
+  title: string | null;
+  created_at: Date | null;
+  click_count: number;
+}
+
+export interface GetUserLinksResult {
+  links: UserLinkSummary[];
+  hasNextPage: boolean;
+  nextCursor: string | null;
 }
 
 type UserAgentDetails = {
@@ -57,40 +79,31 @@ const parseUserAgent = (userAgent: string): UserAgentDetails => {
   };
 };
 
-const getUrlOwnerContext = async (shortCode: string) => {
-  return prisma.url_mappings.findUnique({
-    where: { short_code: shortCode },
-    select: {
-      id: true,
-      user_id: true,
-    },
-  });
-};
-
 // ----------------------------------------------------------------
-// Get all active links for a user (used by getLinks controller)
+// Get paginated active links for a user (used by getLinks controller)
 // ----------------------------------------------------------------
-export const getUserLinks = async (userId: number): Promise<UserLinkSummary[]> => {
-  const links = await prisma.url_mappings.findMany({
-    where: { user_id: userId, is_active: true },
-    orderBy: { created_at: "desc" },
-    select: {
-      short_code: true,
-      long_url: true,
-      title: true,
-      created_at: true,
-      _count: {
-        select: {
-          click_logs: true,
-        },
-      },
-    },
-  });
+export const getUserLinks = async (
+  userId: number,
+  options: GetUserLinksOptions = {},
+): Promise<GetUserLinksResult> => {
+  const { limit } = options;
+  const rows = await getUserLinksRepo(userId, options);
 
-  return links.map(({ _count, ...link }) => ({
+  const hasNextPage = limit !== undefined && rows.length > limit;
+  const items = hasNextPage ? rows.slice(0, limit) : rows;
+
+  const links = items.map(({ id, _count, ...link }) => ({
+    id: id.toString(),
     ...link,
     click_count: _count.click_logs,
   }));
+
+  const nextCursor =
+    hasNextPage && items.length > 0
+      ? items[items.length - 1]!.id.toString()
+      : null;
+
+  return { links, hasNextPage, nextCursor };
 };
 
 // ----------------------------------------------------------------
@@ -99,21 +112,8 @@ export const getUserLinks = async (userId: number): Promise<UserLinkSummary[]> =
 export const getLinkInfoByShortCode = async (
   shortCode: string,
   userId: number,
-): Promise<UserLinkSummary | null> => {
-  const link = await prisma.url_mappings.findFirst({
-    where: { short_code: shortCode, user_id: userId, is_active: true },
-    select: {
-      short_code: true,
-      long_url: true,
-      title: true,
-      created_at: true,
-      _count: {
-        select: {
-          click_logs: true,
-        },
-      },
-    },
-  });
+): Promise<LinkInfoSummary | null> => {
+  const link = await getLinkInfoByShortCodeRepo(shortCode, userId);
 
   if (!link) {
     return null;
@@ -133,11 +133,7 @@ export const getLinkInfoByShortCode = async (
 // Only fetches the long_url column — no need for other fields.
 // ----------------------------------------------------------------
 export const getLongUrlByShortCode = async (shortCode: string): Promise<string | null> => {
-  const record = await prisma.url_mappings.findUnique({
-    where: { short_code: shortCode },
-    select: { long_url: true },
-  });
-
+  const record = await getLongUrlByShortCodeRepo(shortCode);
   return record?.long_url ?? null;
 };
 
@@ -150,7 +146,7 @@ export const publishClickEvent = async (message: ClickTrackInput): Promise<void>
   try {
     logger.info('Kafka: publishing click event', { shortCode: message.shortCode });
 
-    const ownerContext = await getUrlOwnerContext(message.shortCode);
+    const ownerContext = await getUrlOwnerContextRepo(message.shortCode);
     if (!ownerContext) {
       logger.warn('Kafka: skipped click event because shortCode was not found.', {
         shortCode: message.shortCode,

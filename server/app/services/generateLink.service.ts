@@ -4,7 +4,7 @@ import encodeIdToBase62 from '../utils/generateShortLink';
 
 export default async function generateShortLink(
   longUrl: string,
-  userId: number // Bắt buộc userId vì schema của bạn không cho null
+  userId: number // Obligatory
 ): Promise<string> {
   const BASE_URL = process.env.SHORT_LINK_BASE_URL ?? 'https://short.ly';
 

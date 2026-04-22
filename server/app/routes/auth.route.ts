@@ -20,14 +20,16 @@ import {
 } from "../controllers/auth.controller";
 import { googleLogin } from "../controllers/googleLogin.controller";
 import { verifyToken } from "../middlewares/verifyToken.middleware";
+import { authRateLimit } from "../middlewares/ratelimit.middleware";
 
 const authRouter = Router();
 
 // ---- Public routes ----
-authRouter.post("/register", registerHandler);
-authRouter.post("/login", loginHandler);
+authRouter.post("/register", authRateLimit, registerHandler);
+authRouter.post("/login", authRateLimit, loginHandler);
 authRouter.post("/refresh", refreshHandler);
 authRouter.post("/google", googleLogin);
+
 // ---- Protected routes (yêu cầu accessToken hợp lệ) ----
 authRouter.post("/logout", verifyToken, logoutHandler);
 authRouter.get("/me", verifyToken, getMeHandler);

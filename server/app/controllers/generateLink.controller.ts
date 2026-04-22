@@ -19,7 +19,6 @@ import {
 
 interface ShortenRequestBody {
   originalUrl: string;
-  userId?: number;
 }
 
 interface ShortenResponseBody {
@@ -29,6 +28,7 @@ interface ShortenResponseBody {
 
 const URL_REGEX = /^https?:\/\/.{1,2048}$/;
 
+// Helper function to validate URL format
 function isValidUrl(url: string): boolean {
   try {
     const parsed = new URL(url);
@@ -38,6 +38,7 @@ function isValidUrl(url: string): boolean {
   }
 }
 
+// Controller function to generate short URL
 const genShortLink = async (
   req: Request<{}, ShortenResponseBody, ShortenRequestBody>,
   res: Response,
@@ -45,7 +46,8 @@ const genShortLink = async (
 ): Promise<void> => {
   try {
     const { originalUrl } = req.body;
-    const userId = req.user?.userId || null;
+    // Get userId from auth middleware
+    const userId = req.user?.userId ?? null;
 
     if (!userId) {
       throw new UnauthorizedError("Unauthorized.");
@@ -60,6 +62,8 @@ const genShortLink = async (
         "Invalid URL format. Must start with http:// or https://.",
       );
     }
+
+    // Check danger URL 
 
     const shortUrl = await generateShortLink(originalUrl, userId);
    

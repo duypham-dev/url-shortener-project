@@ -9,11 +9,11 @@
  * 6. Global error handler (CUỐI CÙNG)
  */
 import express from "express";
+import "dotenv/config";
 import morgan from "morgan";
 import cors from "cors";
 import helmet from "helmet";
 import cookieParser from "cookie-parser";
-import "dotenv/config";
 import shortenRouter from "./routes/shortlink.route.js";
 import authRouter from "./routes/auth.route.js";
 import paymentRouter  from "./routes/payment.route.js";
@@ -31,15 +31,28 @@ app.set('etag', false);
 const baseUrl = process.env.BASE_URL ?? "/api/v1";
 const corsOptions = {
   origin: process.env.FRONTEND_URL ?? "http://localhost:5173",
-  credentials: true, // Cho phép gửi cookies qua CORS
+  credentials: true, // Required to send/receive httpOnly refreshToken cookie
 };
 
 // ---- Security ----
-// app.use(
-//   helmet({
-//     referrerPolicy: { policy: "no-referrer" },
-//   })
-// );
+app.use(
+  helmet({
+    referrerPolicy: { policy: "no-referrer" },
+    // Allow cross-origin resource loads after redirect (needed for short-link redirects)
+    crossOriginResourcePolicy: { policy: "cross-origin" },
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        scriptSrc: ["'self'"],
+        styleSrc: ["'self'", "'unsafe-inline'"],
+        imgSrc: ["'self'", "data:", "https:"],
+        connectSrc: ["'self'"],
+        frameSrc: ["'none'"],
+        objectSrc: ["'none'"],
+      },
+    },
+  })
+);
 app.use(cors(corsOptions));
 
 // ---- Logging ----

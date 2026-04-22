@@ -13,12 +13,17 @@
  * - Added explicit `select` to activeSubscription query (replaces `include`).
  */
 import type { PlanTier } from "../../generated/prisma/enums";
-import { prisma } from "../libs/prisma";
 import {
   NotFoundError,
   PaymentRequiredError,
   QuotaExceededError,
 } from "../errors/app.error.js";
+import {
+  getPlanUsageRepo,
+  getFallbackFreePlanRepo,
+  getActiveSubscriptionRepo,
+  getPendingPaymentRepo,
+} from "../repositories/subscription.repo";
 
 const getCurrentYearMonth = (date = new Date()): string => {
   const year = date.getUTCFullYear();
@@ -105,19 +110,7 @@ const getPlanUsage = async (
   plan: ActivePlanSummary,
 ): Promise<UsageSummary> => {
   const yearMonth = getCurrentYearMonth();
-
-  const usage = await prisma.user_link_monthly_usage.findUnique({
-    where: {
-      user_id_year_month: {
-        user_id: userId,
-        year_month: yearMonth,
-      },
-    },
-    select: {
-      link_count: true,
-      custom_link_count: true,
-    },
-  });
+  const usage = await getPlanUsageRepo(userId, yearMonth);
 
   const linkCount = usage?.link_count ?? 0;
   const customLinkCount = usage?.custom_link_count ?? 0;
@@ -136,16 +129,7 @@ const getPlanUsage = async (
 };
 
 const getFallbackFreePlan = async () => {
-  const freePlan = await prisma.subscription_plans.findFirst({
-    where: {
-      tier: "free",
-      is_active: true,
-    },
-    orderBy: {
-      price: "asc",
-    },
-    select: PLAN_SELECT,
-  });
+  const freePlan = await getFallbackFreePlanRepo();
 
   if (!freePlan) {
     throw new NotFoundError("Không tìm thấy gói miễn phí đang hoạt động.");
@@ -154,59 +138,12 @@ const getFallbackFreePlan = async () => {
   return freePlan;
 };
 
-const syncExpiredSubscriptions = async (
-  userId: number,
-): Promise<void> => {
-  await prisma.subscriptions.updateMany({
-    where: {
-      user_id: userId,
-      status: "active",
-      expires_at: { lte: new Date() },
-    },
-    data: {
-      status: "expired",
-    },
-  });
-};
-
 export const getActivePlanContext = async (
   userId: number,
 ): Promise<ActivePlanContext> => {
-
-  await syncExpiredSubscriptions(userId);
-
   const [activeSubscription, pendingPayment] = await Promise.all([
-    prisma.subscriptions.findFirst({
-      where: {
-        user_id: userId,
-        status: "active",
-        expires_at: { gt: new Date() },
-      },
-      orderBy: {
-        expires_at: "desc",
-      },
-      select: {
-        id: true,
-        status: true,
-        started_at: true,
-        expires_at: true,
-        subscription_plans: {
-          select: PLAN_SELECT,
-        },
-      },
-    }),
-    prisma.payments.findFirst({
-      where: {
-        user_id: userId,
-        status: "pending",
-      },
-      orderBy: {
-        created_at: "desc",
-      },
-      select: {
-        id: true,
-      },
-    }),
+    getActiveSubscriptionRepo(userId),
+    getPendingPaymentRepo(userId),
   ]);
 
   const planSource = activeSubscription?.subscription_plans

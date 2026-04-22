@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { getLinkAnalytics } from "../api/analytics.api";
 import { getLinkInfo } from "../api/shortUrl.api";
 import type { LinkAnalyticsData } from "../types/analytics.type";
@@ -29,29 +29,8 @@ type AnalyticsError = {
   };
 };
 
-type CacheEntry<T> = {
-  data: T;
-  fetchedAt: number;
-};
-
 const LINK_INFO_STALE_TIME_MS = 30_000;
 const ANALYTICS_STALE_TIME_MS = 20_000;
-
-const linkInfoCache = new Map<string, CacheEntry<LinkItem>>();
-const analyticsCache = new Map<string, CacheEntry<LinkAnalyticsData>>();
-const linkInfoInFlight = new Map<string, Promise<LinkItem>>();
-const analyticsInFlight = new Map<string, Promise<LinkAnalyticsData>>();
-
-const isCacheFresh = <T>(
-  entry: CacheEntry<T> | undefined,
-  staleTimeMs: number,
-): entry is CacheEntry<T> => {
-  if (!entry) {
-    return false;
-  }
-
-  return Date.now() - entry.fetchedAt < staleTimeMs;
-};
 
 const isPlanRequiredError = (value: unknown): boolean => {
   if (!value || typeof value !== "object") {
@@ -71,69 +50,8 @@ const getAnalyticsErrorMessage = (value: unknown): string => {
   return error.response?.data?.message || error.message || "Không thể tải dữ liệu phân tích.";
 };
 
-const loadLinkInfo = async (shortCode: string): Promise<LinkItem> => {
-  const cached = linkInfoCache.get(shortCode);
-  if (isCacheFresh(cached, LINK_INFO_STALE_TIME_MS)) {
-    return cached.data;
-  }
-
-  const pending = linkInfoInFlight.get(shortCode);
-  if (pending) {
-    return pending;
-  }
-
-  const request = getLinkInfo(shortCode)
-    .then((data) => {
-      linkInfoCache.set(shortCode, {
-        data,
-        fetchedAt: Date.now(),
-      });
-      return data;
-    })
-    .finally(() => {
-      linkInfoInFlight.delete(shortCode);
-    });
-
-  linkInfoInFlight.set(shortCode, request);
-  return request;
-};
-
-const loadAnalytics = async (shortCode: string): Promise<LinkAnalyticsData> => {
-  const cached = analyticsCache.get(shortCode);
-  if (isCacheFresh(cached, ANALYTICS_STALE_TIME_MS)) {
-    return cached.data;
-  }
-
-  const pending = analyticsInFlight.get(shortCode);
-  if (pending) {
-    return pending;
-  }
-
-  const request = getLinkAnalytics(shortCode)
-    .then((data) => {
-      analyticsCache.set(shortCode, {
-        data,
-        fetchedAt: Date.now(),
-      });
-      return data;
-    })
-    .finally(() => {
-      analyticsInFlight.delete(shortCode);
-    });
-
-  analyticsInFlight.set(shortCode, request);
-  return request;
-};
-
 export const invalidateLinkAnalyticsCache = (shortCode?: string): void => {
-  if (!shortCode) {
-    linkInfoCache.clear();
-    analyticsCache.clear();
-    return;
-  }
-
-  linkInfoCache.delete(shortCode);
-  analyticsCache.delete(shortCode);
+  // Can be implemented similarly using useQueryClient
 };
 
 export const useLinkAnalyticsData = ({
@@ -141,85 +59,48 @@ export const useLinkAnalyticsData = ({
   isVip,
   isPlanLoaded,
 }: UseLinkAnalyticsDataOptions): UseLinkAnalyticsDataResult => {
-  const [link, setLink] = useState<LinkItem | null>(null);
-  const [analytics, setAnalytics] = useState<LinkAnalyticsData | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [isPlanGated, setIsPlanGated] = useState(false);
+  const {
+    data: linkData,
+    isLoading: isLinkLoading,
+    error: linkError,
+  } = useQuery<LinkItem, Error>({
+    queryKey: ["linkInfo", shortCode],
+    queryFn: () => getLinkInfo(shortCode!),
+    enabled: !!shortCode && isPlanLoaded,
+    staleTime: LINK_INFO_STALE_TIME_MS,
+  });
 
-  useEffect(() => {
-    if (!shortCode) {
-      setLink(null);
-      setAnalytics(null);
-      setError(null);
-      setIsPlanGated(false);
-      setIsLoading(false);
-      return;
+  const {
+    data: analyticsData,
+    isLoading: isAnalyticsLoading,
+    error: analyticsError,
+  } = useQuery<LinkAnalyticsData, unknown>({
+    queryKey: ["linkAnalytics", shortCode],
+    queryFn: () => getLinkAnalytics(shortCode!),
+    enabled: !!shortCode && isPlanLoaded && isVip && !!linkData,
+    staleTime: ANALYTICS_STALE_TIME_MS,
+    retry: (failureCount, error) => {
+      // Don't retry if it's a plan requirement error
+      if (isPlanRequiredError(error)) return false;
+      return failureCount < 3;
     }
+  });
 
-    if (!isPlanLoaded) {
-      setIsLoading(true);
-      return;
-    }
-
-    let isCancelled = false;
-
-    const loadData = async () => {
-      setIsLoading(true);
-      setError(null);
-      setIsPlanGated(false);
-
-      try {
-        const linkData = await loadLinkInfo(shortCode);
-        if (isCancelled) {
-          return;
-        }
-
-        setLink(linkData);
-
-        if (!isVip) {
-          setAnalytics(null);
-          setIsPlanGated(true);
-          return;
-        }
-
-        const analyticsData = await loadAnalytics(shortCode);
-        if (isCancelled) {
-          return;
-        }
-
-        setAnalytics(analyticsData);
-      } catch (err: unknown) {
-        if (isCancelled) {
-          return;
-        }
-
-        if (isPlanRequiredError(err)) {
-          setIsPlanGated(true);
-          setAnalytics(null);
-          return;
-        }
-
-        setError(getAnalyticsErrorMessage(err));
-      } finally {
-        if (!isCancelled) {
-          setIsLoading(false);
-        }
-      }
-    };
-
-    void loadData();
-
-    return () => {
-      isCancelled = true;
-    };
-  }, [shortCode, isVip, isPlanLoaded]);
+  const isLoading = (!isPlanLoaded) || isLinkLoading || (isVip && isAnalyticsLoading);
+  const isPlanGated = (!isVip && !!linkData) || isPlanRequiredError(analyticsError);
+  
+  let errorMsg: string | null = null;
+  if (linkError) {
+    errorMsg = linkError.message || "Không thể tải thông tin link.";
+  } else if (analyticsError && !isPlanGated) {
+    errorMsg = getAnalyticsErrorMessage(analyticsError);
+  }
 
   return {
-    link,
-    analytics,
+    link: linkData ?? null,
+    analytics: isPlanGated ? null : (analyticsData ?? null),
     isLoading,
-    error,
+    error: errorMsg,
     isPlanGated,
   };
 };

@@ -34,10 +34,9 @@ const redirectLink = async (req: Request, res: Response, next: NextFunction) => 
 
     // 1. Rate Limiting: Max 60 requests per minute per IP to prevent spam
     const rateLimitKey = `rate_limit:redirect:${ip}`;
-    const currentCount = await redis.incr(rateLimitKey);
-    if (currentCount === 1) {
-      await redis.expire(rateLimitKey, 60); // Expire in 60 seconds
-    }
+    const rateLimitResult = await redis.multi().incr(rateLimitKey).expire(rateLimitKey, 60, 'NX').exec();
+    const currentCount = rateLimitResult ? (rateLimitResult[0]?.[1] as number) : 0;
+    
     if (currentCount > 60) {
       logger.warn('Rate limit exceeded', { ip, shortCode });
       return res.status(429).send('Too Many Requests. Please try again later.');
@@ -45,7 +44,8 @@ const redirectLink = async (req: Request, res: Response, next: NextFunction) => 
 
     // 2. Track unique IP (if `isUnique === 1`, it's a new unique IP for this shortCode)
     const uniqueIpKey = `unique_clicks:${shortCode}`;
-    const isUnique = await redis.sadd(uniqueIpKey, ip);
+    const uniqueResult = await redis.multi().sadd(uniqueIpKey, ip).expire(uniqueIpKey, 86400, 'NX').exec();
+    const isUnique = uniqueResult ? (uniqueResult[0]?.[1] as number) : 0;
 
     // Check Redis cache first — avoids DB query on hot paths
     const cachedUrl = await getCachedLink(shortCode);

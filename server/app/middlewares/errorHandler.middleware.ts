@@ -35,7 +35,6 @@ export const errorHandler = (
   err: unknown,
   req: Request,
   res: Response,
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   next: NextFunction
 ): void => {
   // Log lỗi ra console (trong production nên dùng logger như winston/pino)

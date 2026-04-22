@@ -1,5 +1,18 @@
+/**
+ * getLinkInfo.controller.ts
+ *
+ * Refactor Notes:
+ * - Phase 8: Replaced all inline res.status() error responses with
+ *   throw + custom error classes, so all paths flow through the global
+ *   errorHandler middleware consistently.
+ */
 import type { Request, Response, NextFunction } from "express";
 import { getLinkInfoByShortCode } from "../services/link.service.js";
+import {
+  BadRequestError,
+  NotFoundError,
+  UnauthorizedError,
+} from "../errors/app.error.js";
 
 const getLinkInfo = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
@@ -7,20 +20,17 @@ const getLinkInfo = async (req: Request, res: Response, next: NextFunction): Pro
     const { shortCode } = req.params;
 
     if (!userId) {
-      res.status(401).json({ success: false, message: "Unauthorized." });
-      return;
+      throw new UnauthorizedError("Unauthorized.");
     }
 
-    if (typeof shortCode !== 'string' || !shortCode) {
-      res.status(400).json({ success: false, message: "Invalid short code." });
-      return;
+    if (typeof shortCode !== "string" || !shortCode) {
+      throw new BadRequestError("Invalid short code.");
     }
 
     const link = await getLinkInfoByShortCode(shortCode, userId);
 
     if (!link) {
-      res.status(404).json({ success: false, message: "Link not found." });
-      return;
+      throw new NotFoundError("Link not found.");
     }
 
     res.status(200).json({ success: true, data: link });

@@ -4,24 +4,14 @@
  * Service layer for link click analytics.
  * Queries click_logs table grouped by date for a given short_code.
  */
-import { prisma } from "../libs/prisma";
+import { getClickLogsRepo, getLinkBreakdownAnalyticsRepo, type LinkBreakdownAnalyticsResult, type AnalyticsBreakdownItem, getLinkReferrerAnalyticsRepo, isLinkOwnedByUserRepo, getDailyClickAnalyticsRepo } from "../repositories/analytics.repo";
 
 export interface DailyClickRow {
   date: string;   // YYYY-MM-DD
   clicks: number;
 }
 
-export interface AnalyticsBreakdownItem {
-  label: string;
-  clicks: number;
-}
-
-export interface LinkBreakdownAnalyticsResult {
-  deviceBreakdown: AnalyticsBreakdownItem[];
-  browserBreakdown: AnalyticsBreakdownItem[];
-  osBreakdown: AnalyticsBreakdownItem[];
-  countryBreakdown: AnalyticsBreakdownItem[];
-}
+export type { AnalyticsBreakdownItem, LinkBreakdownAnalyticsResult };
 
 export interface LinkAnalyticsResult {
   shortCode: string;
@@ -59,28 +49,7 @@ export const getClickLogs = async (
   const take = pageSize;
   const skip = (Math.max(1, page) - 1) * pageSize;
 
-  const [rows, total] = await prisma.$transaction([
-    prisma.click_logs.findMany({
-      where: { short_code: shortCode },
-      orderBy: { clicked_at: 'desc' },
-      take,
-      skip,
-      select: {
-        id: true,
-        url_mapping_id: true,
-        user_id: true,
-        clicked_at: true,
-        ip_address: true,
-        browser: true,
-        os: true,
-        device_type: true,
-        user_agent: true,
-        referrer: true,
-        country: true,
-      },
-    }),
-    prisma.click_logs.count({ where: { short_code: shortCode } }),
-  ]);
+  const [rows, total] = await getClickLogsRepo(shortCode, take, skip);
 
   const formatted = rows.map((r) => ({
     id: typeof r.id === 'bigint' ? r.id.toString() : String(r.id),
@@ -108,107 +77,14 @@ export const getClickLogs = async (
   };
 };
 
-type BreakdownQueryRow = {
-  label: string;
-  clicks: bigint;
-};
-
-const mapBreakdownRows = (rows: BreakdownQueryRow[]): AnalyticsBreakdownItem[] =>
-  rows.map((row) => ({
-    label: row.label,
-    clicks: Number(row.clicks),
-  }));
-
-const getLinkBreakdownByDimension = async (
-  shortCode: string,
-  dimension: "device" | "browser" | "os" | "country",
-  take: number = 8,
-): Promise<AnalyticsBreakdownItem[]> => {
-  switch (dimension) {
-    case "device": {
-      const rows = await prisma.$queryRaw<BreakdownQueryRow[]>`
-        SELECT
-          COALESCE(NULLIF(TRIM(device_type), ''), 'Unknown') AS label,
-          COUNT(*)::bigint AS clicks
-        FROM shortlink.click_logs
-        WHERE short_code = ${shortCode}
-        GROUP BY 1
-        ORDER BY clicks DESC
-        LIMIT ${take}
-      `;
-      return mapBreakdownRows(rows);
-    }
-    case "browser": {
-      const rows = await prisma.$queryRaw<BreakdownQueryRow[]>`
-        SELECT
-          COALESCE(NULLIF(TRIM(browser), ''), 'Unknown') AS label,
-          COUNT(*)::bigint AS clicks
-        FROM shortlink.click_logs
-        WHERE short_code = ${shortCode}
-        GROUP BY 1
-        ORDER BY clicks DESC
-        LIMIT ${take}
-      `;
-      return mapBreakdownRows(rows);
-    }
-    case "os": {
-      const rows = await prisma.$queryRaw<BreakdownQueryRow[]>`
-        SELECT
-          COALESCE(NULLIF(TRIM(os), ''), 'Unknown') AS label,
-          COUNT(*)::bigint AS clicks
-        FROM shortlink.click_logs
-        WHERE short_code = ${shortCode}
-        GROUP BY 1
-        ORDER BY clicks DESC
-        LIMIT ${take}
-      `;
-      return mapBreakdownRows(rows);
-    }
-    case "country": {
-      const rows = await prisma.$queryRaw<BreakdownQueryRow[]>`
-        SELECT
-          COALESCE(NULLIF(TRIM(country), ''), 'Unknown') AS label,
-          COUNT(*)::bigint AS clicks
-        FROM shortlink.click_logs
-        WHERE short_code = ${shortCode}
-        GROUP BY 1
-        ORDER BY clicks DESC
-        LIMIT ${take}
-      `;
-      return mapBreakdownRows(rows);
-    }
-    default:
-      return [];
-  }
-};
-
 export const getLinkBreakdownAnalytics = async (
   shortCode: string,
 ): Promise<LinkBreakdownAnalyticsResult> => {
-  const [deviceBreakdown, browserBreakdown, osBreakdown, countryBreakdown] =
-    await Promise.all([
-      getLinkBreakdownByDimension(shortCode, "device"),
-      getLinkBreakdownByDimension(shortCode, "browser"),
-      getLinkBreakdownByDimension(shortCode, "os"),
-      getLinkBreakdownByDimension(shortCode, "country"),
-    ]);
-
-  return {
-    deviceBreakdown,
-    browserBreakdown,
-    osBreakdown,
-    countryBreakdown,
-  };
+  return await getLinkBreakdownAnalyticsRepo(shortCode);
 };
 
 export const getLinkReferrerAnalytics = async (shortCode: string) => {
-  const referrers = await prisma.click_logs.groupBy({
-    by: ['referrer'],
-    where: { short_code: shortCode },
-    _count: { referrer: true },
-    orderBy: { _count: { referrer: 'desc' } },
-    take: 10,
-  });
+  const referrers = await getLinkReferrerAnalyticsRepo(shortCode);
   return referrers.map(r => ({
     referrer: r.referrer || 'Direct',
     clicks: r._count.referrer,
@@ -223,10 +99,7 @@ export const isLinkOwnedByUser = async (
   shortCode: string,
   userId: number,
 ): Promise<boolean> => {
-  const link = await prisma.url_mappings.findUnique({
-    where: { short_code: shortCode },
-    select: { user_id: true },
-  });
+  const link = await isLinkOwnedByUserRepo(shortCode);
   return link?.user_id === userId;
 };
 
@@ -242,16 +115,7 @@ export const getDailyClickAnalytics = async (
   since.setDate(since.getDate() - days);
 
   // Raw query for date grouping (Prisma doesn't support GROUP BY DATE natively)
-  const rows = await prisma.$queryRaw<{ date: Date; clicks: bigint }[]>`
-    SELECT 
-      DATE(clicked_at) as date,
-      COUNT(*)::bigint as clicks
-    FROM shortlink.click_logs
-    WHERE short_code = ${shortCode}
-      AND clicked_at >= ${since}
-    GROUP BY DATE(clicked_at)
-    ORDER BY date ASC
-  `;
+  const rows = await getDailyClickAnalyticsRepo(shortCode, since);
 
   const dailyClicks: DailyClickRow[] = rows
     .filter((row) => row.date !== null)
