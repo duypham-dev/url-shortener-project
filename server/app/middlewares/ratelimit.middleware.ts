@@ -30,20 +30,14 @@ export const getLinkRateLimit = rateLimit({
 });
 
 /**
- * authRateLimit — strict brute-force protection for /auth/login and /auth/register.
- * 5 attempts per 15 minutes per IP. Only failed (non-2xx) responses count toward the limit.
+ * authRateLimit — strict bot spam 
+ * max 100 attempts per 1 minutes per IP. Only failed (non-2xx) responses count toward the limit.
  */
-export const authRateLimit = rateLimit({
-    windowMs: 15 * 60 * 1000, // 15 minutes
-    max: 5,
-    message: {
-        success: false,
-        message: 'Too many attempts. Please try again after 15 minutes.',
-        statusCode: 429,
-    },
+export const globalAuthRateLimit = rateLimit({
+    windowMs: 1 * 60 * 1000, // 1 minutes
+    max: 100,
     standardHeaders: true,
     legacyHeaders: false,
-    skipSuccessfulRequests: true,
     keyGenerator: (req) => {
         const ip = req.ip ?? req.socket.remoteAddress ?? 'unknown';
         return `auth_${ipKeyGenerator(ip)}`;
@@ -51,7 +45,56 @@ export const authRateLimit = rateLimit({
     handler: (_req, res) => {
         return res.status(429).json({
             success: false,
-            message: 'Too many login attempts. Please try again after 15 minutes.',
+            message: 'Too many requests! Please slow down.',
+        });
+    },
+});
+
+/**
+ * loginRateLimit — strict brute-force protection for /auth/login and /auth/register.
+ * max 10 attempts per 10 minutes per IP. Only failed (non-2xx) responses count toward the limit.
+ */
+export const loginRateLimit = rateLimit({
+    windowMs: 10 * 60 * 1000, // 10 minutes
+    max: 10,
+    standardHeaders: true,
+    legacyHeaders: false,
+    skipSuccessfulRequests: true,
+    keyGenerator: (req) => {
+        const ip = req.ip ?? 'unknown';
+        let email = req.body?.email ?? 'anonymous';
+        if (typeof email !== 'string') {
+            email = 'invalid_format'; 
+        }
+        email = email.trim().toLowerCase().substring(0, 100);
+        return `login_${ip}_${email}`; 
+    },
+    handler: (_req, res) => {
+        return res.status(429).json({
+            success: false,
+            message: 'Too many failed login attempts. Please try again in 10 minutes.',
+        });
+    },
+});
+
+/**
+ * REGISTER RATE LIMIT
+ * Prevent spam create account
+ */
+export const registerRateLimit = rateLimit({
+    windowMs: 60 * 60 * 1000, // 1 hour
+    max: 5, // max 5 accounts / hour / IP
+    standardHeaders: true,
+    legacyHeaders: false,
+    skipSuccessfulRequests: false, 
+    keyGenerator: (req) => {
+        const ip = req.ip ?? 'unknown';
+        return `register_${ip}`;
+    },
+    handler: (_req, res) => {
+        return res.status(429).json({
+            success: false,
+            message: 'Too many accounts created. Please try again later.',
         });
     },
 });

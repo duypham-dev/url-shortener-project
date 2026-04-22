@@ -1,4 +1,15 @@
-export type ErrorDetails = Record<string, unknown> | string[] | null;
+// Define validation error details
+export interface ValidationErrorDetail {
+  field: string;
+  message: string;
+}
+
+// Define ErrorDetails
+export type ErrorDetails = 
+  | Record<string, unknown> 
+  | string[] 
+  | ValidationErrorDetail[]
+  | null;
 
 export class AppError extends Error {
   readonly statusCode: number;
