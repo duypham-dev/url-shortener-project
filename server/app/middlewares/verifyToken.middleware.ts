@@ -22,7 +22,9 @@ declare global {
 }
 
 // ----------------------------------------------------------------
-// verifyToken: bắt buộc phải có token hợp lệ
+// verifyToken: Main middleware to verify JWT access token
+// - Returns 401 if token is missing, invalid, expired, or blacklisted
+// - On success, attaches payload to req.user and calls next()
 // ----------------------------------------------------------------
 export const verifyToken = async (
   req: Request,
@@ -30,7 +32,7 @@ export const verifyToken = async (
   next: NextFunction
 ): Promise<void> => {
   try {
-    // 1. Lấy token từ header "Authorization: Bearer <token>"
+    // 1. Get token from Authorization header
     const authHeader = req.headers.authorization;
     if (!authHeader?.startsWith("Bearer ")) {
       res.status(401).json({
@@ -46,7 +48,7 @@ export const verifyToken = async (
       return;
     }
 
-    // 2. Kiểm tra token có trong blacklist không (đã logout)
+    // 2. Check if token is blacklisted (after logout)
     const blacklisted = await isTokenBlacklisted(token);
     if (blacklisted) {
       res.status(401).json({
@@ -56,15 +58,15 @@ export const verifyToken = async (
       return;
     }
 
-    // 3. Verify chữ ký và hạn sử dụng
+    // 3. Verify signature and expiration, get payload
     const payload = verifyAccessToken(token);
 
-    // 4. Gắn payload vào request để các middleware/controller sau sử dụng
+    // 4. Attach payload to req.user for downstream handlers
     req.user = payload;
 
     next();
   } catch (error) {
-    // JWT expired hoặc signature không hợp lệ
+    // Token invalid, expired, or verification failed
     res.status(401).json({
       success: false,
       message: "Token không hợp lệ hoặc đã hết hạn.",
@@ -73,8 +75,7 @@ export const verifyToken = async (
 };
 
 // ----------------------------------------------------------------
-// requireRole: kiểm tra quyền truy cập theo role (dùng sau verifyToken)
-// Ví dụ: router.get('/admin', verifyToken, requireRole('admin'), handler)
+// requireRole: Middleware factory to enforce role-based access control
 // ----------------------------------------------------------------
 export const requireRole = (...allowedRoles: string[]) => {
   return (req: Request, res: Response, next: NextFunction): void => {

@@ -26,7 +26,6 @@ export const getLinkRateLimit = rateLimit({
                     message: 'Too many failed get link attempts. Please try again after 1 minute.',
         });
     },
-
 });
 
 /**

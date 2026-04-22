@@ -14,7 +14,7 @@ import {
   UnauthorizedError,
 } from "../errors/app.error.js";
 
-const getLinkInfo = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+const getLinkInfoController = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     const userId = req.user?.userId;
     const { shortCode } = req.params;
@@ -39,4 +39,4 @@ const getLinkInfo = async (req: Request, res: Response, next: NextFunction): Pro
   }
 };
 
-export default getLinkInfo;
+export default getLinkInfoController;
