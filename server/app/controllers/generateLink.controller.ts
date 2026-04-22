@@ -37,7 +37,7 @@ const genShortLink = async (
 ): Promise<void> => {
   try {
     const { originalUrl } = req.body;
-    // Get userId from auth middleware
+    
     const userId = req.user?.userId ?? null;
 
     if (!userId) {

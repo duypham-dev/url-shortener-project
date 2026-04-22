@@ -10,10 +10,10 @@
  */
 import type { Request, Response, NextFunction } from "express";
 import * as authService from "../services/auth.service";
-import {
-  validateRegisterInput,
-  validateLoginInput,
-} from "../utils/validate.util";
+// import {
+//   validateRegisterInput,
+//   validateLoginInput,
+// } from "../utils/validate.util";
 import {
   REFRESH_TOKEN_COOKIE,
   setRefreshTokenCookie,
@@ -42,15 +42,15 @@ export const registerHandler = async (
 ): Promise<void> => {
   try {
     // 1. Validate input
-    const validation = validateRegisterInput(req.body);
-    if (!validation.isValid) {
-      res.status(422).json({
-        success: false,
-        message: "Dữ liệu không hợp lệ.",
-        errors: validation.errors,
-      });
-      return;
-    }
+    // const validation = validateRegisterInput(req.body);
+    // if (!validation.isValid) {
+    //   res.status(422).json({
+    //     success: false,
+    //     message: "Dữ liệu không hợp lệ.",
+    //     errors: validation.errors,
+    //   });
+    //   return;
+    // }
 
     // 2. Gọi service
     const { accessToken, refreshToken, user } = await authService.register({
@@ -83,15 +83,15 @@ export const loginHandler = async (
 ): Promise<void> => {
   try {
     // 1. Validate input
-    const validation = validateLoginInput(req.body);
-    if (!validation.isValid) {
-      res.status(422).json({
-        success: false,
-        message: "Dữ liệu không hợp lệ.",
-        errors: validation.errors,
-      });
-      return;
-    }
+    // const validation = validateLoginInput(req.body);
+    // if (!validation.isValid) {
+    //   res.status(422).json({
+    //     success: false,
+    //     message: "Dữ liệu không hợp lệ.",
+    //     errors: validation.errors,
+    //   });
+    //   return;
+    // }
 
     // 2. Gọi service
     const { accessToken, refreshToken, user } = await authService.login({

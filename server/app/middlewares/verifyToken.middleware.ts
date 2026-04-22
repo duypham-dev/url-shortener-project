@@ -9,9 +9,9 @@ import type { Request, Response, NextFunction } from "express";
 import { verifyAccessToken } from "../utils/jwt.util";
 import { isTokenBlacklisted } from "../services/auth.service";
 import type { JwtPayload } from "../utils/jwt.util";
-
+import { ForbiddenError, UnauthorizedError } from "../errors/app.error.js";
 // ----------------------------------------------------------------
-// Expand Express Request interface to include user property 
+// Expand Express Request interface to include user property
 // ----------------------------------------------------------------
 declare global {
   namespace Express {
@@ -29,69 +29,53 @@ declare global {
 export const verifyToken = async (
   req: Request,
   res: Response,
-  next: NextFunction
+  next: NextFunction,
 ): Promise<void> => {
   try {
     // 1. Get token from Authorization header
     const authHeader = req.headers.authorization;
     if (!authHeader?.startsWith("Bearer ")) {
-      res.status(401).json({
-        success: false,
-        message: "Không tìm thấy token xác thực.",
-      });
-      return;
+      throw new UnauthorizedError("Authorization header missing or malformed.");
     }
 
     const token = authHeader.split(" ")[1];
     if (!token) {
-      res.status(401).json({ success: false, message: "Token không hợp lệ." });
-      return;
+      throw new UnauthorizedError("Token missing.");
     }
 
     // 2. Check if token is blacklisted (after logout)
     const blacklisted = await isTokenBlacklisted(token);
     if (blacklisted) {
-      res.status(401).json({
-        success: false,
-        message: "Token đã bị thu hồi. Vui lòng đăng nhập lại.",
-      });
-      return;
+      throw new UnauthorizedError("Token has been revoked!");
     }
 
-    // 3. Verify signature and expiration, get payload
     const payload = verifyAccessToken(token);
-
-    // 4. Attach payload to req.user for downstream handlers
     req.user = payload;
 
     next();
   } catch (error) {
-    // Token invalid, expired, or verification failed
-    res.status(401).json({
-      success: false,
-      message: "Token không hợp lệ hoặc đã hết hạn.",
-    });
+    if (error instanceof UnauthorizedError) {
+      next(error);
+    } else {
+      next(new UnauthorizedError("Invalid or expired token."));
+    }
   }
 };
 
-// ----------------------------------------------------------------
-// requireRole: Middleware factory to enforce role-based access control
-// ----------------------------------------------------------------
 export const requireRole = (...allowedRoles: string[]) => {
   return (req: Request, res: Response, next: NextFunction): void => {
-    if (!req.user) {
-      res.status(401).json({ success: false, message: "Chưa xác thực." });
-      return;
-    }
+    try {
+      if (!req.user) {
+        throw new UnauthorizedError("Unauthorized.");
+      }
 
-    if (!allowedRoles.includes(req.user.role)) {
-      res.status(403).json({
-        success: false,
-        message: "Bạn không có quyền thực hiện hành động này.",
-      });
-      return;
-    }
+      if (!allowedRoles.includes(req.user.role)) {
+        throw new ForbiddenError("Forbidden: You don't have permission to access this resource.");
+      }
 
-    next();
+      next();
+    } catch (error) {
+      next(error); 
+    }
   };
 };

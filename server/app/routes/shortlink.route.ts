@@ -9,6 +9,10 @@ import { linkController } from '../controllers/link.controller.js';
 // Middleware
 import { verifyToken } from '../middlewares/verifyToken.middleware.js';
 import { enforceCreateLinkQuota } from '../middlewares/quota.middleware.js';
+import { validate } from '../middlewares/validate.middleware.js';
+
+//Schemas to validate request body
+import { urlSchema } from '../schemas/link.schema.js';
 
 // GET /api/v1/links - get user's links
 router.get('/links', verifyToken, linkController.getLinksController);
@@ -23,7 +27,12 @@ router.get('/links/:shortCode/analytics', verifyToken, getLinkAnalytics);
 router.get('/links/:shortCode/clicks', verifyToken, getLinkClickLogs);
 
 // POST /api/shorten - create a short URL
-router.post('/shorten', verifyToken, enforceCreateLinkQuota, linkController.genShortLink);
+router.post('/shorten', 
+    verifyToken, 
+    validate(urlSchema), 
+    enforceCreateLinkQuota, 
+    linkController.genShortLink
+);
 
 // SSE stream for a user's click events (authenticated users)
 router.get('/clicks/stream', clickStreamHandler);
