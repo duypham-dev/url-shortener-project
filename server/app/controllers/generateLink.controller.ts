@@ -1,12 +1,3 @@
-/**
- * generateLink.controller.ts
- *
- * Refactor Notes:
- * - Phase 4: Replaced inline res.status(401/400/422) responses with
- *   throw UnauthorizedError/BadRequestError/ValidationError.
- *   All errors now flow through the global errorHandler middleware
- *   via try/catch → next(error), ensuring consistent error response format.
- */
 import type { NextFunction, Request, Response } from "express";
 import { ApiResponse } from "../utils/response";
 import generateShortLink from "../services/generateLink.service";
@@ -64,7 +55,6 @@ const genShortLink = async (
     }
 
     // Check danger URL 
-
     const shortUrl = await generateShortLink(originalUrl, userId);
    
     ApiResponse.created(

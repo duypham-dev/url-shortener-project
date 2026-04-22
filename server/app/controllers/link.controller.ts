@@ -11,6 +11,8 @@ import type { NextFunction, Request, Response } from "express";
 import { ApiResponse } from "../utils/response";
 import generateShortLink from "../services/generateLink.service";
 import { getLinkInfoByShortCode } from "../services/link.service.js";
+import { getUserLinks } from "../services/link.service.js";
+
 import {
   BadRequestError,
   NotFoundError,
@@ -26,6 +28,9 @@ interface ShortenResponseBody {
   shortUrl: string;
   originalUrl: string;
 }
+
+const DEFAULT_LIMIT = 50;
+const MAX_LIMIT = 200;
 
 const URL_REGEX = /^https?:\/\/.{1,2048}$/;
 
@@ -82,6 +87,45 @@ export const genShortLink = async (
   }
 };
 
+// Controller function to get paginated list of user's links
+export const getLinksController = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const userId = req.user?.userId;
+
+    if (!userId) {
+      throw new UnauthorizedError("Unauthorized.");
+    }
+
+    // Parse optional pagination query params
+    const rawLimit = req.query.limit ? Number(req.query.limit) : DEFAULT_LIMIT;
+
+    const limit = Number.isFinite(rawLimit) && rawLimit > 0
+      ? Math.min(rawLimit, MAX_LIMIT)
+      : DEFAULT_LIMIT;
+
+    const rawCursor = req.query.cursor as string | undefined;
+    const cursor = rawCursor ? BigInt(rawCursor) : undefined;
+
+    const { links, hasNextPage, nextCursor } = await getUserLinks(userId, {
+      limit,
+      ...(cursor !== undefined ? { cursor } : {}),
+    });
+
+    res.status(200).json({
+      success: true,
+      data: links,
+      pagination: {
+        limit,
+        hasNextPage,
+        nextCursor,
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// Controller function to get link info by short code
 export const getLinkInfoController = async (
   req: Request,
   res: Response,
@@ -111,3 +155,8 @@ export const getLinkInfoController = async (
   }
 };
 
+export const linkController = {
+    genShortLink,
+    getLinksController,
+    getLinkInfoController,
+}

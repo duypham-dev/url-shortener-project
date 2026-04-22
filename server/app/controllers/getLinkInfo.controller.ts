@@ -1,11 +1,3 @@
-/**
- * getLinkInfo.controller.ts
- *
- * Refactor Notes:
- * - Phase 8: Replaced all inline res.status() error responses with
- *   throw + custom error classes, so all paths flow through the global
- *   errorHandler middleware consistently.
- */
 import type { Request, Response, NextFunction } from "express";
 import { getLinkInfoByShortCode } from "../services/link.service.js";
 import {
