@@ -135,7 +135,7 @@ export const register = async (input: RegisterInput): Promise<AuthResult> => {
   });
 
   if (existingByEmail) {
-    throw new ConflictError("Email đã được sử dụng.");
+    throw new ConflictError("Email has already registered.");
   }
 
   const password_hash = await bcrypt.hash(password, BCRYPT_SALT_ROUNDS);
@@ -267,7 +267,7 @@ export const logout = async (
 };
 
 // ================================================================
-// Helper: check accessToken có bị blacklist không (dùng bởi middleware)
+// Helper: check if accessToken is blacklisted (after logout)
 // ================================================================
 export const isTokenBlacklisted = async (token: string): Promise<boolean> => {
   const result = await redis.get(buildBlacklistKey(token));
@@ -275,7 +275,7 @@ export const isTokenBlacklisted = async (token: string): Promise<boolean> => {
 };
 
 // ================================================================
-// Private helper: phát hành tokens và lưu refreshToken vào Redis
+// Private helper: create accessToken + refreshToken pair and store refreshToken in Redis
 // ================================================================
 async function issueTokens(
   payload: JwtPayload,

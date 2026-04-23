@@ -17,9 +17,9 @@ export const validate =
       next();
     } catch (error) {
       if (error instanceof ZodError) {
-        // Format lại lỗi của Zod thành mảng dễ đọc cho frontend
+        // Formatted errors to match ValidationErrorDetail
         const formattedErrors = error.issues.map((err) => ({
-          field: err.path.join("."), // Ví dụ: "body.email"
+          field: err.path.join("."), // Example: "body.email"
           message: err.message,
         }));
 

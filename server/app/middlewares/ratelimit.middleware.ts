@@ -64,7 +64,7 @@ export const loginRateLimit = rateLimit({
             email = 'invalid_format'; 
         }
         email = email.trim().toLowerCase().substring(0, 100);
-        return `login_${ip}_${email}`; 
+        return `login_${ipKeyGenerator(ip)}_${email}`; 
     },
     handler: (_req, _res, next) => {
         next(new TooManyRequestsError('Too many failed login attempts. Please try again in 10 minutes.'));
@@ -83,7 +83,7 @@ export const registerRateLimit = rateLimit({
     skipSuccessfulRequests: false, 
     keyGenerator: (req) => {
         const ip = req.ip ?? 'unknown';
-        return `register_${ip}`;
+        return `register_${ipKeyGenerator(ip)}`;
     },
     handler: (_req, _res, next) => {
         next(new TooManyRequestsError('Too many accounts created. Please try again later.'));

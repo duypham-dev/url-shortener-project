@@ -82,18 +82,7 @@ export const loginHandler = async (
   next: NextFunction
 ): Promise<void> => {
   try {
-    // 1. Validate input
-    // const validation = validateLoginInput(req.body);
-    // if (!validation.isValid) {
-    //   res.status(422).json({
-    //     success: false,
-    //     message: "Dữ liệu không hợp lệ.",
-    //     errors: validation.errors,
-    //   });
-    //   return;
-    // }
-
-    // 2. Gọi service
+    console.log("LOGIN HANDLER CALLED WITH BODY:", req.body);
     const { accessToken, refreshToken, user } = await authService.login({
       email: (req.body.email as string).trim().toLowerCase(),
       password: req.body.password as string,
@@ -109,6 +98,7 @@ export const loginHandler = async (
       data: { accessToken, user: toAuthUserDto(user) },
     });
   } catch (error) {
+    console.error("Error in loginHandler:", error);
     next(error);
   }
 };

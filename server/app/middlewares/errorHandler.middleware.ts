@@ -15,11 +15,11 @@ interface ErrorResponse {
   success: false;
   message: string;
   code?: string;
-  errors?: unknown; // Chi tiết lỗi validation nếu có
+  errors?: unknown; // Detail 
 }
 
 // ----------------------------------------------------------------
-// Prisma error codes hay gặp
+// Prisma error codes
 // ----------------------------------------------------------------
 const PRISMA_ERROR_CODES: Record<string, { status: number; message: string }> =
   {
@@ -28,7 +28,7 @@ const PRISMA_ERROR_CODES: Record<string, { status: number; message: string }> =
     P2003: { status: 400, message: "Foreign key constraint violation." },
   };
 
-// ----------------------------------------------------------------
+  // ----------------------------------------------------------------
 // Global Error Handler
 // ----------------------------------------------------------------
 export const errorHandler = (
@@ -37,7 +37,7 @@ export const errorHandler = (
   res: Response,
   next: NextFunction
 ): void => {
-  // Log lỗi ra console (trong production nên dùng logger như winston/pino)
+  
   console.error(`[${new Date().toISOString()}] ${req.method} ${req.path}`, err);
 
   const errorResponse: ErrorResponse = { success: false, message: "Đã xảy ra lỗi." };
