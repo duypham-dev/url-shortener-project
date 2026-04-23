@@ -54,11 +54,7 @@ export const verifyToken = async (
 
     next();
   } catch (error) {
-    if (error instanceof UnauthorizedError) {
-      next(error);
-    } else {
-      next(new UnauthorizedError("Invalid or expired token."));
-    }
+    next(error); 
   }
 };
 

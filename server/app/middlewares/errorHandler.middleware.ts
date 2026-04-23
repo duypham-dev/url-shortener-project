@@ -6,7 +6,7 @@
  * - Fallback: 500 Internal Server Error
  */
 import type { Request, Response, NextFunction } from "express";
-import { AppError } from "../errors/app.error.js";
+import { AppError, isAppError } from "../errors/app.error.js";
 
 // ----------------------------------------------------------------
 // Kiểu chuẩn cho error response
@@ -43,7 +43,7 @@ export const errorHandler = (
   const errorResponse: ErrorResponse = { success: false, message: "Đã xảy ra lỗi." };
 
   // ---- 1. Custom application errors ----
-  if (err instanceof AppError) {
+  if (isAppError(err)) {
     res.status(err.statusCode).json({
       ...errorResponse,
       message: err.message,
@@ -62,13 +62,12 @@ export const errorHandler = (
     ) {
       res.status(401).json({
         ...errorResponse,
-        message: "Token không hợp lệ hoặc đã hết hạn.",
+        message: "Token is invalid or has expired.",
       });
       return;
     }
 
     // ---- 3. Prisma errors ----
-    // Prisma ném lỗi có dạng { code: "P2002", ... }
     const prismaErr = err as Error & { code?: string };
     if (prismaErr.code && prismaErr.code.startsWith("P")) {
       const mapped = PRISMA_ERROR_CODES[prismaErr.code];
@@ -96,6 +95,6 @@ export const errorHandler = (
 export const notFoundHandler = (req: Request, res: Response): void => {
   res.status(404).json({
     success: false,
-    message: `Route ${req.method} ${req.path} không tồn tại.`,
+    message: `Route ${req.method} ${req.path} not found.`,
   });
 };

@@ -10,15 +10,12 @@
  */
 import type { Request, Response, NextFunction } from "express";
 import * as authService from "../services/auth.service";
-// import {
-//   validateRegisterInput,
-//   validateLoginInput,
-// } from "../utils/validate.util";
 import {
   REFRESH_TOKEN_COOKIE,
   setRefreshTokenCookie,
   clearRefreshTokenCookie,
 } from "../utils/cookie.util";
+import { UnauthorizedError } from "../errors/app.error";
 
 const toAuthUserDto = (user: {
   id: number;
@@ -41,35 +38,23 @@ export const registerHandler = async (
   next: NextFunction
 ): Promise<void> => {
   try {
-    // 1. Validate input
-    // const validation = validateRegisterInput(req.body);
-    // if (!validation.isValid) {
-    //   res.status(422).json({
-    //     success: false,
-    //     message: "Dữ liệu không hợp lệ.",
-    //     errors: validation.errors,
-    //   });
-    //   return;
-    // }
-
-    // 2. Gọi service
     const { accessToken, refreshToken, user } = await authService.register({
       full_name: (req.body.fullName as string).trim(),
       email: (req.body.email as string).trim().toLowerCase(),
       password: req.body.password as string,
     });
 
-    // 3. Set refreshToken vào httpOnly cookie
+    // Set refreshToken into httpOnly cookie
     setRefreshTokenCookie(res, refreshToken);
 
-    // 4. Trả về accessToken và thông tin user qua JSON
+    // Return accessToken and user info
     res.status(201).json({
       success: true,
-      message: "Đăng ký thành công.",
+      message: "Registration successful.",
       data: { accessToken, user: toAuthUserDto(user) },
     });
   } catch (error) {
-    next(error); // Chuyển lỗi sang errorHandler middleware
+    next(error);
   }
 };
 
@@ -82,30 +67,27 @@ export const loginHandler = async (
   next: NextFunction
 ): Promise<void> => {
   try {
-    console.log("LOGIN HANDLER CALLED WITH BODY:", req.body);
     const { accessToken, refreshToken, user } = await authService.login({
       email: (req.body.email as string).trim().toLowerCase(),
       password: req.body.password as string,
     });
 
-    // 3. Set refreshToken vào httpOnly cookie
+    //Set refreshToken into httpOnly cookie
     setRefreshTokenCookie(res, refreshToken);
 
-    // 4. Trả về accessToken
+    //Return accessToken and user info
     res.status(200).json({
       success: true,
-      message: "Đăng nhập thành công.",
+      message: "Login successful.",
       data: { accessToken, user: toAuthUserDto(user) },
     });
   } catch (error) {
-    console.error("Error in loginHandler:", error);
     next(error);
   }
 };
 
 // ================================================================
 // POST /api/v1/auth/refresh
-// Lấy accessToken mới bằng refreshToken trong cookie
 // ================================================================
 export const refreshHandler = async (
   req: Request,
@@ -113,20 +95,16 @@ export const refreshHandler = async (
   next: NextFunction
 ): Promise<void> => {
   try {
-    // 1. Lấy refreshToken từ httpOnly cookie (không lấy từ body để bảo mật)
+    //Get refreshToken from cookie
     const incomingRefreshToken = req.cookies[REFRESH_TOKEN_COOKIE] as
       | string
       | undefined;
 
     if (!incomingRefreshToken) {
-      res.status(401).json({
-        success: false,
-        message: "Không tìm thấy refresh token.",
-      });
-      return;
+      throw new UnauthorizedError("Refresh token is required.");
     }
 
-    // 2. Gọi service - sẽ rotate token (phát hành cặp mới, invalidate cũ)
+    // Call refreshTokens Service - it will verify the incoming refresh token, issue new tokens, and handle blacklisting of old tokens if necessary
     const { accessToken, refreshToken: newRefreshToken } = await authService.refreshTokens(incomingRefreshToken);
     // 3. Cập nhật cookie với refreshToken mới
     setRefreshTokenCookie(res, newRefreshToken);
@@ -134,7 +112,7 @@ export const refreshHandler = async (
     // 4. Trả về accessToken mới
     res.status(200).json({
       success: true,
-      message: "Làm mới token thành công.",
+      message: "Token refreshed successfully.",
       data: { accessToken },
     });
   } catch (error) {
@@ -143,7 +121,7 @@ export const refreshHandler = async (
 };
 
 // ================================================================
-// POST /api/v1/auth/logout  [Protected - cần verifyToken]
+// POST /api/v1/auth/logout
 // ================================================================
 export const logoutHandler = async (
   req: Request,
@@ -151,7 +129,6 @@ export const logoutHandler = async (
   next: NextFunction
 ): Promise<void> => {
   try {
-    // req.user được gắn bởi verifyToken middleware
     const userId = req.user!.userId;
 
     // Lấy raw token để blacklist
@@ -165,7 +142,7 @@ export const logoutHandler = async (
 
     res.status(200).json({
       success: true,
-      message: "Đăng xuất thành công.",
+      message: "Logout successful.",
     });
   } catch (error) {
     next(error);

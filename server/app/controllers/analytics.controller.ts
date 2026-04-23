@@ -94,7 +94,7 @@ export const getLinkClickLogs = async (
     // Verify ownership
     const isOwner = await isLinkOwnedByUser(shortCode, userId);
     if (!isOwner) {
-      throw new NotFoundError("Link không tồn tại hoặc không thuộc về bạn.");
+      throw new NotFoundError("Link not found or does not belong to you.");
     }
 
     // Check subscription — analytics is a paid feature
@@ -103,7 +103,7 @@ export const getLinkClickLogs = async (
       return res.status(403).json({
         success: false,
         code: "PLAN_REQUIRED",
-        message: "Tính năng phân tích chỉ dành cho tài khoản trả phí. Vui lòng nâng cấp gói.",
+        message: "Analytics feature is only available for paid accounts. Please upgrade your plan.",
       });
     }
 

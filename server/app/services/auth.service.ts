@@ -1,16 +1,3 @@
-/**
- * auth.service.ts
- * Chứa toàn bộ business logic của Authentication.
- * Tuân thủ Single Responsibility Principle - chỉ xử lý logic, không biết về HTTP.
- *
- * Refactor Notes (v2):
- * - DELETED enrichUserWithVip() and isVipUser import entirely.
- *   is_vip was computed on every auth event but never consumed by any
- *   middleware, controller, or frontend component. The frontend uses
- *   /subscriptions/me/plan for authoritative subscription status.
- * - REMOVED is_vip from AuthResult.user, JwtPayload construction, and issueTokens().
- * - Net effect: zero DB queries for subscription status on auth events.
- */
 import bcrypt from "bcrypt";
 import crypto from "crypto";
 import { prisma } from "../libs/prisma";
@@ -97,6 +84,7 @@ export const findOrCreateOAuthUser = async (
   });
 
   const safeUser = toSafeUser(user);
+  
   const payload: JwtPayload = {
     userId: safeUser.id,
     fullName: safeUser.full_name,
@@ -210,8 +198,7 @@ export const refreshTokens = async (
   try {
     payload = verifyRefreshToken(incomingRefreshToken);
   } catch (error) {
-    console.error("Error occurred while verifying refresh token:", error);
-    throw new UnauthorizedError("Refresh token không hợp lệ hoặc đã hết hạn.");
+    throw error;
   }
 
   const storedToken = await redis.get(buildRefreshTokenKey(payload.userId));
@@ -219,7 +206,7 @@ export const refreshTokens = async (
   if (!storedToken || storedToken !== incomingRefreshToken) {
     await redis.del(buildRefreshTokenKey(payload.userId));
     throw new UnauthorizedError(
-      "Refresh token đã bị thu hồi hoặc không hợp lệ.",
+      "Refresh token is invalid or has been revoked. Please log in again.",
     );
   }
 
@@ -228,7 +215,7 @@ export const refreshTokens = async (
     select: { id: true, full_name: true, email: true, role: true },
   });
   if (!user) {
-    throw new UnauthorizedError("Tài khoản không tồn tại.");
+    throw new UnauthorizedError("User not found.");
   }
 
   const safeUser = toSafeUser(user);
