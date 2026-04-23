@@ -23,9 +23,9 @@ interface ErrorResponse {
 // ----------------------------------------------------------------
 const PRISMA_ERROR_CODES: Record<string, { status: number; message: string }> =
   {
-    P2002: { status: 409, message: "Dữ liệu đã tồn tại (vi phạm unique constraint)." },
-    P2025: { status: 404, message: "Không tìm thấy bản ghi." },
-    P2003: { status: 400, message: "Vi phạm ràng buộc khóa ngoại." },
+    P2002: { status: 409, message: "Data has already exists." },
+    P2025: { status: 404, message: "Record not found." },
+    P2003: { status: 400, message: "Foreign key constraint violation." },
   };
 
 // ----------------------------------------------------------------

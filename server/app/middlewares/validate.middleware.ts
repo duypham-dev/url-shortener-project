@@ -24,7 +24,7 @@ export const validate =
         }));
 
         // Pass to Global Error Handler to return 422
-        next(new ValidationError("Dữ liệu đầu vào không hợp lệ", formattedErrors));
+        next(new ValidationError("Input validation failed", formattedErrors));
       } else {
         next(error); // Unknown error
       }

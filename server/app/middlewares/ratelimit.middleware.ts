@@ -1,4 +1,5 @@
 import rateLimit, { ipKeyGenerator } from 'express-rate-limit';
+import { TooManyRequestsError } from '../errors/app.error.js';
 
 export const getLinkRateLimit = rateLimit({
     windowMs: 60 * 1000, // 1 minute
@@ -41,11 +42,8 @@ export const globalAuthRateLimit = rateLimit({
         const ip = req.ip ?? req.socket.remoteAddress ?? 'unknown';
         return `auth_${ipKeyGenerator(ip)}`;
     },
-    handler: (_req, res) => {
-        return res.status(429).json({
-            success: false,
-            message: 'Too many requests! Please slow down.',
-        });
+    handler: (_req, _res, next) => {
+        next(new TooManyRequestsError('Too many requests! Please slow down.'));
     },
 });
 
@@ -68,11 +66,8 @@ export const loginRateLimit = rateLimit({
         email = email.trim().toLowerCase().substring(0, 100);
         return `login_${ip}_${email}`; 
     },
-    handler: (_req, res) => {
-        return res.status(429).json({
-            success: false,
-            message: 'Too many failed login attempts. Please try again in 10 minutes.',
-        });
+    handler: (_req, _res, next) => {
+        next(new TooManyRequestsError('Too many failed login attempts. Please try again in 10 minutes.'));
     },
 });
 
@@ -90,10 +85,7 @@ export const registerRateLimit = rateLimit({
         const ip = req.ip ?? 'unknown';
         return `register_${ip}`;
     },
-    handler: (_req, res) => {
-        return res.status(429).json({
-            success: false,
-            message: 'Too many accounts created. Please try again later.',
-        });
+    handler: (_req, _res, next) => {
+        next(new TooManyRequestsError('Too many accounts created. Please try again later.'));
     },
 });
