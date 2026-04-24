@@ -12,7 +12,6 @@ const queryClient = new QueryClient({
     },
   },
 });
-
 // Pages
 import Home from "./pages/Home";
 import Login from "./pages/Login";

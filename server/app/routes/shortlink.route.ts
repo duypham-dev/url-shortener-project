@@ -14,6 +14,8 @@ import { linkController } from "../controllers/link.controller.js";
 import { verifyToken } from "../middlewares/verifyToken.middleware.js";
 import { enforceCreateLinkQuota } from "../middlewares/quota.middleware.js";
 import { validate } from "../middlewares/validate.middleware.js";
+import { redirectRateLimit } from "../middlewares/Redirectratelimit.middleware.js";
+
 
 // Schemas
 import { urlSchema, getLinksQuerySchema } from "../schemas/link.schema.js";
@@ -64,6 +66,6 @@ router.post(
 router.get("/clicks/stream", clickStreamHandler);
 
 // GET /api/v1/:shortCode — redirect to long URL
-router.get("/:shortCode", validate(shortCodeSchema), redirectLink);
+router.get("/:shortCode", redirectRateLimit, validate(shortCodeSchema), redirectLink);
 
 export default router;
