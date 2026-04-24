@@ -15,7 +15,7 @@ const LinksPageHeaderComponent: React.FC<LinksPageHeaderProps> = ({
       <button
         type="button"
         onClick={onCreateLink}
-        className="bg-[#0f34a3] hover:bg-[#0c2a86] text-white font-medium py-2 px-5 rounded-md transition-colors shadow-sm focus:ring-2 focus:ring-offset-2 focus:ring-blue-600"
+        className="bg-[#232323] hover:bg-black text-gray-200 hover:text-white font-medium py-2 px-5 rounded-md transition-colors shadow-sm"
       >
         Create link
       </button>

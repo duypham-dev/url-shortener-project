@@ -59,7 +59,7 @@ export const Dashboard: React.FC = () => {
 
   return (
     <>
-      <div className="flex items-center justify-center mt-0 mx-auto">
+      <div className="flex items-center justify-center mt-0 mx-auto border border-gray-300 rounded-lg p-6 bg-white">
         <div className="w-full max-w-200">
           
           {/* Tabs switch */}

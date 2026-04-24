@@ -13,10 +13,12 @@ export const Links: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const deferredSearchTerm = useDeferredValue(searchTerm);
 
+  // Navigate to the link creation page when "Create link" button is clicked
   const handleCreateLink = useCallback(() => {
     navigate("/dashboard/links/create");
   }, [navigate]);
 
+  
   const handleSearchTermChange = useCallback((value: string) => {
     setSearchTerm(value);
   }, []);

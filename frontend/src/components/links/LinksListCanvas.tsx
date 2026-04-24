@@ -36,7 +36,7 @@ const LinksListCanvasComponent: React.FC<LinksListCanvasProps> = ({
   }, [links, normalizedSearchTerm]);
 
   return (
-    <div className="space-y-4 relative bg-gray-50 pt-4 p-4 min-h-screen">
+    <div className="space-y-4 relative pt-4 min-h-screen">
       {isLoading && (
         <div className="py-20 flex justify-center text-gray-400">Loading links...</div>
       )}
