@@ -1,18 +1,20 @@
 import type { Request, Response, NextFunction } from "express";
-import { ZodObject, ZodError } from "zod";
+import { ZodObject, type ZodRawShape, ZodError } from "zod";
 import { ValidationError } from "../errors/app.error.js"; // Import class lỗi của bạn
 
 export const validate =
-  (schema: ZodObject) =>
+  (schema: ZodObject<ZodRawShape>) =>
   async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       // validate body, query, params
-      await schema.parseAsync({
+      const validatedData = await schema.parseAsync({
         body: req.body,
         query: req.query,
         params: req.params,
       });
-
+      if (validatedData.body)   req.body   = validatedData.body;
+      if (validatedData.query)  req.query  = validatedData.query as typeof req.query;
+      if (validatedData.params) req.params = validatedData.params as typeof req.params;;
       // pass if validate success
       next();
     } catch (error) {

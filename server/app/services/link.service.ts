@@ -100,7 +100,7 @@ export const getUserLinks = async (
 
   const nextCursor =
     hasNextPage && items.length > 0
-      ? items[items.length - 1]!.id.toString()
+      ? items.at(-1)?.id.toString() ?? null
       : null;
 
   return { links, hasNextPage, nextCursor };

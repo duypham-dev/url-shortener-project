@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { paginationCoreSchema } from "./common.schema";
 
 export const urlSchema = z.object({
     body: z.object({
@@ -8,5 +9,9 @@ export const urlSchema = z.object({
             .regex(/^https?:\/\//)
     })
 })
+
+export const getLinksQuerySchema = z.object({
+  query: paginationCoreSchema
+});
 
 

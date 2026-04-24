@@ -20,21 +20,6 @@ interface ShortenResponseBody {
   originalUrl: string;
 }
 
-const DEFAULT_LIMIT = 50;
-const MAX_LIMIT = 200;
-
-const URL_REGEX = /^https?:\/\/.{1,2048}$/;
-
-// Helper function to validate URL format
-function isValidUrl(url: string): boolean {
-  try {
-    const parsed = new URL(url);
-    return ["http:", "https:"].includes(parsed.protocol) && URL_REGEX.test(url);
-  } catch {
-    return false;
-  }
-}
-
 // Controller function to generate short URL
 export const genShortLink = async (
   req: Request<{}, ShortenResponseBody, ShortenRequestBody>,
@@ -50,17 +35,9 @@ export const genShortLink = async (
       throw new UnauthorizedError("Unauthorized.");
     }
 
-    if (!originalUrl?.trim()) {
-      throw new BadRequestError("URL is required.");
-    }
-
-    if (!isValidUrl(originalUrl)) {
-      throw new ValidationError(
-        "Invalid URL format. Must start with http:// or https://.",
-      );
-    }
-
-    // Check danger URL
+    // Can check danger URL here before generating short link (optional)
+    
+    // Call generate short URL service
     const shortUrl = await generateShortLink(originalUrl, userId);
     
     res.status(201).json({
@@ -78,7 +55,7 @@ export const genShortLink = async (
 };
 
 // Controller function to get paginated list of user's links
-export const getLinksController = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+export const getLinksList = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     const userId = req.user?.userId;
 
@@ -86,15 +63,9 @@ export const getLinksController = async (req: Request, res: Response, next: Next
       throw new UnauthorizedError("Unauthorized.");
     }
 
-    // Parse optional pagination query params
-    const rawLimit = req.query.limit ? Number(req.query.limit) : DEFAULT_LIMIT;
+    const limit = req.query.limit as unknown as number;
 
-    const limit = Number.isFinite(rawLimit) && rawLimit > 0
-      ? Math.min(rawLimit, MAX_LIMIT)
-      : DEFAULT_LIMIT;
-
-    const rawCursor = req.query.cursor as string | undefined;
-    const cursor = rawCursor ? BigInt(rawCursor) : undefined;
+    const cursor = req.query.cursor ? BigInt(req.query.cursor as string) : undefined;
 
     const { links, hasNextPage, nextCursor } = await getUserLinks(userId, {
       limit,
@@ -116,8 +87,8 @@ export const getLinksController = async (req: Request, res: Response, next: Next
 };
 
 // Controller function to get link info by short code
-export const getLinkInfoController = async (
-  req: Request,
+export const getLinkInfor = async (
+  req: Request<{ shortCode: string }>,
   res: Response,
   next: NextFunction,
 ): Promise<void> => {
@@ -127,10 +98,6 @@ export const getLinkInfoController = async (
 
     if (!userId) {
       throw new UnauthorizedError("Unauthorized.");
-    }
-
-    if (typeof shortCode !== "string" || !shortCode) {
-      throw new BadRequestError("Invalid short code.");
     }
 
     const link = await getLinkInfoByShortCode(shortCode, userId);
@@ -147,6 +114,6 @@ export const getLinkInfoController = async (
 
 export const linkController = {
     genShortLink,
-    getLinksController,
-    getLinkInfoController,
+    getLinksList,
+    getLinkInfor,
 }

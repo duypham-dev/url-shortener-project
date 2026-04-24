@@ -11,15 +11,18 @@ export const getUrlOwnerContextRepo = async (shortCode: string) => {
 };
 
 export interface GetUserLinksOptions {
-  limit?: number;    // max items to return
-  cursor?: bigint;   // exclusive cursor (id of the last item on the previous page)
+  limit?: number; // max items to return
+  cursor?: bigint; // exclusive cursor (id of the last item on the previous page)
 }
 
-export const getUserLinksRepo = async (userId: number, options: GetUserLinksOptions = {}) => {
+export const getUserLinksRepo = async (
+  userId: number,
+  options: GetUserLinksOptions = {},
+) => {
   const { limit, cursor } = options;
   return await prisma.url_mappings.findMany({
     where: { user_id: userId, is_active: true },
-    orderBy: { created_at: 'desc' },
+    orderBy: [{ created_at: "desc" }, { id: "desc" }],
     ...(limit !== undefined ? { take: limit + 1 } : {}), // fetch one extra to determine hasNextPage
     ...(cursor !== undefined ? { cursor: { id: cursor }, skip: 1 } : {}),
     select: {
@@ -37,7 +40,10 @@ export const getUserLinksRepo = async (userId: number, options: GetUserLinksOpti
   });
 };
 
-export const getLinkInfoByShortCodeRepo = async (shortCode: string, userId: number) => {
+export const getLinkInfoByShortCodeRepo = async (
+  shortCode: string,
+  userId: number,
+) => {
   return await prisma.url_mappings.findFirst({
     where: { short_code: shortCode, user_id: userId, is_active: true },
     select: {

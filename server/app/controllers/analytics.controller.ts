@@ -34,10 +34,6 @@ export const getLinkAnalytics = async (
       throw new ForbiddenError("Unauthorized");
     }
 
-    if (!shortCode) {
-      throw new NotFoundError("Short code is required.");
-    }
-
     // 1. Verify link ownership
     const isOwner = await isLinkOwnedByUser(shortCode, userId);
     if (!isOwner) {
