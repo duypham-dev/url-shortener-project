@@ -1,6 +1,6 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { getLinkAnalytics } from "../api/analytics.api";
-import { getLinkInfo } from "../api/shortUrl.api";
+import { getLinkInfo } from "../api/link.api";
 import type { LinkAnalyticsData } from "../types/analytics.type";
 import type { LinkItem } from "../types/url.type";
 

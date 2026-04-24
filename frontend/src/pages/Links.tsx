@@ -10,6 +10,10 @@ export const Links: React.FC = () => {
   const { links, isLoading, error } = useLinks();
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState("");
+  const [filterOptions, setFilterOptions] = useState({
+    search: "",
+    dateRange: "all_time",
+  });
   const deferredSearchTerm = useDeferredValue(searchTerm);
 
   // Navigate to the link creation page when "Create link" button is clicked

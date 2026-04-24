@@ -71,7 +71,7 @@ export const getLinksList = async (req: Request, res: Response, next: NextFuncti
       limit,
       ...(cursor !== undefined ? { cursor } : {}),
     });
-
+    
     res.status(200).json({
       success: true,
       data: links,

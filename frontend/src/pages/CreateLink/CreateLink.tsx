@@ -2,7 +2,7 @@ import React, { useCallback, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import QRPanel from "./components/QRPanel";
 import { QR_COLORS } from "../../config/qr.constants";
-import { createShortenUrl } from "../../api/shortUrl.api";
+import { createShortenUrl } from "../../api/link.api";
 
 // Reusable Toggle Switch UI
 const Switch = ({

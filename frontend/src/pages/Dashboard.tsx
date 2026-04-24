@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link as LinkIcon, QrCode, Lock, HelpCircle } from 'lucide-react';
-import { createShortenUrl } from '../api/shortUrl.api';
+import { createShortenUrl } from '../api/link.api';
 import { SuccessModal } from '../components/SuccessModal';
 import { useQueryClient } from '@tanstack/react-query';
 import { usePlanStore, selectPlanName, selectRemainingLinks } from '../store/usePlanStore';

@@ -21,7 +21,7 @@ import ProtectedRoute from "./components/ProtectedRoute";
 import PublicRoute from "./components/PublicRoute";
 import OAuthRedirect from "./pages/OauthRedirect";
 import Dashboard from "./pages/Dashboard";
-import { DashboardLayout } from "./components/layout/DashboardLayout";
+import { DashboardLayout } from "./layout/DashboardLayout";
 import { Links } from "./pages/Links";
 import { Upgrade } from "./pages/Upgrade";
 import { PaymentResult } from "./pages/PaymentSuccess";

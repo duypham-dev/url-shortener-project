@@ -1,6 +1,6 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import type { LinkItem } from "../types/url.type";
-import { getUserLinks } from "../api/shortUrl.api";
+import { getUserLinks } from "../api/link.api";
 
 interface UseLinksOptions {
   staleTimeMs?: number;

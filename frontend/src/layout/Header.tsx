@@ -1,8 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Search, HelpCircle, Zap } from 'lucide-react';
-import { useAuthStore } from '../../store/useAuthStore';
-import { usePlanStore, selectIsVip, selectPlanName } from '../../store/usePlanStore';
+import { useAuthStore } from '../store/useAuthStore';
+import { usePlanStore, selectIsVip, selectPlanName } from '../store/usePlanStore';
 
 export const Header: React.FC = () => {
   const { user, logout } = useAuthStore();

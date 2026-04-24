@@ -1,6 +1,7 @@
 import React from "react";
 import { Calendar, Filter, Search } from "lucide-react";
 import DisplaySettings from "./DisplaySettings";
+import DateFilterPopover from "../DateFilterPopover";
 
 interface LinksFilterToolbarProps {
   searchTerm: string;
@@ -25,15 +26,7 @@ const LinksFilterToolbarComponent: React.FC<LinksFilterToolbarProps> = ({
           onChange={(event) => onSearchTermChange(event.target.value)}
         />
       </div>
-
-      <button
-        type="button"
-        className="flex items-center gap-2 px-4 py-2.5 bg-white border border-gray-200 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
-      >
-        <Calendar size={16} strokeWidth={2.5} className="text-gray-500" />
-        Filter by created date
-      </button>
-
+      <DateFilterPopover />
       <button
         type="button"
         className="flex items-center gap-2 px-4 py-2.5 bg-white border border-gray-200 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
