@@ -8,9 +8,10 @@ export default async function generateShortLink(
 ): Promise<string> {
   const BASE_URL = process.env.SHORT_LINK_BASE_URL ?? 'https://short.ly';
 
-  // Chạy Transaction để đảm bảo link luôn có code sau khi tạo
+  // Use a transaction to ensure atomicity of the two steps: creating the record and updating it with the code
   const result = await prisma.$transaction(async (tx) => {
-    // Bước 1: Tạo record mới (bỏ trống short_code)
+    // Create a new URL mapping record with the long URL and user ID. 
+    // The short_code will be generated after we get the ID.
     const newMapping = await tx.url_mappings.create({
       data: {
         long_url: longUrl,
@@ -18,10 +19,10 @@ export default async function generateShortLink(
       },
     });
 
-    // Bước 2: Sinh mã từ ID (BigInt) vừa nhận được
+    // Create the short code based on the new record's ID
     const code = encodeIdToBase62(newMapping.id);
     console.log(`Generated code ${code} for URL ID ${newMapping.id}`);
-    // Bước 3: Cập nhật mã đó vào record
+    // Update the record with the generated short code
     await tx.url_mappings.update({
       where: { id: newMapping.id },
       data: { short_code: code },

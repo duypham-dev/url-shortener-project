@@ -13,18 +13,19 @@ import { validate } from '../middlewares/validate.middleware.js';
 
 //Schemas to validate request body
 import { urlSchema } from '../schemas/link.schema.js';
+import { shortCodeSchema } from '../schemas/shortCode.schema.js';
 
 // GET /api/v1/links - get user's links
 router.get('/links', verifyToken, linkController.getLinksController);
 
 // GET /api/v1/links/:shortCode - get info of a single link
-router.get('/links/:shortCode', verifyToken, linkController.getLinkInfoController);
+router.get('/links/:shortCode', verifyToken, validate(shortCodeSchema), linkController.getLinkInfoController);
 
 // GET /api/v1/links/:shortCode/analytics - link click analytics (paid feature)
-router.get('/links/:shortCode/analytics', verifyToken, getLinkAnalytics);
+router.get('/links/:shortCode/analytics', verifyToken, validate(shortCodeSchema), getLinkAnalytics);
 
 // GET /api/v1/links/:shortCode/clicks - paginated click logs for a link (paid feature)
-router.get('/links/:shortCode/clicks', verifyToken, getLinkClickLogs);
+router.get('/links/:shortCode/clicks', verifyToken, validate(shortCodeSchema), getLinkClickLogs);
 
 // POST /api/shorten - create a short URL
 router.post('/shorten', 

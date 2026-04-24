@@ -59,7 +59,7 @@ app.use(cors(corsOptions));
 app.use(morgan("common"));
 
 // ---- Body & Cookie parsing ----
-app.use(cookieParser()); // Cần thiết để đọc httpOnly cookie chứa refreshToken
+app.use(cookieParser());
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
@@ -73,7 +73,7 @@ app.use((req, res, next) => {
 
 // ---- Routes ----
 app.use(`${baseUrl}/auth`, authRouter);     // /api/v1/auth/*
-app.use(`${baseUrl}/subscriptions`, subscriptionRouter);
+app.use(`${baseUrl}/subscriptions`, subscriptionRouter);  // /api/v1/subscriptions/*
 app.use(baseUrl, paymentRouter);
 app.use(baseUrl, shortenRouter);            // /api/v1/*
 

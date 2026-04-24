@@ -150,11 +150,7 @@ export const logoutHandler = async (
 };
 
 // ================================================================
-// GET /api/v1/auth/me  [Protected - cần verifyToken]
-// Returns the JWT payload directly — no DB query.
-// Design tradeoff (Option A): speed over freshness.
-// isVip/role may be up to 15 min stale (until next token refresh).
-// For authoritative subscription data, frontend uses /subscriptions/me/plan.
+// GET /api/v1/auth/me
 // ================================================================
 export const getMeHandler = (req: Request, res: Response): void => {
   // req.user đã được verifyToken middleware gắn vào
