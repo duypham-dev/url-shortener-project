@@ -19,6 +19,7 @@ import { verifyToken } from "../middlewares/verifyToken.middleware";
 import { globalAuthRateLimit, loginRateLimit, registerRateLimit } from "../middlewares/ratelimit.middleware";
 import { registerSchema, loginSchema } from "../schemas/auth.schema";
 import { validate } from "../middlewares/validate.middleware";
+import { googleLoginSchema } from "../schemas/googleLogin.schema";
 
 const authRouter = Router();
 
@@ -37,7 +38,14 @@ authRouter.post("/login",
 );
 
 authRouter.post("/refresh", globalAuthRateLimit, refreshHandler);
-authRouter.post("/google", globalAuthRateLimit, googleLogin);
+
+// Google OAuth: validate credential + csrf token before calling controller
+authRouter.post(
+  "/google",
+  globalAuthRateLimit,
+  validate(googleLoginSchema),
+  googleLogin,
+);
 
 // ---- Protected routes ----
 authRouter.post("/logout", verifyToken, logoutHandler);

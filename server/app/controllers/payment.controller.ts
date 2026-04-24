@@ -1,15 +1,5 @@
 /**
  * payment.controller.ts
- *
- * Refactor Notes:
- * - Phase 3: Updated to use purpose-specific query functions:
- *     • vnpayReturn → getPaymentForVerification (minimal fields)
- *     • getPaymentResult → getPaymentForDisplay (display fields only)
- *     • vnpayIpn → processVnpayPayment (internally uses getPaymentForProcessing)
- *   Removed import of the old monolithic getPaymentByOrderId.
- * - Removed duplicated amount comparison logic from vnpayReturn (was duplicating
- *   the normalizeAmount/isAmountMatched logic already in payment.service.ts).
- *   vnpayReturn now uses extractAmountFromVnp consistently.
  */
 import type { NextFunction, Request, Response } from "express";
 import {
@@ -65,6 +55,10 @@ const parseClientIp = (req: Request): string => {
 };
 
 // POST /api/v1/create_payment_url
+// Body has been validated by validate(createPaymentUrlSchema) middleware:
+//   planId: number (integer, positive)
+//   bankCode?: string
+//   language?: string
 export const createPaymentUrl = async (
   req: Request,
   res: Response,
@@ -76,19 +70,17 @@ export const createPaymentUrl = async (
       throw new UnauthorizedError("Unauthorized");
     }
 
-    const planId = Number(req.body.planId);
-    if (!Number.isInteger(planId) || planId <= 0) {
-      throw new BadRequestError("planId không hợp lệ");
-    }
+    // planId has been validated by the middleware — guaranteed to be a positive integer
+    const planId = req.body.planId as number;
 
     const plan = await getSubscriptionPlanById(planId);
     if (!plan || !plan.is_active) {
-      throw new NotFoundError("Không tìm thấy gói đăng ký đang hoạt động");
+      throw new NotFoundError("Invalid subscription plan");
     }
 
     const amount = Number(plan.price);
     if (amount <= 0) {
-      throw new BadRequestError("Gói đăng ký không hợp lệ");
+      throw new BadRequestError("Invalid subscription plan");
     }
 
     const orderId = createOrderId(userId);
@@ -98,7 +90,7 @@ export const createPaymentUrl = async (
 
     const { createDate, orderInfo } = createPaymentMetadata(plan.name, orderId);
 
-    // Lưu thông tin đơn hàng vào DB trước khi redirect để đảm bảo có thể xử lý callback sau này.
+    // Save pending payment to DB before redirecting to payment gateway
     await createPendingPayment({
       orderId,
       userId,
@@ -109,7 +101,6 @@ export const createPaymentUrl = async (
       createDate,
     });
 
-    // Tạo URL thanh toán VNPay
     const paymentUrl = generateVnPayUrl(
       amount,
       bankCode,
@@ -151,8 +142,7 @@ export const vnpayReturn = async (req: Request, res: Response) => {
   }
 
   try {
-    // Return URL chỉ hiển thị kết quả cho người dùng.
-    // Trạng thái DB chỉ được cập nhật bởi IPN callback.
+    // Return URL chỉ hiển thị kết quả — trạng thái DB cập nhật bởi IPN.
     const payment = await getPaymentForVerification(orderId);
     if (!payment) {
       return res.redirect(
@@ -162,7 +152,6 @@ export const vnpayReturn = async (req: Request, res: Response) => {
 
     const vnpAmount = extractAmountFromVnp(vnpParams);
     const dbAmount = Number(payment.amount);
-    // Use consistent rounding for comparison
     if (Math.round(dbAmount * 100) !== Math.round(vnpAmount * 100)) {
       return res.redirect(
         normalizeClientRedirect(orderId, "error", "04", "Amount invalid"),
@@ -172,10 +161,15 @@ export const vnpayReturn = async (req: Request, res: Response) => {
     const responseCode = String(vnpParams["vnp_ResponseCode"] ?? "99");
     const transactionStatus = String(vnpParams["vnp_TransactionStatus"] ?? "");
     const isSuccess =
-      responseCode === "00" && (!transactionStatus || transactionStatus === "00");
+      responseCode === "00" &&
+      (!transactionStatus || transactionStatus === "00");
 
     return res.redirect(
-      normalizeClientRedirect(orderId, isSuccess ? "success" : "error", responseCode),
+      normalizeClientRedirect(
+        orderId,
+        isSuccess ? "success" : "error",
+        responseCode,
+      ),
     );
   } catch (error) {
     console.error("vnpayReturn processing failed", error);
@@ -196,18 +190,24 @@ export const vnpayIpn = async (req: Request, res: Response) => {
 
     const orderId = String(vnpParams["vnp_TxnRef"] ?? "");
     if (!orderId) {
-      return res.status(200).json({ RspCode: "01", Message: "Order not found" });
+      return res
+        .status(200)
+        .json({ RspCode: "01", Message: "Order not found" });
     }
 
     const vnpAmount = extractAmountFromVnp(vnpParams);
     const result = await processVnpayPayment(orderId, vnpAmount, vnpParams);
 
     if (result.outcome === "not_found") {
-      return res.status(200).json({ RspCode: "01", Message: "Order not found" });
+      return res
+        .status(200)
+        .json({ RspCode: "01", Message: "Order not found" });
     }
 
     if (result.outcome === "amount_mismatch") {
-      return res.status(200).json({ RspCode: "04", Message: "Amount invalid" });
+      return res
+        .status(200)
+        .json({ RspCode: "04", Message: "Amount invalid" });
     }
 
     if (result.outcome === "already_processed") {
@@ -224,21 +224,18 @@ export const vnpayIpn = async (req: Request, res: Response) => {
 };
 
 // GET /api/v1/payments/:orderId
+// Param orderId has been validated by validate(paymentOrderIdSchema) middleware
 export const getPaymentResult = async (
   req: Request,
   res: Response,
   next: NextFunction,
 ) => {
   try {
-    const orderId = String(req.params.orderId || "");
+    const orderId = req.params.orderId as string;
     const userId = req.user?.userId;
 
     if (!userId) {
       throw new UnauthorizedError("Unauthorized");
-    }
-
-    if (!orderId) {
-      throw new BadRequestError("orderId is required");
     }
 
     const payment = await getPaymentForDisplay(orderId);
