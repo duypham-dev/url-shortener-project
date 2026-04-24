@@ -30,7 +30,7 @@ export const LinkCard: React.FC<LinkCardProps> = React.memo(({ link }) => {
             type="checkbox"
             className="w-4 h-4 mt-1 border-gray-300 rounded text-blue-600 focus:ring-blue-500 cursor-pointer"
           />
-          <div className="hidden sm:block mt-1 w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center overflow-hidden shrink-0 border border-gray-200">
+          <div className="sm:block mt-1 w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center overflow-hidden shrink-0 border border-gray-200">
              <img src={defaultFavicon} alt="" className="w-full h-full object-contain" />
           </div>
         </div>
@@ -88,7 +88,7 @@ export const LinkCard: React.FC<LinkCardProps> = React.memo(({ link }) => {
           <div className="flex flex-wrap items-center gap-4 mt-4 text-xs font-medium text-gray-500">
              <button
                onClick={() => navigate(`/dashboard/links/${link.short_code}/analytics`)}
-               className="px-2 py-1 bg-gray-50 border border-gray-200 rounded flex items-center gap-1.5 shadow-sm text-gray-700 cursor-pointer hover:bg-gray-100 transition-colors"
+               className="px-2 py-1 bg-gray-50 border border-gray-200 rounded flex items-center gap-1.5 text-gray-700 cursor-pointer hover:bg-gray-100 transition-colors"
              >
                <Lock size={12} className="text-gray-400" />
                Click data

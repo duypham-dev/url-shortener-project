@@ -6,7 +6,6 @@ import LinksFilterToolbar from "../components/links/LinksFilterToolbar";
 import LinksSecondaryToolbar from "../components/links/LinksSecondaryToolbar";
 import LinksListCanvas from "../components/links/LinksListCanvas";
 
-
 export const Links: React.FC = () => {
   const { links, isLoading, error } = useLinks();
   const navigate = useNavigate();
@@ -18,7 +17,7 @@ export const Links: React.FC = () => {
     navigate("/dashboard/links/create");
   }, [navigate]);
 
-  
+
   const handleSearchTermChange = useCallback((value: string) => {
     setSearchTerm(value);
   }, []);
