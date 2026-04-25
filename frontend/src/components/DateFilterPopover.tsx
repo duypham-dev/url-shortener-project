@@ -24,14 +24,15 @@ import {
 } from "date-fns";
 import { DateCalendar } from "@mui/x-date-pickers/DateCalendar";
 import { PickerDay } from "@mui/x-date-pickers/PickerDay";
+import type { DateFilter } from "../types/filter.type";
 
 // --- Custom Day Component ---
-// Tự định nghĩa type thay vì extend PickerDayProps<T> (không còn generic ở v7)
+// Define RangeDayProps (PickerDayProps no longer generic)
 interface RangeDayProps {
   day: Date;
   start: Date | null;
   end: Date | null;
-  [key: string]: unknown; // forward tất cả props còn lại xuống PickerDay
+  [key: string]: unknown; 
 }
 
 const RangeDay = ({ day, start, end, ...props }: RangeDayProps) => {
@@ -76,11 +77,11 @@ const RangeDay = ({ day, start, end, ...props }: RangeDayProps) => {
       <PickerDay
         {...(props as unknown as React.ComponentProps<typeof PickerDay>)}
         day={day}
-        selected={isEndpoint} // ← Để MUI render circle đúng cho cả start lẫn end
+        selected={isEndpoint}   
         sx={{
           m: 0,
           borderRadius: "50%",
-          // Override .Mui-selected để dùng màu của mình thay vì màu mặc định MUI
+          // Override .Mui-selected to use custom color instead of default MUI color
           "&.Mui-selected": {
             bgcolor: "#3182CE",
             color: "white",
@@ -111,13 +112,29 @@ const SHORTCUTS = [
   { label: "Last 90 days", getStart: () => subDays(new Date(), 90) },
 ];
 
-const DateFilterPopover = () => {
+interface DateFilterPopoverProps {
+  filter: DateFilter;
+  onFilterChange: (filter: DateFilter) => void;
+}
+
+const DateFilterPopover: React.FC<DateFilterPopoverProps> = ({
+  filter,
+  onFilterChange,
+}) => {
   const [anchorEl, setAnchorEl] = useState<HTMLButtonElement | null>(null);
-  const [startDate, setStartDate] = useState<Date | null>(null);
-  const [endDate, setEndDate] = useState<Date | null>(null);
+  const [startDate, setStartDate] = useState<Date | null>(filter.startDate);
+  const [endDate, setEndDate] = useState<Date | null>(filter.endDate);
   const [selectionStep, setSelectionStep] = useState<"first" | "second">(
     "first",
   );
+
+  React.useEffect(() => {
+    if (anchorEl) {
+      setStartDate(filter.startDate);
+      setEndDate(filter.endDate);
+      setSelectionStep("first");
+    }
+  }, [anchorEl, filter]);
 
   const open = Boolean(anchorEl);
 
@@ -147,7 +164,7 @@ const DateFilterPopover = () => {
   const handleClose = () => setAnchorEl(null);
 
   const handleApply = () => {
-    console.log("Start:", startDate, "End:", endDate);
+    onFilterChange({ startDate, endDate });
     handleClose();
   };
 
@@ -167,10 +184,10 @@ const DateFilterPopover = () => {
           color: "text.primary",
         }}
       >
-        {startDate && endDate
-          ? startDate == endDate
-            ? formatDate(startDate)
-            : `${formatDate(startDate)} - ${formatDate(endDate)}`
+        {filter.startDate && filter.endDate
+          ? filter.startDate == filter.endDate
+            ? formatDate(filter.startDate)
+            : `${formatDate(filter.startDate)} - ${formatDate(filter.endDate)}`
           : "Filter by created date"}
       </Button>
 

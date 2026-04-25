@@ -1,17 +1,32 @@
 import React from "react";
-import { Filter, Search } from "lucide-react";
+import { Search, X } from "lucide-react";
 import DisplaySettings from "./DisplaySettings";
 import DateFilterPopover from "../DateFilterPopover";
 import FilterPopover from "../FilterPopover";
+import type { DateFilter, LinkFilters } from "../../types/filter.type";
 
 interface LinksFilterToolbarProps {
   searchTerm: string;
   onSearchTermChange: (value: string) => void;
+  onSearchSubmit: () => void;
+  dateFilter: DateFilter;
+  onDateFilterChange: (filter: DateFilter) => void;
+  linkFilters: LinkFilters;
+  onLinkFiltersChange: (filter: LinkFilters) => void;
+  hasActiveFilters: boolean;
+  onClearAllFilters: () => void;
 }
 
 const LinksFilterToolbarComponent: React.FC<LinksFilterToolbarProps> = ({
   searchTerm,
   onSearchTermChange,
+  onSearchSubmit,
+  dateFilter,
+  onDateFilterChange,
+  linkFilters,
+  onLinkFiltersChange,
+  hasActiveFilters,
+  onClearAllFilters,
 }) => {
   return (
     <div className="flex flex-wrap gap-3 mb-6 p-1 pb-1">
@@ -25,11 +40,25 @@ const LinksFilterToolbarComponent: React.FC<LinksFilterToolbarProps> = ({
           placeholder="Search links"
           value={searchTerm}
           onChange={(event) => onSearchTermChange(event.target.value)}
+          onKeyDown={(event) => {
+            if (event.key === "Enter") {
+              onSearchSubmit();
+            }
+          }}
         />
       </div>
-      <DateFilterPopover />
-      <FilterPopover />
+      <DateFilterPopover filter={dateFilter} onFilterChange={onDateFilterChange} />
+      <FilterPopover filter={linkFilters} onFilterChange={onLinkFiltersChange} />
       <DisplaySettings />
+      {hasActiveFilters && (
+        <button
+          onClick={onClearAllFilters}
+          className="flex items-center gap-1.5 px-3 py-2 text-sm text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-md transition-colors"
+        >
+          <X size={16} />
+          Clear filters
+        </button>
+      )}
     </div>
   );
 };

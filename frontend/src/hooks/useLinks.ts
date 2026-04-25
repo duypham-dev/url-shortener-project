@@ -1,10 +1,8 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import type { LinkItem } from "../types/url.type";
 import { getUserLinks } from "../api/link.api";
+import type { LinksQueryParams } from "../types/filter.type";
 
-interface UseLinksOptions {
-  staleTimeMs?: number;
-}
 
 interface UseLinksReturn {
   links: LinkItem[];
@@ -15,14 +13,14 @@ interface UseLinksReturn {
 
 const DEFAULT_STALE_TIME_MS = 5 * 60 * 1000; // 5 minutes
 
-export function useLinks(options: UseLinksOptions = {}): UseLinksReturn {
-  const staleTimeMs = options.staleTimeMs ?? DEFAULT_STALE_TIME_MS;
+export function useLinks(params: LinksQueryParams): UseLinksReturn {
+  const staleTimeMs = DEFAULT_STALE_TIME_MS;
   const queryClient = useQueryClient();
 
   const { data, isLoading, error, refetch } = useQuery<LinkItem[], Error>({
-    queryKey: ['userLinks'],
+    queryKey: ['userLinks', params], // Include params in the query key for caching
     queryFn: async () => {
-      return await getUserLinks();
+      return await getUserLinks(params);
     },
     staleTime: staleTimeMs,
   });

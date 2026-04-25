@@ -11,7 +11,11 @@ export const urlSchema = z.object({
 })
 
 export const getLinksQuerySchema = z.object({
-  query: paginationCoreSchema
+  query: paginationCoreSchema.extend({
+    search: z.string().optional(),
+    startDate: z.iso.datetime().optional(),
+    endDate: z.iso.datetime().optional(),
+  })
 });
 
 

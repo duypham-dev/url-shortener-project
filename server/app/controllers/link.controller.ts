@@ -66,10 +66,16 @@ export const getLinksList = async (req: Request, res: Response, next: NextFuncti
     const limit = req.query.limit as unknown as number;
 
     const cursor = req.query.cursor ? BigInt(req.query.cursor as string) : undefined;
+    const search = req.query.search as string | undefined;
+    const startDate = req.query.startDate as string | undefined;
+    const endDate = req.query.endDate as string | undefined;
 
     const { links, hasNextPage, nextCursor } = await getUserLinks(userId, {
       limit,
       ...(cursor !== undefined ? { cursor } : {}),
+      ...(search !== undefined ? { search } : {}),
+      ...(startDate !== undefined ? { startDate } : {}),
+      ...(endDate !== undefined ? { endDate } : {}),
     });
     
     res.status(200).json({

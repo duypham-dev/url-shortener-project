@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Popover, Button, Box, Typography, IconButton, Divider,
   Chip, MenuItem, Select, RadioGroup, FormControlLabel,
@@ -8,20 +8,21 @@ import CloseIcon from '@mui/icons-material/Close';
 import FilterListIcon from '@mui/icons-material/FilterList';
 import ClearIcon from '@mui/icons-material/Clear';
 
+import type { LinkFilters } from '../types/filter.type';
+
 // ─── Types ───────────────────────────────────────────────
 type ExpirationValue = 'expired' | 'expiring' | 'no_expiration' | '';
 
-interface FilterState {
-  tags: string[];
-  attachedQR: string;
-  expiration: ExpirationValue;
-}
-
-const INITIAL_STATE: FilterState = {
+const INITIAL_STATE: LinkFilters = {
   tags: [],
   attachedQR: 'all',
   expiration: '',
 };
+
+interface FilterPopoverProps {
+  filter: LinkFilters;
+  onFilterChange: (filter: LinkFilters) => void;
+}
 
 const TAG_OPTIONS = ['Marketing', 'Campaign', 'Social', 'Product', 'Internal', 'Partner'];
 
@@ -48,16 +49,22 @@ const SectionLabel = ({ children }: { children: React.ReactNode }) => (
 );
 
 // ─── Main Component ───────────────────────────────────────
-const FilterPopover = () => {
+const FilterPopover: React.FC<FilterPopoverProps> = ({ filter, onFilterChange }) => {
   const [anchorEl, setAnchorEl] = useState<HTMLButtonElement | null>(null);
-  const [filters, setFilters] = useState<FilterState>(INITIAL_STATE);
+  const [filters, setFilters] = useState<LinkFilters>(filter);
+
+  useEffect(() => {
+    if (anchorEl) {
+      setFilters(filter);
+    }
+  }, [anchorEl, filter]);
 
   const open = Boolean(anchorEl);
 
   const activeFilterCount =
-    filters.tags.length +
-    (filters.attachedQR !== 'all' ? 1 : 0) +
-    (filters.expiration ? 1 : 0);
+    filter.tags.length +
+    (filter.attachedQR !== 'all' ? 1 : 0) +
+    (filter.expiration ? 1 : 0);
 
   // ── Handlers ──
   const handleTagChange = (e: SelectChangeEvent<string[]>) => {
@@ -78,7 +85,7 @@ const FilterPopover = () => {
   const handleClose    = () => setAnchorEl(null);
 
   const handleApply = () => {
-    console.log('Applied filters:', filters);
+    onFilterChange(filters);
     handleClose();
   };
 
@@ -149,7 +156,7 @@ const FilterPopover = () => {
           {/* Tags */}
           <Box sx={{ mb: 3 }}>
             <SectionLabel>Tags</SectionLabel>
-            <Select
+            <Select<string[]>
               multiple
               displayEmpty
               fullWidth
