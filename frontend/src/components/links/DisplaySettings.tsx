@@ -41,7 +41,7 @@ const DisplaySettingsButton: React.FC = () => {
         color="inherit"
         onClick={handleClick}
         startIcon={<TuneIcon />}
-        sx={{ textTransform: 'none' }} // Tắt tính năng tự động viết hoa toàn bộ chữ của MUI
+        sx={{ textTransform: 'none', borderColor: 'grey.300', color: 'text.primary' }}
       >
         Display
       </Button>
@@ -53,11 +53,18 @@ const DisplaySettingsButton: React.FC = () => {
         onClose={handleClose}
         anchorOrigin={{
           vertical: 'bottom',
-          horizontal: 'left',
+          horizontal: 'center',
         }}
         transformOrigin={{
           vertical: 'top',
-          horizontal: 'left',
+          horizontal: 'center',
+        }}
+        slotProps={{
+          paper: {
+            sx: {
+              mt: 1, 
+            }
+          }
         }}
       >
         {/* Nội dung bên trong Popover */}

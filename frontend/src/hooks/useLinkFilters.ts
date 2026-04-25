@@ -59,7 +59,7 @@ export const useLinkFilters = () => {
     setSearchParams(prev => {
       const next = new URLSearchParams(prev);
 
-      // Sử dụng format của date-fns thay vì toISOString()
+      // Use format of date-fns instead of toISOString()
       if (filter.startDate) {
         next.set("startDate", format(filter.startDate, 'yyyy-MM-dd'));
       } else {
@@ -85,7 +85,7 @@ export const useLinkFilters = () => {
     setDraftSearchTerm("");
   }, [setSearchParams]);
 
-  // Trả về tất cả những gì UI cần
+  // Return all what UI needs
   return {
     draftSearchTerm,
     dateFilter,
