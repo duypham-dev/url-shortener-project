@@ -42,6 +42,7 @@ export const getLinkAnalytics = async (
 
     // 2. Check subscription — analytics is a paid feature
     const context = await getActivePlanContext(userId);
+    
     if (!context.plan.allow_analytics) {
       return res.status(403).json({
         success: false,

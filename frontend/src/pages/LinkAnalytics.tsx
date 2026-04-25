@@ -88,7 +88,7 @@ export const LinkAnalytics: React.FC = () => {
         className="flex items-center gap-2 text-sm font-medium text-slate-500 hover:text-slate-900 mb-6 transition-colors"
       >
         <ArrowLeft size={16} strokeWidth={2.5} />
-        Quay lại danh sách link
+        Back to list
       </button>
 
       {/* Card chính */}
@@ -162,7 +162,7 @@ export const LinkAnalytics: React.FC = () => {
           className="flex items-center gap-2 text-sm text-gray-500 hover:text-gray-700 mb-6 transition-colors"
         >
           <ArrowLeft size={16} />
-          Quay lại danh sách link
+          Back to list
         </button>
         <div className="p-6 bg-red-50 text-red-600 rounded-xl border border-red-200">
           {error}

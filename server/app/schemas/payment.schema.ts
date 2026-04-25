@@ -11,8 +11,8 @@ export const createPaymentUrlSchema = z.object({
       .number()
       .int("planId must be an integer")
       .positive("planId must be a positive number"),
-    bankCode: z.string().max(20).optional(),
-    language: z.string().max(10).optional(),
+    bankCode: z.string().max(20).nullish(),
+    language: z.string().max(10).nullish(),
   }),
 });
  
