@@ -2,13 +2,25 @@ import { axiosClient } from "../config/axiosClient";
 import type { ApiEnvelope } from "../types/api.type";
 import type { LinkItem, ShortenResponse } from "../types/url.type";
 import type { LinksQueryParams } from "../types/filter.type";
+import type { QrCodeItem } from "../types/qr.type";
+
+export interface CreateShortenOptions {
+  generateQr?: boolean;
+  qrOptions?: {
+    fgColor?: string;
+    bgColor?: string;
+  };
+}
 
 export const createShortenUrl = async (
   originalUrl: string,
-): Promise<ShortenResponse> => {
+  options?: CreateShortenOptions,
+): Promise<ShortenResponse & { qrCode?: QrCodeItem }> => {
   const response = (await axiosClient.post("/shorten", {
     originalUrl,
-  })) as ApiEnvelope<ShortenResponse>;
+    generateQr: options?.generateQr,
+    qrOptions: options?.qrOptions,
+  })) as ApiEnvelope<ShortenResponse & { qrCode?: QrCodeItem }>;
 
   return response.data;
 };

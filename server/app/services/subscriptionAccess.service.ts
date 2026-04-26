@@ -15,6 +15,7 @@
 import type { PlanTier } from "../../generated/prisma/enums";
 import {
   ConflictError,
+  ForbiddenError,
   NotFoundError,
   QuotaExceededError,
 } from "../errors/app.error.js";
@@ -45,6 +46,7 @@ export interface ActivePlanSummary {
   currency: string;
   max_links: number;
   max_custom_links: number;
+  max_qr_codes: number;
   allow_analytics: boolean;
   allow_expiry: boolean;
   allow_custom_domain: boolean;
@@ -63,8 +65,10 @@ export interface UsageSummary {
   yearMonth: string;
   linkCount: number;
   customLinkCount: number;
+  qrCodeCount: number;
   remainingLinks: number | null;
   remainingCustomLinks: number | null;
+  remainingQrCodes: number | null;
 }
 
 export interface ActivePlanContext {
@@ -91,6 +95,7 @@ const mapPlan = (plan: {
   currency: string;
   max_links: number;
   max_custom_links: number;
+  max_qr_codes: number;
   allow_analytics: boolean;
   allow_expiry: boolean;
   allow_custom_domain: boolean;
@@ -103,22 +108,30 @@ const mapPlan = (plan: {
 
 const buildUsageSummary = (
   plan: ActivePlanSummary,
-  rawUsage: { link_count: number; custom_link_count: number } | null,
+  rawUsage: { link_count: number; custom_link_count: number; qr_code_count: number } | null,
 ): UsageSummary => {
   const yearMonth = getCurrentYearMonth();
   const linkCount = rawUsage?.link_count ?? 0;
   const customLinkCount = rawUsage?.custom_link_count ?? 0;
+  const qrCodeCount = rawUsage?.qr_code_count ?? 0;
 
   return {
     yearMonth,
     linkCount,
     customLinkCount,
+    qrCodeCount,
     remainingLinks:
       plan.max_links === -1 ? null : Math.max(0, plan.max_links - linkCount),
     remainingCustomLinks:
       plan.max_custom_links === -1
         ? null
         : Math.max(0, plan.max_custom_links - customLinkCount),
+    remainingQrCodes:
+      plan.max_qr_codes === -1
+        ? null
+        : plan.max_qr_codes === 0
+        ? 0
+        : Math.max(0, plan.max_qr_codes - qrCodeCount),
   };
 };
 
@@ -248,4 +261,38 @@ export const assertNoActiveSubscription = async (
       "Bạn đang có gói cước đang hoạt động. Vui lòng hủy gói hiện tại trước khi đăng ký gói mới.",
     );
   }
+};
+
+/**
+ * Asserts the user can create a new QR code within their plan limits.
+ * Throws ForbiddenError if the plan doesn't include QR (max_qr_codes === 0).
+ * Throws QuotaExceededError if the monthly quota is exhausted.
+ */
+export const assertCanCreateQrCode = async (
+  userId: number,
+): Promise<ActivePlanContext> => {
+  const context = await getActivePlanContext(userId);
+
+  const { max_qr_codes } = context.plan;
+  const { qrCodeCount } = context.usage;
+
+  if (max_qr_codes === 0) {
+    throw new ForbiddenError(
+      "QR codes are not available on your current plan. Please upgrade to use this feature.",
+    );
+  }
+
+  if (max_qr_codes !== -1 && qrCodeCount >= max_qr_codes) {
+    throw new QuotaExceededError(
+      "You have reached your monthly QR code limit. Please upgrade your plan for more.",
+      {
+        planName: context.plan.name,
+        tier: context.plan.tier,
+        maxQrCodes: max_qr_codes,
+        currentQrCodes: qrCodeCount,
+      },
+    );
+  }
+
+  return context;
 };

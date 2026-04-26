@@ -1,18 +1,23 @@
 import type { NextFunction, Request, Response } from "express";
-import { ApiResponse } from "../utils/response";
-import generateShortLink from "../services/generateLink.service";
+import generateShortLink from "../services/generateLink.service.js";
 import { getLinkInfoByShortCode } from "../services/link.service.js";
 import { getUserLinks } from "../services/link.service.js";
+import { createQrCodeForLink } from "../services/qrCode.service.js";
+import { assertCanCreateQrCode } from "../services/subscriptionAccess.service.js";
 
 import {
   BadRequestError,
   NotFoundError,
   UnauthorizedError,
-  ValidationError,
 } from "../errors/app.error.js";
 
 interface ShortenRequestBody {
   originalUrl: string;
+  generateQr?: boolean;
+  qrOptions?: {
+    fgColor?: string;
+    bgColor?: string;
+  };
 }
 
 interface ShortenResponseBody {
@@ -27,7 +32,7 @@ export const genShortLink = async (
   next: NextFunction,
 ): Promise<void> => {
   try {
-    const { originalUrl } = req.body;
+    const { originalUrl, generateQr = false, qrOptions } = req.body;
     // Get userId from auth middleware
     const userId = req.user?.userId ?? null;
 
@@ -35,11 +40,27 @@ export const genShortLink = async (
       throw new UnauthorizedError("Unauthorized.");
     }
 
-    // Can check danger URL here before generating short link (optional)
-    
+    // If QR creation is requested, assert QR quota before creating the link
+    if (generateQr) {
+      await assertCanCreateQrCode(userId);
+    }
+
     // Call generate short URL service
-    const shortUrl = await generateShortLink(originalUrl, userId);
-    
+    const { shortUrl, shortCode, urlMappingId } = await generateShortLink(originalUrl, userId);
+
+    // Optionally create a linked QR code (fire-and-forget on failure)
+    let qrCode = null;
+    if (generateQr) {
+      qrCode = await createQrCodeForLink({
+        destinationUrl: shortUrl,
+        urlMappingId,
+        shortCode,
+        userId,
+        ...(qrOptions?.fgColor ? { fgColor: qrOptions.fgColor } : {}),
+        ...(qrOptions?.bgColor ? { bgColor: qrOptions.bgColor } : {}),
+      });
+    }
+
     res.status(201).json({
       success: true,
       message: "Short URL created successfully.",
@@ -47,6 +68,7 @@ export const genShortLink = async (
         shortUrl,
         originalUrl,
         createdAt: new Date().toISOString(),
+        ...(qrCode ? { qrCode } : {}),
       }
     });
   } catch (error) {

@@ -4,9 +4,15 @@ import { paginationCoreSchema } from "./common.schema";
 export const urlSchema = z.object({
     body: z.object({
         originalUrl: z
+            .string()
             .url()
             .max(2048) // Giới hạn tổng độ dài là 2048 ký tự
-            .regex(/^https?:\/\//)
+            .regex(/^https?:\/\//),
+        generateQr: z.boolean().optional().default(false),
+        qrOptions: z.object({
+            fgColor: z.string().regex(/^#[0-9A-Fa-f]{6}$/).optional(),
+            bgColor: z.string().regex(/^#[0-9A-Fa-f]{6}$/).optional(),
+        }).optional(),
     })
 })
 

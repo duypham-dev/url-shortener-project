@@ -9,6 +9,7 @@ interface SuccessModalProps {
   isOpen: boolean;
   onClose: () => void;
   shortUrl: string;
+  qrCodeUrl?: string;  // Optional Cloudinary URL of the generated QR code
 }
 
 const SocialIconItem = React.memo(({ Icon, label, onClick }: { Icon: React.FC<any>, label: string, onClick?: () => void }) => (
@@ -23,7 +24,7 @@ const SocialIconItem = React.memo(({ Icon, label, onClick }: { Icon: React.FC<an
   </button>
 ));
 
-export const SuccessModal: React.FC<SuccessModalProps> = React.memo(({ isOpen, onClose, shortUrl }) => {
+export const SuccessModal: React.FC<SuccessModalProps> = React.memo(({ isOpen, onClose, shortUrl, qrCodeUrl }) => {
   const [copiedValue, copy] = useCopyToClipboard();
   const navigate = useNavigate();
 
@@ -113,6 +114,32 @@ export const SuccessModal: React.FC<SuccessModalProps> = React.memo(({ isOpen, o
               </button>
             </div>
           </div>
+
+          {/* QR Code preview (if generated alongside the link) */}
+          {qrCodeUrl && (
+            <div className="flex flex-col items-center gap-3 border-t border-gray-100 pt-4">
+              <p className="text-sm text-gray-500 font-medium">QR Code generated</p>
+              <img src={qrCodeUrl} alt="QR Code" className="w-28 h-28 object-contain border border-gray-200 rounded-lg" />
+              <div className="flex gap-3">
+                <a
+                  href={qrCodeUrl}
+                  download="qr-code.png"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-sm text-blue-600 hover:underline font-medium"
+                >
+                  Download PNG
+                </a>
+                <span className="text-gray-300">·</span>
+                <button
+                  onClick={() => { onClose(); navigate('/dashboard/qr'); }}
+                  className="text-sm text-blue-600 hover:underline font-medium"
+                >
+                  View QR details
+                </button>
+              </div>
+            </div>
+          )}
 
           {/* Social share icons */}
           <div className="flex items-center justify-center gap-4 pt-4 mt-2 mb-2">

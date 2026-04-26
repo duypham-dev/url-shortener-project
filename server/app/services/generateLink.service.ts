@@ -1,11 +1,16 @@
 import { prisma } from "../libs/prisma";
 import encodeIdToBase62 from '../utils/generateShortLink';
 
+export interface GenerateLinkResult {
+  shortUrl: string;
+  shortCode: string;
+  urlMappingId: bigint;
+}
 
 export default async function generateShortLink(
   longUrl: string,
   userId: number // Obligatory
-): Promise<string> {
+): Promise<GenerateLinkResult> {
   const BASE_URL = process.env.SHORT_LINK_BASE_URL ?? 'https://short.ly';
 
   // Use a transaction to ensure atomicity of the two steps: creating the record and updating it with the code
@@ -28,8 +33,12 @@ export default async function generateShortLink(
       data: { short_code: code },
     });
 
-    return code;
+    return { shortCode: code, urlMappingId: newMapping.id };
   });
 
-  return `${BASE_URL}/${result}`;
+  return {
+    shortUrl: `${BASE_URL}/${result.shortCode}`,
+    shortCode: result.shortCode,
+    urlMappingId: result.urlMappingId,
+  };
 }

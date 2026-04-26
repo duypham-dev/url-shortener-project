@@ -11,6 +11,7 @@ export interface SubscriptionPlan {
   currency: string;
   max_links: number;
   max_custom_links: number;
+  max_qr_codes: number;
   reset_period: ResetPeriod;
   allow_analytics: boolean;
   allow_expiry: boolean;
@@ -29,8 +30,10 @@ export interface UsageSnapshot {
   yearMonth: string;
   linkCount: number;
   customLinkCount: number;
+  qrCodeCount: number;
   remainingLinks: number | null;
   remainingCustomLinks: number | null;
+  remainingQrCodes: number | null;
 }
 
 export interface ActivePlanAccess {

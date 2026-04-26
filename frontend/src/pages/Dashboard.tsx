@@ -15,6 +15,7 @@ export const Dashboard: React.FC = () => {
   // Modal state
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [generatedShortUrl, setGeneratedShortUrl] = useState('');
+  const [generatedQrUrl, setGeneratedQrUrl] = useState<string | undefined>(undefined);
 
   // Plan data from shared store (fetched once in DashboardLayout)
   const planName = usePlanStore(selectPlanName);
@@ -34,15 +35,21 @@ export const Dashboard: React.FC = () => {
 
     try {
       setCreateError(null);
-      const response = await createShortenUrl(url);
+      const response = await createShortenUrl(url, {
+        generateQr: createQrCode,
+      });
       
       const actualShortUrl = response?.shortUrl || "";
       
       if (actualShortUrl) {
         setGeneratedShortUrl(actualShortUrl);
+        setGeneratedQrUrl(response?.qrCode?.cloudinaryUrl ?? undefined);
         setIsModalOpen(true);
         setUrl('');
         queryClient.invalidateQueries({ queryKey: ['userLinks'] });
+        if (createQrCode) {
+          queryClient.invalidateQueries({ queryKey: ['userQrCodes'] });
+        }
         // Refresh only the usage/quota data after link creation
         refreshUsage();
       }
@@ -185,6 +192,7 @@ export const Dashboard: React.FC = () => {
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         shortUrl={generatedShortUrl}
+        qrCodeUrl={generatedQrUrl}
       />
     </>
   );

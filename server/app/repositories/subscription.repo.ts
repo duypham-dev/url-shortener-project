@@ -13,6 +13,7 @@ export const PLAN_SELECT = {
   currency: true,
   max_links: true,
   max_custom_links: true,
+  max_qr_codes: true,
   allow_analytics: true,
   allow_expiry: true,
   allow_custom_domain: true,
@@ -35,6 +36,7 @@ export const getPlanUsageRepo = async (userId: number, yearMonth: string) => {
     select: {
       link_count: true,
       custom_link_count: true,
+      qr_code_count: true,
     },
   });
 };
@@ -73,6 +75,7 @@ export const getActiveSubscriptionPlans = async () => {
       currency: true,
       max_links: true,
       max_custom_links: true,
+      max_qr_codes: true,
       reset_period: true,
       allow_analytics: true,
       allow_expiry: true,

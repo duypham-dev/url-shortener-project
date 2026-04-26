@@ -18,6 +18,7 @@ import shortenRouter from "./routes/shortlink.route.js";
 import authRouter from "./routes/auth.route.js";
 import paymentRouter  from "./routes/payment.route.js";
 import subscriptionRouter from "./routes/subscription.route.js";
+import qrRouter from "./routes/qrCode.route.js";
 import {
   errorHandler,
   notFoundHandler,
@@ -75,6 +76,7 @@ app.use((req, res, next) => {
 app.use(`${baseUrl}/auth`, authRouter);     // /api/v1/auth/*
 app.use(`${baseUrl}/subscriptions`, subscriptionRouter);  // /api/v1/subscriptions/*
 app.use(baseUrl, paymentRouter);
+app.use(baseUrl, qrRouter);                // /api/v1/qr-codes/* and /api/v1/links/:shortCode/qr
 app.use(baseUrl, shortenRouter);            // /api/v1/*
 
 

@@ -36,6 +36,10 @@ export const selectIsVip = (s: PlanState) =>
 export const selectPlanName = (s: PlanState) => s.plan?.name ?? "Free";
 export const selectRemainingLinks = (s: PlanState) =>
   s.usage?.remainingLinks ?? null;
+export const selectRemainingQrCodes = (s: PlanState) =>
+  s.usage?.remainingQrCodes ?? null;
+export const selectCanUseQr = (s: PlanState) =>
+  s.plan !== null && (s.plan.max_qr_codes !== 0);
 
 const initialState = {
   plan: null,

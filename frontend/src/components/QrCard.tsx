@@ -1,0 +1,203 @@
+// frontend/src/components/QrCard.tsx
+import React, { useCallback } from "react";
+import { QRCodeSVG } from "qrcode.react";
+import {
+  Download,
+  Trash2,
+  RefreshCw,
+  Copy,
+  ExternalLink,
+  QrCode,
+  Calendar,
+  BarChart2,
+} from "lucide-react";
+import type { QrCodeItem } from "../types/qr.type";
+import { useCopyToClipboard } from "../hooks/useCopyToClipboard";
+import { formatDate } from "../utils/date";
+
+interface QrCardProps {
+  qrCode: QrCodeItem;
+  onDelete?: (id: string) => void;
+  onRegenerate?: (id: string) => void;
+}
+
+const getShortUrlDisplay = (shortCode: string | null): string => {
+  const base = import.meta.env.VITE_SHORT_LINK_BASE_URL || "https://short.ly";
+  return shortCode ? `${base.replace(/^https?:\/\//, "")}/${shortCode}` : "";
+};
+
+export const QrCard: React.FC<QrCardProps> = React.memo(
+  ({ qrCode, onDelete, onRegenerate }) => {
+    const [copiedValue, copy] = useCopyToClipboard();
+    const shortUrlDisplay = getShortUrlDisplay(qrCode.shortCode);
+    const displayTitle = qrCode.title || qrCode.destinationUrl.substring(0, 60) + "...";
+
+    // Download the QR code as PNG
+    const handleDownload = useCallback(async () => {
+      if (qrCode.cloudinaryUrl) {
+        // Download from Cloudinary
+        try {
+          const response = await fetch(qrCode.cloudinaryUrl);
+          const blob = await response.blob();
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement("a");
+          a.href = url;
+          a.download = `qr-${qrCode.id}.png`;
+          a.click();
+          URL.revokeObjectURL(url);
+        } catch {
+          window.open(qrCode.cloudinaryUrl, "_blank");
+        }
+      } else {
+        // Generate from SVG using canvas
+        const svgEl = document.getElementById(`qr-svg-${qrCode.id}`)?.querySelector("svg");
+        if (!svgEl) return;
+        const canvas = document.createElement("canvas");
+        canvas.width = 300;
+        canvas.height = 300;
+        const ctx = canvas.getContext("2d");
+        if (!ctx) return;
+        const img = new Image();
+        const svgData = new XMLSerializer().serializeToString(svgEl);
+        img.src = `data:image/svg+xml;base64,${btoa(svgData)}`;
+        img.onload = () => {
+          ctx.drawImage(img, 0, 0, 300, 300);
+          const a = document.createElement("a");
+          a.href = canvas.toDataURL("image/png");
+          a.download = `qr-${qrCode.id}.png`;
+          a.click();
+        };
+      }
+    }, [qrCode]);
+
+    return (
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 mb-4 hover:shadow-md transition-shadow">
+        <div className="flex flex-col sm:flex-row gap-4">
+          {/* QR Code Preview */}
+          <div
+            id={`qr-svg-${qrCode.id}`}
+            className="w-20 h-20 shrink-0 border border-gray-200 rounded-lg overflow-hidden flex items-center justify-center bg-white p-1"
+          >
+            {qrCode.cloudinaryUrl ? (
+              <img
+                src={qrCode.cloudinaryUrl}
+                alt="QR Code"
+                className="w-full h-full object-contain"
+              />
+            ) : (
+              <QRCodeSVG
+                value={qrCode.destinationUrl}
+                size={72}
+                fgColor={qrCode.fgColor}
+                bgColor={qrCode.bgColor}
+                level={qrCode.errorCorrection as "L" | "M" | "Q" | "H"}
+              />
+            )}
+          </div>
+
+          {/* Main Content */}
+          <div className="flex-1 min-w-0">
+            {/* Title row + actions */}
+            <div className="flex justify-between items-start gap-4">
+              <h3 className="font-bold text-gray-900 text-base truncate" title={displayTitle}>
+                {displayTitle}
+              </h3>
+              <div className="flex items-center text-gray-500 gap-2 shrink-0">
+                <button
+                  onClick={handleDownload}
+                  className="p-1 hover:bg-gray-100 rounded-md transition-colors"
+                  title="Download QR"
+                >
+                  <Download size={15} />
+                </button>
+                {onRegenerate && (
+                  <button
+                    onClick={() => onRegenerate(qrCode.id)}
+                    className="p-1 hover:bg-gray-100 rounded-md transition-colors"
+                    title="Regenerate QR"
+                  >
+                    <RefreshCw size={15} />
+                  </button>
+                )}
+                {onDelete && (
+                  <button
+                    onClick={() => onDelete(qrCode.id)}
+                    className="p-1 hover:bg-red-50 text-red-400 hover:text-red-600 rounded-md transition-colors"
+                    title="Delete QR"
+                  >
+                    <Trash2 size={15} />
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* Short link chip (if linked) */}
+            {qrCode.shortCode && (
+              <div className="flex items-center gap-2 mt-1.5">
+                <a
+                  href={`https://${shortUrlDisplay}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-blue-600 font-semibold text-sm hover:underline"
+                >
+                  {shortUrlDisplay}
+                </a>
+                <button
+                  onClick={() => copy(shortUrlDisplay)}
+                  className="p-0.5 rounded text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors"
+                  title="Copy short URL"
+                >
+                  <Copy size={13} className={copiedValue ? "text-green-500" : ""} />
+                </button>
+              </div>
+            )}
+
+            {/* Destination URL */}
+            <div className="mt-1.5 text-sm text-gray-500 flex items-center gap-1.5 truncate">
+              <ExternalLink size={12} className="shrink-0" />
+              <span className="truncate">{qrCode.destinationUrl}</span>
+            </div>
+
+            {/* Bottom meta row */}
+            <div className="flex flex-wrap items-center gap-4 mt-3 text-xs font-medium text-gray-500">
+              {/* Color dot */}
+              <div className="flex items-center gap-1.5">
+                <span
+                  className="w-3 h-3 rounded-full border border-gray-200 shrink-0"
+                  style={{ backgroundColor: qrCode.fgColor }}
+                />
+                <span>{qrCode.fgColor}</span>
+              </div>
+
+              {/* Scan count (only for linked QR codes) */}
+              {qrCode.shortCode && (
+                <div className="flex items-center gap-1.5">
+                  <BarChart2 size={13} />
+                  <span>{qrCode.scanCount} scans</span>
+                </div>
+              )}
+
+              {/* Link badge */}
+              {qrCode.shortCode && (
+                <div className="flex items-center gap-1 bg-blue-50 text-blue-700 rounded-full px-2 py-0.5">
+                  <QrCode size={11} />
+                  <span>Linked to /{qrCode.shortCode}</span>
+                </div>
+              )}
+
+              {/* Created date */}
+              <div className="flex items-center gap-1.5 ml-auto">
+                <Calendar size={13} strokeWidth={2.5} />
+                {formatDate(qrCode.createdAt)}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  },
+);
+
+QrCard.displayName = "QrCard";
+
+export default QrCard;
