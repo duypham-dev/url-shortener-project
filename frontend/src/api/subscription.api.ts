@@ -20,3 +20,11 @@ export const getMyPlanAccess = async (): Promise<ActivePlanAccess> => {
 
   return response.data;
 };
+
+/**
+ * Cancel the user's active subscription immediately.
+ * Server returns 404 if no active subscription exists.
+ */
+export const cancelMySubscription = async (): Promise<void> => {
+  await axiosClient.post("/subscriptions/me/cancel");
+};

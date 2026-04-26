@@ -3,8 +3,11 @@ import {
   BadRequestError,
   UnauthorizedError,
 } from "../errors/app.error.js";
-import { getActivePlanContext } from "../services/subscriptionAccess.service.js";
-import { getActiveSubscriptionPlans } from "../services/subscription.service.js";
+import { getFullPlanContext } from "../services/subscriptionAccess.service.js";
+import {
+  getActiveSubscriptionPlans,
+  cancelActiveSubscription,
+} from "../services/subscription.service.js";
 
 export const getSubscriptionPlans = async (
   req: Request,
@@ -40,7 +43,8 @@ export const getMyPlanAccess = async (
       throw new BadRequestError("userId không hợp lệ");
     }
 
-    const context = await getActivePlanContext(userId);
+    // Full context includes pending payment flag (only needed by this API)
+    const context = await getFullPlanContext(userId);
 
     return res.status(200).json({
       success: true,
@@ -50,6 +54,33 @@ export const getMyPlanAccess = async (
         usage: context.usage,
         hasPendingPayment: context.hasPendingPayment,
       },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * POST /subscriptions/me/cancel
+ * Cancels the user's active subscription immediately.
+ * Returns 404 if no active subscription exists.
+ */
+export const cancelMySubscription = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  try {
+    const userId = req.user?.userId;
+    if (!userId) {
+      throw new UnauthorizedError("Unauthorized");
+    }
+
+    await cancelActiveSubscription(userId);
+
+    return res.status(200).json({
+      success: true,
+      message: "Gói cước đã được hủy thành công.",
     });
   } catch (error) {
     next(error);

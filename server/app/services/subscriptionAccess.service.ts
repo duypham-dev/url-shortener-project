@@ -1,21 +1,21 @@
 /**
  * subscriptionAccess.service.ts
  *
- * Refactor Notes:
- * - isVipUser(): REPLACED full getActivePlanContext() cascade (3-5 queries + UPDATE)
- *   with a single lightweight existence check on the subscriptions table.
- *   This eliminates the major bottleneck on every auth event.
- * - Removed unused `tx?: Prisma.TransactionClient` parameter from all functions.
- *   The parameter was accepted but never wired through — callers always hit the
- *   global prisma client. Removing avoids misleading callers.
- * - Added explicit `select` to getFallbackFreePlan() and the subscription query
- *   in getActivePlanContext() to avoid fetching unnecessary columns.
- * - Added explicit `select` to activeSubscription query (replaces `include`).
+ * Central service for checking user's active plan, quota, and subscription status.
+ *
+ * Design decisions:
+ * - getActivePlanContext: Runs subscription + usage queries in parallel (2 queries).
+ *   Pending payment check is EXCLUDED from this path — it's only needed by
+ *   the /me/plan API endpoint, not by quota enforcement middleware.
+ * - assertCanCreateLink: Thin wrapper that calls getActivePlanContext then
+ *   checks quota limits. Used by quota middleware on link creation.
+ * - assertNoActiveSubscription: Guard for payment creation — prevents duplicate
+ *   subscriptions per the "one plan per user per cycle" business rule.
  */
 import type { PlanTier } from "../../generated/prisma/enums";
 import {
+  ConflictError,
   NotFoundError,
-  PaymentRequiredError,
   QuotaExceededError,
 } from "../errors/app.error.js";
 import {
@@ -23,6 +23,7 @@ import {
   getFallbackFreePlanRepo,
   getActiveSubscriptionRepo,
   getPendingPaymentRepo,
+  hasActiveSubscriptionRepo,
 } from "../repositories/subscription.repo";
 
 const getCurrentYearMonth = (date = new Date()): string => {
@@ -30,6 +31,10 @@ const getCurrentYearMonth = (date = new Date()): string => {
   const month = String(date.getUTCMonth() + 1).padStart(2, "0");
   return `${year}-${month}`;
 };
+
+// ----------------------------------------------------------------
+// Public types
+// ----------------------------------------------------------------
 
 export interface ActivePlanSummary {
   id: number;
@@ -66,25 +71,16 @@ export interface ActivePlanContext {
   plan: ActivePlanSummary;
   subscription: ActiveSubscriptionSummary | null;
   usage: UsageSummary;
+}
+
+/** Extended context returned only by the /me/plan API (includes pending payment flag) */
+export interface FullPlanContext extends ActivePlanContext {
   hasPendingPayment: boolean;
 }
 
-// Select clause matching ActivePlanSummary fields (reused across queries)
-const PLAN_SELECT = {
-  id: true,
-  name: true,
-  tier: true,
-  duration_days: true,
-  price: true,
-  currency: true,
-  max_links: true,
-  max_custom_links: true,
-  allow_analytics: true,
-  allow_expiry: true,
-  allow_custom_domain: true,
-  allow_qr_code: true,
-  reset_period: true,
-} as const;
+// ----------------------------------------------------------------
+// Helpers
+// ----------------------------------------------------------------
 
 const mapPlan = (plan: {
   id: number;
@@ -105,15 +101,13 @@ const mapPlan = (plan: {
   price: typeof plan.price === "number" ? plan.price : Number(plan.price),
 });
 
-const getPlanUsage = async (
-  userId: number,
+const buildUsageSummary = (
   plan: ActivePlanSummary,
-): Promise<UsageSummary> => {
+  rawUsage: { link_count: number; custom_link_count: number } | null,
+): UsageSummary => {
   const yearMonth = getCurrentYearMonth();
-  const usage = await getPlanUsageRepo(userId, yearMonth);
-
-  const linkCount = usage?.link_count ?? 0;
-  const customLinkCount = usage?.custom_link_count ?? 0;
+  const linkCount = rawUsage?.link_count ?? 0;
+  const customLinkCount = rawUsage?.custom_link_count ?? 0;
 
   return {
     yearMonth,
@@ -128,34 +122,32 @@ const getPlanUsage = async (
   };
 };
 
-// const getFallbackFreePlan = async () => {
-//   const freePlan = await getFallbackFreePlanRepo();
-
-//   if (!freePlan) {
-//     throw new NotFoundError("Không tìm thấy gói miễn phí đang hoạt động.");
-//   }
-
-//   return freePlan;
-// };
+// ----------------------------------------------------------------
+// Core context fetcher — used by quota middleware & analytics
+// Runs 2 queries in parallel (subscription + usage), no pending payment check.
+// ----------------------------------------------------------------
 
 export const getActivePlanContext = async (
   userId: number,
 ): Promise<ActivePlanContext> => {
-  const [activeSubscription, pendingPayment] = await Promise.all([
+  const yearMonth = getCurrentYearMonth();
+
+  // Run subscription and usage queries in parallel
+  const [activeSubscription, rawUsage] = await Promise.all([
     getActiveSubscriptionRepo(userId),
-    getPendingPaymentRepo(userId),
+    getPlanUsageRepo(userId, yearMonth),
   ]);
 
   const planSource = activeSubscription?.subscription_plans
     ? activeSubscription.subscription_plans
     : await getFallbackFreePlanRepo();
-  
+
   if (!planSource) {
     throw new NotFoundError("Cannot find active free plan.");
   }
-  
+
   const plan = mapPlan(planSource);
-  const usage = await getPlanUsage(userId, plan);
+  const usage = buildUsageSummary(plan, rawUsage);
 
   return {
     plan,
@@ -168,15 +160,41 @@ export const getActivePlanContext = async (
         }
       : null,
     usage,
+  };
+};
+
+// ----------------------------------------------------------------
+// Full context fetcher — used only by GET /subscriptions/me/plan
+// Adds pending payment check on top of base context.
+// ----------------------------------------------------------------
+
+export const getFullPlanContext = async (
+  userId: number,
+): Promise<FullPlanContext> => {
+  const [context, pendingPayment] = await Promise.all([
+    getActivePlanContext(userId),
+    getPendingPaymentRepo(userId),
+  ]);
+
+  return {
+    ...context,
     hasPendingPayment: Boolean(pendingPayment),
   };
 };
+
+// ----------------------------------------------------------------
+// Guards
+// ----------------------------------------------------------------
 
 export interface LinkQuotaCheckInput {
   userId: number;
   isCustom: boolean;
 }
 
+/**
+ * Asserts the user can create a new link within their plan limits.
+ * Throws QuotaExceededError if any limit is reached.
+ */
 export const assertCanCreateLink = async (
   input: LinkQuotaCheckInput,
 ): Promise<ActivePlanContext> => {
@@ -204,13 +222,6 @@ export const assertCanCreateLink = async (
     currentCustomLinks: context.usage.customLinkCount,
   };
 
-  if (context.hasPendingPayment) {
-    throw new PaymentRequiredError(
-      "Giao dịch nâng cấp đang chờ xác nhận. Vui lòng hoàn tất thanh toán hoặc đợi hệ thống cập nhật.",
-      errorDetails,
-    );
-  }
-
   if (isCustomQuotaExceeded) {
     throw new QuotaExceededError(
       "Bạn đã vượt giới hạn link tùy chỉnh của gói hiện tại.",
@@ -222,4 +233,19 @@ export const assertCanCreateLink = async (
     "Bạn đã vượt giới hạn số link trong tháng của gói hiện tại.",
     errorDetails,
   );
+};
+
+/**
+ * Guard for payment creation — prevents duplicate active subscriptions.
+ * Throws ConflictError if user already has an active paid subscription.
+ */
+export const assertNoActiveSubscription = async (
+  userId: number,
+): Promise<void> => {
+  const hasActive = await hasActiveSubscriptionRepo(userId);
+  if (hasActive) {
+    throw new ConflictError(
+      "Bạn đang có gói cước đang hoạt động. Vui lòng hủy gói hiện tại trước khi đăng ký gói mới.",
+    );
+  }
 };

@@ -1,5 +1,11 @@
 /**
  * payment.controller.ts
+ *
+ * Handles VNPay payment flow:
+ * - POST /create_payment_url — creates a pending payment + redirects to VNPay
+ * - GET /vnpay_return — handles VNPay redirect back to frontend
+ * - GET /vnpay_ipn — handles VNPay server-to-server callback
+ * - GET /payments/:orderId — fetches payment result for display
  */
 import type { NextFunction, Request, Response } from "express";
 import {
@@ -19,6 +25,7 @@ import {
   verifyVnPayReturn,
 } from "../services/payment.service.js";
 import { getSubscriptionPlanById } from "../services/subscription.service.js";
+import { assertNoActiveSubscription } from "../services/subscriptionAccess.service.js";
 import type { VnpParams } from "../services/payment.service.js";
 
 const FRONTEND_URL = process.env.FRONTEND_URL || "http://localhost:5173";
@@ -83,6 +90,9 @@ export const createPaymentUrl = async (
       throw new BadRequestError("Invalid subscription plan");
     }
 
+    // Guard: prevent duplicate subscriptions (throws ConflictError)
+    await assertNoActiveSubscription(userId);
+
     const orderId = createOrderId(userId);
     const ipAddr = parseClientIp(req);
     const bankCode = req.body.bankCode as string | undefined;
@@ -91,6 +101,7 @@ export const createPaymentUrl = async (
     const { createDate, orderInfo } = createPaymentMetadata(plan.name, orderId);
 
     // Save pending payment to DB before redirecting to payment gateway
+    // (also re-checks active subscription + pending payment inside transaction)
     await createPendingPayment({
       orderId,
       userId,
@@ -142,7 +153,7 @@ export const vnpayReturn = async (req: Request, res: Response) => {
   }
 
   try {
-    // Return URL chỉ hiển thị kết quả — trạng thái DB cập nhật bởi IPN.
+    // Return URL only displays the result — DB state is updated by IPN.
     const payment = await getPaymentForVerification(orderId);
     if (!payment) {
       return res.redirect(

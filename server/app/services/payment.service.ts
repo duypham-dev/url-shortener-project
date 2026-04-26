@@ -1,21 +1,22 @@
 /**
  * payment.service.ts
  *
- * Refactor Notes:
- * - Phase 3: Split monolithic getPaymentByOrderId (which used nested `include`
- *   fetching ALL columns from payments + subscriptions + subscription_plans)
- *   into three purpose-specific query functions:
- *     • getPaymentForVerification — minimal fields for signature/amount checks
- *     • getPaymentForProcessing — adds subscription + plan duration for IPN flow
- *     • getPaymentForDisplay — shaped fields for the API response
- *   Each fetches only what its caller needs, avoiding large JSONB payloads
- *   and unnecessary JOINs.
+ * Handles VNPay payment lifecycle: URL generation, signature verification,
+ * pending payment creation, and IPN processing.
+ *
+ * Key business rules enforced:
+ * - One subscription per user: createPendingPayment checks for existing
+ *   active subscriptions inside the transaction (race-condition safe).
+ * - No time-stacking: activateSubscriptionAfterSuccess sets expiry to
+ *   now + duration_days, never stacking on top of existing subscriptions.
+ * - Idempotent IPN: uses updateMany with status = pending guard.
  */
 import config from "config";
 import crypto from "crypto";
 import qs from "qs";
 import { PaymentStatus } from "../../generated/prisma/enums";
 import { prisma } from "../libs/prisma";
+import { ConflictError } from "../errors/app.error.js";
 
 export interface VnpParams {
   [key: string]: string | number | undefined;
@@ -42,6 +43,10 @@ export interface CreatePendingPaymentInput {
   orderInfo: string;
   createDate: string;
 }
+
+// ----------------------------------------------------------------
+// Date / amount helpers
+// ----------------------------------------------------------------
 
 const toVnpDate = (date: Date): string => {
   const year = date.getFullYear();
@@ -73,13 +78,17 @@ const isGatewaySuccess = (vnpParams: VnpParams): boolean => {
   return responseCode === "00" && (!transactionStatus || transactionStatus === "00");
 };
 
+// ----------------------------------------------------------------
+// Order / metadata generation
+// ----------------------------------------------------------------
+
 export const createOrderId = (userId: number): string => {
   const randomHex = crypto.randomBytes(4).toString("hex");
   return `VNP_${Date.now()}_${userId}_${randomHex}`;
 };
 
 export const createPaymentMetadata = (planName: string, orderId: string, date = new Date()) => {
-  // Lược bỏ dấu tiếng Việt và ký tự đặc biệt (chỉ giữ chữ/số) để tránh lỗi Fail Checksum của VNPay
+  // Strip Vietnamese diacritics and special characters to prevent VNPay checksum failures
   const safePlanName = planName
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
@@ -94,6 +103,10 @@ export const createPaymentMetadata = (planName: string, orderId: string, date = 
     orderInfo: `Thanh toan ${safePlanName} - ${orderId}`,
   };
 };
+
+// ----------------------------------------------------------------
+// VNPay URL generation & verification
+// ----------------------------------------------------------------
 
 export const generateVnPayUrl = (
   amount: number,
@@ -165,19 +178,58 @@ export const extractAmountFromVnp = (params: VnpParams): number => {
   return Number.isFinite(amount) ? amount : 0;
 };
 
+// ----------------------------------------------------------------
+// Pending payment creation (with duplicate subscription guard)
+// ----------------------------------------------------------------
+
+const PENDING_PAYMENT_TTL_MS = 15 * 60 * 1000; // 15 minutes
+
 export const createPendingPayment = async (
   input: CreatePendingPaymentInput,
 ): Promise<{ subscriptionId: string }> => {
   const { orderId, userId, planId, amount, currency, orderInfo, createDate } = input;
 
   return prisma.$transaction(async (tx) => {
+    // Guard: prevent duplicate active subscriptions (race-condition safe inside tx)
+    const existingActive = await tx.subscriptions.findFirst({
+      where: {
+        user_id: userId,
+        status: "active",
+        expires_at: { gt: new Date() },
+      },
+      select: { id: true },
+    });
+
+    if (existingActive) {
+      throw new ConflictError(
+        "Bạn đang có gói cước đang hoạt động. Vui lòng hủy gói hiện tại trước khi đăng ký gói mới.",
+      );
+    }
+
+    // Guard: prevent multiple pending payments within TTL
+    const pendingCutoff = new Date(Date.now() - PENDING_PAYMENT_TTL_MS);
+    const existingPending = await tx.payments.findFirst({
+      where: {
+        user_id: userId,
+        status: "pending",
+        created_at: { gte: pendingCutoff },
+      },
+      select: { id: true },
+    });
+
+    if (existingPending) {
+      throw new ConflictError(
+        "Bạn đang có giao dịch chờ xử lý. Vui lòng hoàn tất hoặc chờ giao dịch hết hạn trước khi tạo giao dịch mới.",
+      );
+    }
+
     const pendingSubscription = await tx.subscriptions.create({
       data: {
         user_id: userId,
         plan_id: planId,
         status: "pending",
         started_at: new Date(),
-        expires_at: new Date(),
+        expires_at: new Date(), // placeholder — set to real value on activation
       },
     });
 
@@ -202,12 +254,11 @@ export const createPendingPayment = async (
 };
 
 // ----------------------------------------------------------------
-// Purpose-specific payment queries (replaces monolithic getPaymentByOrderId)
+// Purpose-specific payment queries
 // ----------------------------------------------------------------
 
 /**
  * Minimal query for signature/amount verification (vnpay_return flow).
- * Only fetches the fields needed to validate the payment.
  */
 export const getPaymentForVerification = async (orderId: string) => {
   return prisma.payments.findUnique({
@@ -223,7 +274,6 @@ export const getPaymentForVerification = async (orderId: string) => {
 
 /**
  * Query for IPN processing — includes subscription + plan duration.
- * Avoids fetching large provider_payload JSONB.
  */
 export const getPaymentForProcessing = async (orderId: string) => {
   return prisma.payments.findUnique({
@@ -274,9 +324,16 @@ export const getPaymentForDisplay = async (orderId: string) => {
   });
 };
 
+// ----------------------------------------------------------------
+// IPN processing — activate or fail payment
+// ----------------------------------------------------------------
+
+/**
+ * Activate subscription after successful payment.
+ * No time-stacking: always sets expiry to now + duration_days.
+ */
 const activateSubscriptionAfterSuccess = async (
   orderId: string,
-  userId: number,
   subscriptionId: string | null,
   durationDays: number,
   vnpParams: VnpParams,
@@ -303,30 +360,7 @@ const activateSubscriptionAfterSuccess = async (
     }
 
     if (subscriptionId) {
-      const latestActiveSubscription = await tx.subscriptions.findFirst({
-        where: {
-          user_id: userId,
-          status: "active",
-          expires_at: {
-            gt: now,
-          },
-          id: {
-            not: subscriptionId,
-          },
-        },
-        orderBy: {
-          expires_at: "desc",
-        },
-        select: {
-          expires_at: true,
-        },
-      });
-
-      const baseDate =
-        latestActiveSubscription?.expires_at && latestActiveSubscription.expires_at > now
-          ? latestActiveSubscription.expires_at
-          : now;
-
+      // Simple activation: now + duration_days (no stacking)
       await tx.subscriptions.update({
         where: {
           id: subscriptionId,
@@ -334,7 +368,7 @@ const activateSubscriptionAfterSuccess = async (
         data: {
           status: "active",
           started_at: now,
-          expires_at: addDays(baseDate, durationDays),
+          expires_at: addDays(now, durationDays),
         },
       });
     }
@@ -400,12 +434,12 @@ export const processVnpayPayment = async (
     const durationDays = payment.subscriptions?.subscription_plans?.duration_days ?? 30;
     await activateSubscriptionAfterSuccess(
       payment.id,
-      payment.user_id,
       payment.subscription_id,
       durationDays,
       vnpParams,
     );
 
+    // Re-fetch to confirm activation (handles race conditions)
     const latestPayment = await prisma.payments.findUnique({
       where: { id: payment.id },
       select: { status: true },
@@ -436,7 +470,10 @@ export const processVnpayPayment = async (
   return { outcome: "failed", paymentStatus: "failed" };
 };
 
-// Hàm sắp xếp object theo key (dùng để tạo chuỗi ký)
+// ----------------------------------------------------------------
+// Utility
+// ----------------------------------------------------------------
+
 export const sortObject = (obj: VnpParams): { [key: string]: string } => {
   const sorted: { [key: string]: string } = {};
   const keys: string[] = [];
