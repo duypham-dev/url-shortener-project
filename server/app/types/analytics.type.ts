@@ -19,9 +19,13 @@ export const ANALYTICS_GROUP_BY_VALUES = [
 export type AnalyticsGroupBy = (typeof ANALYTICS_GROUP_BY_VALUES)[number];
 
 // ----------------------------------------------------------------
-// Timeseries mode: last24h (hourly buckets) vs custom (daily buckets)
+// Timeseries mode:
+//   last24h  — 24 hours back from now, hourly buckets
+//   last7d   — 7 days back from now, daily buckets
+//   last30d  — 30 days back from now, daily buckets
+//   custom   — user-selected date range (max 30 days), daily buckets
 // ----------------------------------------------------------------
-export const TIMESERIES_MODE_VALUES = ["last24h", "custom"] as const;
+export const TIMESERIES_MODE_VALUES = ["last24h", "last7d", "last30d", "custom"] as const;
 export type TimeseriesMode = (typeof TIMESERIES_MODE_VALUES)[number];
 
 // ----------------------------------------------------------------

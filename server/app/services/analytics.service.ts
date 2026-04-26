@@ -4,6 +4,11 @@
  * Service layer for link click analytics.
  * Each function targets a single analytics dimension, called by the controller
  * based on the `groupBy` query parameter.
+ *
+ * Date ranges are computed server-side from the `mode` preset:
+ *   last24h  — 24 hours back from now, hourly buckets
+ *   last7d   — 7 days back from now, daily buckets
+ *   last30d  — 30 days back from now, daily buckets
  */
 import {
   getTimeseriesClicksRepo,
@@ -50,6 +55,64 @@ export interface ClickLogsResult {
   pageSize: number;
   rows: ClickLogRow[];
 }
+
+// ----------------------------------------------------------------
+// Date range resolution — single source of truth for all dimensions
+// ----------------------------------------------------------------
+
+export interface ResolvedDateRange {
+  start: string; // ISO 8601
+  end: string;   // ISO 8601
+}
+
+/**
+ * Resolve start/end dates from the mode.
+ *
+ * For presets (last24h, last7d, last30d): dates computed server-side.
+ * For custom: uses client-supplied start/end (validated by schema).
+ *
+ * - last24h: exactly 24 hours back from now
+ * - last7d:  7 calendar days back from start-of-today (UTC)
+ * - last30d: 30 calendar days back from start-of-today (UTC)
+ * - custom:  client-supplied start/end (max 30-day span enforced by schema)
+ */
+export const resolveAnalyticsDateRange = (
+  mode: TimeseriesMode,
+  clientStart?: string,
+  clientEnd?: string,
+): ResolvedDateRange => {
+  const now = new Date();
+
+  if (mode === "last24h") {
+    const start = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+    return { start: start.toISOString(), end: now.toISOString() };
+  }
+
+  if (mode === "custom" && clientStart && clientEnd) {
+    // Use client-supplied range — already validated for max 30-day span
+    const start = new Date(clientStart);
+    console.log("Start date: ", start);
+    start.setUTCHours(0, 0, 0, 0);
+    const end = new Date(clientEnd);
+    console.log("End date: ", end);
+    end.setUTCHours(23, 59, 59, 999);
+    return { start: start.toISOString(), end: end.toISOString() };
+  }
+
+  // Preset daily modes (last7d / last30d)
+  const endOfToday = new Date(now);
+  endOfToday.setUTCHours(23, 59, 59, 999);
+
+  const daysBack = mode === "last7d" ? 7 : 30;
+  const startDate = new Date(now);
+  startDate.setUTCHours(0, 0, 0, 0);
+  startDate.setUTCDate(startDate.getUTCDate() - (daysBack - 1));
+
+  return {
+    start: startDate.toISOString(),
+    end: endOfToday.toISOString(),
+  };
+};
 
 // ----------------------------------------------------------------
 // Zero-fill utilities
@@ -172,45 +235,44 @@ const groupByDay = (
 // Per-dimension analytics
 // ----------------------------------------------------------------
 
+/** Shared input for all analytics queries */
+export interface AnalyticsDateInput {
+  mode: TimeseriesMode;
+  clientStart?: string | undefined;
+  clientEnd?: string | undefined;
+}
+
 /**
- * Get click timeseries for a link, either hourly (last24h) or daily (custom).
- * Returns a continuous array with zero-filled gaps — every bucket is present.
+ * Get click timeseries for a link.
+ * For presets, dates are computed server-side.
+ * For custom, uses client-supplied start/end.
  */
 export const getTimeseriesAnalytics = async (
   shortCode: string,
-  start: string,
-  end: string,
-  _timezone: string,
-  mode: TimeseriesMode,
+  input: AnalyticsDateInput,
 ): Promise<TimeseriesResult> => {
-  // For last24h mode, override start/end to exactly the last 24 hours
-  const effectiveStart = mode === "last24h"
-    ? new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
-    : start;
-  const effectiveEnd = mode === "last24h"
-    ? new Date().toISOString()
-    : end;
+  const { start, end } = resolveAnalyticsDateRange(input.mode, input.clientStart, input.clientEnd);
 
-  const rows = await getTimeseriesClicksRepo(shortCode, effectiveStart, effectiveEnd);
+  const rows = await getTimeseriesClicksRepo(shortCode, start, end);
 
-  const startDate = new Date(effectiveStart);
-  const endDate = new Date(effectiveEnd);
+  const startDate = new Date(start);
+  const endDate = new Date(end);
 
-  const items = mode === "last24h"
+  const items = input.mode === "last24h"
     ? groupByHour(rows, startDate, endDate)
     : groupByDay(rows, startDate, endDate);
 
-  return { mode, items };
+  return { mode: input.mode, items };
 };
 
 /**
- * Get referrer source breakdown for a link within a date range.
+ * Get referrer source breakdown for a link.
  */
 export const getReferrersAnalytics = async (
   shortCode: string,
-  start: string,
-  end: string,
+  input: AnalyticsDateInput,
 ): Promise<ReferrerItem[]> => {
+  const { start, end } = resolveAnalyticsDateRange(input.mode, input.clientStart, input.clientEnd);
   const referrers = await getReferrersRepo(shortCode, start, end);
 
   return referrers.map((r) => ({
@@ -220,13 +282,13 @@ export const getReferrersAnalytics = async (
 };
 
 /**
- * Get country breakdown for a link within a date range.
+ * Get country breakdown for a link.
  */
 export const getCountriesAnalytics = async (
   shortCode: string,
-  start: string,
-  end: string,
+  input: AnalyticsDateInput,
 ): Promise<BreakdownItem[]> => {
+  const { start, end } = resolveAnalyticsDateRange(input.mode, input.clientStart, input.clientEnd);
   const rows = await getCountriesRepo(shortCode, start, end);
 
   return rows.map((row) => ({
@@ -236,13 +298,13 @@ export const getCountriesAnalytics = async (
 };
 
 /**
- * Get device/browser/OS breakdown for a link within a date range.
+ * Get device/browser/OS breakdown for a link.
  */
 export const getDevicesAnalytics = async (
   shortCode: string,
-  start: string,
-  end: string,
+  input: AnalyticsDateInput,
 ): Promise<DeviceBreakdownResult> => {
+  const { start, end } = resolveAnalyticsDateRange(input.mode, input.clientStart, input.clientEnd);
   const rows = await getDevicesRepo(shortCode, start, end);
 
   const result: DeviceBreakdownResult = {
@@ -262,13 +324,13 @@ export const getDevicesAnalytics = async (
 };
 
 /**
- * Get top-performing links for a user within a date range.
+ * Get top-performing links for a user.
  */
 export const getTopLinksAnalytics = async (
   userId: number,
-  start: string,
-  end: string,
+  input: AnalyticsDateInput,
 ): Promise<TopLinkItem[]> => {
+  const { start, end } = resolveAnalyticsDateRange(input.mode, input.clientStart, input.clientEnd);
   const rows = await getTopLinksRepo(userId, start, end);
 
   return rows.map((row) => ({

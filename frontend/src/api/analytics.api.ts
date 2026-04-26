@@ -20,10 +20,9 @@ const buildAnalyticsParams = (
   params?: AnalyticsQueryParams,
 ): Record<string, string> => {
   const qs: Record<string, string> = { groupBy };
+  if (params?.mode) qs.mode = params.mode;
   if (params?.start) qs.start = params.start;
   if (params?.end) qs.end = params.end;
-  if (params?.timezone) qs.timezone = params.timezone;
-  if (params?.mode) qs.mode = params.mode;
   return qs;
 };
 

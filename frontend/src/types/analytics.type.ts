@@ -10,7 +10,7 @@ export interface AnalyticsBreakdownItem {
 // Per-dimension result types
 // ----------------------------------------------------------------
 
-export type TimeseriesMode = "last24h" | "custom";
+export type TimeseriesMode = "last24h" | "last7d" | "last30d" | "custom";
 
 export interface TimeseriesItem {
   bucket: string;   // "YYYY-MM-DD" (daily) or "YYYY-MM-DDTHH:00" (hourly)
@@ -40,13 +40,14 @@ export interface TopLinkItem {
 }
 
 // ----------------------------------------------------------------
-// Query params shared by all analytics API functions
+// Query params shared by all analytics API functions.
+// For presets: only `mode` is needed.
+// For custom: `mode`, `start`, and `end` are required.
 // ----------------------------------------------------------------
 export interface AnalyticsQueryParams {
-  start?: string;
-  end?: string;
-  timezone?: string;
-  mode?: TimeseriesMode;
+  mode: TimeseriesMode;
+  start?: string;  // ISO date string, required when mode is 'custom'
+  end?: string;    // ISO date string, required when mode is 'custom'
 }
 
 // ----------------------------------------------------------------

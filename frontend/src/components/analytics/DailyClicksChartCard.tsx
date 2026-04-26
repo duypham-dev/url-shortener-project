@@ -12,6 +12,7 @@ import { formatTooltipClicks } from "../../utils/chart.utils";
 import type { TimeseriesMode } from "../../types/analytics.type";
 
 interface ClicksChartPoint {
+  bucket: string;
   label: string;
   clicks: number;
 }
@@ -49,7 +50,11 @@ const ClicksChartCardComponent: React.FC<ClicksChartCardProps> = ({ data, mode }
             </defs>
             <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
             <XAxis
-              dataKey="label"
+              dataKey="bucket"
+              tickFormatter={(value) => {
+                const item = data.find((d) => d.bucket === value);
+                return item ? item.label : value;
+              }}
               tick={{ fontSize: 12, fill: "#9ca3af" }}
               tickLine={false}
               axisLine={{ stroke: "#e5e7eb" }}
@@ -69,7 +74,10 @@ const ClicksChartCardComponent: React.FC<ClicksChartCardProps> = ({ data, mode }
                 boxShadow: "0 4px 6px -1px rgb(0 0 0 / 0.1)",
                 fontSize: "13px",
               }}
-              labelFormatter={(label) => `${tooltipLabelPrefix}: ${label}`}
+              labelFormatter={(label, payload) => {
+                const itemLabel = payload && payload.length > 0 ? payload[0].payload.label : label;
+                return `${tooltipLabelPrefix}: ${itemLabel}`;
+              }}
               formatter={formatTooltipClicks}
             />
             <Area

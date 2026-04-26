@@ -1,11 +1,14 @@
 /**
  * analytics.controller.ts
  *
- * Handles GET /api/v1/links/:shortCode/analytics?groupBy=...
+ * Handles GET /api/v1/links/:shortCode/analytics?groupBy=...&mode=...
  * - Requires authentication (verifyToken)
  * - Verifies link ownership (skipped for top_links)
  * - Checks active subscription (analytics is a paid feature)
  * - Dispatches to the correct service function based on `groupBy`
+ *
+ * Date ranges are computed server-side from the `mode` preset.
+ * The client only sends `mode` (last24h | last7d | last30d).
  */
 import type { NextFunction, Request, Response } from "express";
 import {
@@ -34,12 +37,11 @@ export const getGroupedLinkAnalytics = async (
     const shortCode = req.params.shortCode as string;
 
     // Query params are already validated and defaulted by Zod
-    const { groupBy, start, end, timezone, mode } = req.query as unknown as {
+    const { groupBy, mode, start, end } = req.query as unknown as {
       groupBy: AnalyticsGroupBy;
-      start: string;
-      end: string;
-      timezone: string;
       mode: TimeseriesMode;
+      start?: string;
+      end?: string;
     };
 
     if (!userId) {
@@ -66,24 +68,27 @@ export const getGroupedLinkAnalytics = async (
       });
     }
 
-    // 3. Dispatch to the correct service function
+    // 3. Build date input — presets ignore start/end, custom uses them
+    const dateInput = { mode, clientStart: start, clientEnd: end };
+
+    // 4. Dispatch to the correct service function
     let items: unknown;
 
     switch (groupBy) {
       case "timeseries":
-        items = await getTimeseriesAnalytics(shortCode, start, end, timezone, mode);
+        items = await getTimeseriesAnalytics(shortCode, dateInput);
         break;
       case "referrers":
-        items = await getReferrersAnalytics(shortCode, start, end);
+        items = await getReferrersAnalytics(shortCode, dateInput);
         break;
       case "countries":
-        items = await getCountriesAnalytics(shortCode, start, end);
+        items = await getCountriesAnalytics(shortCode, dateInput);
         break;
       case "devices":
-        items = await getDevicesAnalytics(shortCode, start, end);
+        items = await getDevicesAnalytics(shortCode, dateInput);
         break;
       case "top_links":
-        items = await getTopLinksAnalytics(userId, start, end);
+        items = await getTopLinksAnalytics(userId, dateInput);
         break;
     }
 

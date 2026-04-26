@@ -10,6 +10,7 @@
 export const formatTooltipClicks = (
   value: number | string | readonly (number | string)[] | undefined,
 ): [string, string] => {
+ 
   const rawValue = Array.isArray(value) ? value[0] : value;
   const parsed = typeof rawValue === 'number' ? rawValue : Number(rawValue ?? 0);
   const safeValue = Number.isFinite(parsed) ? parsed : 0;
