@@ -128,15 +128,15 @@ const getPlanUsage = async (
   };
 };
 
-const getFallbackFreePlan = async () => {
-  const freePlan = await getFallbackFreePlanRepo();
+// const getFallbackFreePlan = async () => {
+//   const freePlan = await getFallbackFreePlanRepo();
 
-  if (!freePlan) {
-    throw new NotFoundError("Không tìm thấy gói miễn phí đang hoạt động.");
-  }
+//   if (!freePlan) {
+//     throw new NotFoundError("Không tìm thấy gói miễn phí đang hoạt động.");
+//   }
 
-  return freePlan;
-};
+//   return freePlan;
+// };
 
 export const getActivePlanContext = async (
   userId: number,
@@ -148,8 +148,12 @@ export const getActivePlanContext = async (
 
   const planSource = activeSubscription?.subscription_plans
     ? activeSubscription.subscription_plans
-    : await getFallbackFreePlan();
-
+    : await getFallbackFreePlanRepo();
+  
+  if (!planSource) {
+    throw new NotFoundError("Cannot find active free plan.");
+  }
+  
   const plan = mapPlan(planSource);
   const usage = await getPlanUsage(userId, plan);
 

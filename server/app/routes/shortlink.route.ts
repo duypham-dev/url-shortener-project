@@ -4,7 +4,7 @@ const router = express.Router();
 // Controllers
 import redirectLink from "../controllers/redirecLink.controller.js";
 import {
-  getLinkAnalytics,
+  getGroupedLinkAnalytics,
   getLinkClickLogs,
 } from "../controllers/analytics.controller.js";
 import { clickStreamHandler } from "../controllers/stream.controller.js";
@@ -20,6 +20,7 @@ import { redirectRateLimit } from "../middlewares/redirectRateLimit.middleware.j
 // Schemas
 import { urlSchema, getLinksQuerySchema } from "../schemas/link.schema.js";
 import { shortCodeSchema } from "../schemas/shortCode.schema.js";
+import { analyticsQuerySchema } from "../schemas/analytics.schema.js";
 
 // GET /api/v1/links — get paginated list of user's links
 router.get(
@@ -41,8 +42,8 @@ router.get(
 router.get(
   "/links/:shortCode/analytics",
   verifyToken,
-  validate(shortCodeSchema),
-  getLinkAnalytics,
+  validate(analyticsQuerySchema),
+  getGroupedLinkAnalytics,
 );
 
 // GET /api/v1/links/:shortCode/clicks — paginated click logs (paid feature)

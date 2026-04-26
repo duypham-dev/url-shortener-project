@@ -9,25 +9,34 @@ import {
   YAxis,
 } from "recharts";
 import { formatTooltipClicks } from "../../utils/chart.utils";
+import type { TimeseriesMode } from "../../types/analytics.type";
 
-interface DailyClicksChartPoint {
+interface ClicksChartPoint {
   label: string;
   clicks: number;
 }
 
-interface DailyClicksChartCardProps {
-  data: DailyClicksChartPoint[];
+interface ClicksChartCardProps {
+  data: ClicksChartPoint[];
+  mode: TimeseriesMode;
 }
 
+const ClicksChartCardComponent: React.FC<ClicksChartCardProps> = ({ data, mode }) => {
+  const title = mode === "last24h" ? "Click theo giờ" : "Click theo ngày";
+  const emptyMessage =
+    mode === "last24h"
+      ? "Chưa có dữ liệu click trong 24 giờ qua."
+      : "Chưa có dữ liệu click trong khoảng thời gian này.";
 
-const DailyClicksChartCardComponent: React.FC<DailyClicksChartCardProps> = ({ data }) => {
+  const tooltipLabelPrefix = mode === "last24h" ? "Giờ" : "Ngày";
+
   return (
     <div className="md:col-span-2 bg-white rounded-xl border border-gray-200 p-6">
-      <h2 className="text-lg font-semibold text-gray-900 mb-6">Click theo ngày</h2>
+      <h2 className="text-lg font-semibold text-gray-900 mb-6">{title}</h2>
 
       {data.length === 0 ? (
         <div className="flex items-center justify-center py-16 text-gray-400">
-          Chưa có dữ liệu click trong 30 ngày qua.
+          {emptyMessage}
         </div>
       ) : (
         <ResponsiveContainer width="100%" height={320}>
@@ -44,6 +53,7 @@ const DailyClicksChartCardComponent: React.FC<DailyClicksChartCardProps> = ({ da
               tick={{ fontSize: 12, fill: "#9ca3af" }}
               tickLine={false}
               axisLine={{ stroke: "#e5e7eb" }}
+              interval={mode === "last24h" ? 1 : undefined}
             />
             <YAxis
               tick={{ fontSize: 12, fill: "#9ca3af" }}
@@ -59,7 +69,7 @@ const DailyClicksChartCardComponent: React.FC<DailyClicksChartCardProps> = ({ da
                 boxShadow: "0 4px 6px -1px rgb(0 0 0 / 0.1)",
                 fontSize: "13px",
               }}
-              labelFormatter={(label) => `Ngày: ${label}`}
+              labelFormatter={(label) => `${tooltipLabelPrefix}: ${label}`}
               formatter={formatTooltipClicks}
             />
             <Area
@@ -68,7 +78,7 @@ const DailyClicksChartCardComponent: React.FC<DailyClicksChartCardProps> = ({ da
               stroke="#3b82f6"
               strokeWidth={2.5}
               fill="url(#clickGradient)"
-              dot={{ r: 3, fill: "#3b82f6", strokeWidth: 0 }}
+              dot={mode === "last24h" ? false : { r: 3, fill: "#3b82f6", strokeWidth: 0 }}
               activeDot={{ r: 5, fill: "#3b82f6", stroke: "#fff", strokeWidth: 2 }}
             />
           </AreaChart>
@@ -78,6 +88,6 @@ const DailyClicksChartCardComponent: React.FC<DailyClicksChartCardProps> = ({ da
   );
 };
 
-export const DailyClicksChartCard = React.memo(DailyClicksChartCardComponent);
+export const DailyClicksChartCard = React.memo(ClicksChartCardComponent);
 
 export default DailyClicksChartCard;
