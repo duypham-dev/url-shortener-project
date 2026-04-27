@@ -21,7 +21,7 @@ const QrListCanvasComponent: React.FC<QrListCanvasProps> = ({
   onRegenerate,
 }) => {
   return (
-    <div className="space-y-4 relative pt-4 min-h-screen">
+    <div className="space-y-4 relative pt-4">
       {isLoading && (
         <div className="py-20 flex justify-center text-gray-400">
           Loading QR codes...

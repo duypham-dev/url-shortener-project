@@ -1,7 +1,7 @@
 // frontend/src/pages/CreateQrCode/CreateQrCode.tsx
 // Full-page QR creation form — standalone URL or linked to an existing short link.
 import React, { useState, useCallback } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { QRCodeSVG } from "qrcode.react";
 import { Download, ArrowLeft, HelpCircle } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
@@ -25,6 +25,7 @@ const ERROR_CORRECTION_OPTIONS = [
 
 const CreateQrCode: React.FC = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const queryClient = useQueryClient();
 
   // Plan info
@@ -34,7 +35,8 @@ const CreateQrCode: React.FC = () => {
   const isPlanLoading = usePlanStore((s) => s.isLoading);
 
   // Form state
-  const [destinationUrl, setDestinationUrl] = useState("");
+  const initialUrl = searchParams.get("url") || "";
+  const [destinationUrl, setDestinationUrl] = useState(initialUrl);
   const [title, setTitle] = useState("");
   const [fgColor, setFgColor] = useState(QR_COLORS[0]);
   const [bgColor, setBgColor] = useState("#ffffff");

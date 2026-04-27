@@ -16,19 +16,6 @@ const LinksSecondaryToolbarComponent: React.FC = () => {
         <div className="flex items-center gap-5 text-sm font-medium text-gray-400">
           <button
             type="button"
-            className="flex items-center gap-1.5 cursor-not-allowed hover:text-gray-500 transition-colors"
-          >
-            <Lock size={14} />
-            Export
-          </button>
-          <button
-            type="button"
-            className="flex items-center gap-1.5 text-gray-400 cursor-not-allowed hover:text-gray-500 transition-colors"
-          >
-            Hide
-          </button>
-          <button
-            type="button"
             className="flex items-center gap-1.5 text-gray-400 hover:text-gray-600 transition-colors"
           >
             Tag
@@ -37,23 +24,6 @@ const LinksSecondaryToolbarComponent: React.FC = () => {
       </div>
 
       <div className="flex items-center gap-4 text-gray-600">
-        <div className="flex bg-white rounded-md border border-gray-200 shadow-sm overflow-hidden shrink-0">
-          <button
-            type="button"
-            className="p-1.5 px-3 bg-gray-100 text-gray-900 border-r border-gray-200 transition-colors"
-            title="List view"
-          >
-            <List size={16} />
-          </button>
-          <button
-            type="button"
-            className="p-1.5 px-3 bg-white text-gray-400 hover:bg-gray-50 transition-colors"
-            title="Grid view"
-          >
-            <LayoutGrid size={16} />
-          </button>
-        </div>
-
         <div className="h-6 w-px bg-gray-300" />
 
         <button

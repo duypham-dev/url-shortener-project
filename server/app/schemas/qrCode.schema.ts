@@ -17,7 +17,7 @@ const ERROR_CORRECTION_VALUES = ["L", "M", "Q", "H"] as const;
 
 export const createQrCodeSchema = z.object({
   body: z.object({
-    destinationUrl: z.string().url("destinationUrl must be a valid URL"),
+    destinationUrl: z.url(),
     urlMappingId: z
       .string()
       .regex(/^\d+$/, "urlMappingId must be a numeric string")

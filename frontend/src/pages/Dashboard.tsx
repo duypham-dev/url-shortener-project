@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Link as LinkIcon, QrCode, Lock, HelpCircle } from 'lucide-react';
 import { createShortenUrl } from '../api/link.api';
+import { createQrCode as createQrCodeApi } from '../api/qrCode.api';
 import { SuccessModal } from '../components/SuccessModal';
 import { useQueryClient } from '@tanstack/react-query';
 import { usePlanStore, selectPlanName, selectRemainingLinks } from '../store/usePlanStore';
@@ -28,39 +29,53 @@ export const Dashboard: React.FC = () => {
   const handleCreate = async () => {
     if (!url) return;
 
-    if (isQuotaExceeded) {
+    if (isQuotaExceeded && activeTab === 'link') {
       setCreateError('Bạn đã hết quota tạo link trong tháng này. Vui lòng nâng cấp gói.');
       return;
     }
 
     try {
       setCreateError(null);
-      const response = await createShortenUrl(url, {
-        generateQr: createQrCode,
-      });
-      
-      const actualShortUrl = response?.shortUrl || "";
-      
-      if (actualShortUrl) {
-        setGeneratedShortUrl(actualShortUrl);
-        setGeneratedQrUrl(response?.qrCode?.cloudinaryUrl ?? undefined);
+      if (activeTab === 'link') {
+        const response = await createShortenUrl(url, {
+          generateQr: createQrCode,
+        });
+        
+        const actualShortUrl = response?.shortUrl || "";
+        
+        if (actualShortUrl) {
+          setGeneratedShortUrl(actualShortUrl);
+          setGeneratedQrUrl(response?.qrCode?.cloudinaryUrl ?? undefined);
+          setIsModalOpen(true);
+          setUrl('');
+          queryClient.invalidateQueries({ queryKey: ['userLinks'] });
+          if (createQrCode) {
+            queryClient.invalidateQueries({ queryKey: ['userQrCodes'] });
+          }
+          // Refresh only the usage/quota data after link creation
+          refreshUsage();
+        }
+      } else {
+        const response = await createQrCodeApi({
+          destinationUrl: url,
+        });
+        
+        setGeneratedShortUrl('');
+        setGeneratedQrUrl(response?.cloudinaryUrl ?? undefined);
         setIsModalOpen(true);
         setUrl('');
-        queryClient.invalidateQueries({ queryKey: ['userLinks'] });
-        if (createQrCode) {
-          queryClient.invalidateQueries({ queryKey: ['userQrCodes'] });
-        }
-        // Refresh only the usage/quota data after link creation
-        refreshUsage();
+        queryClient.invalidateQueries({ queryKey: ['userQrCodes'] });
       }
     } catch (error) {
-      console.error('Error creating shortlink:', error); 
+      console.error('Error creating:', error); 
       const message =
         typeof error === 'object' && error && 'message' in error
           ? String(error.message)
-          : 'Không thể tạo short link. Vui lòng thử lại.';
+          : `Không thể tạo ${activeTab === 'link' ? 'short link' : 'QR code'}. Vui lòng thử lại.`;
       setCreateError(message);
-      refreshUsage();
+      if (activeTab === 'link') {
+        refreshUsage();
+      }
     }
   };
 
@@ -119,7 +134,7 @@ export const Dashboard: React.FC = () => {
               {/* Domain Input Area */}
               <div className="space-y-1">
                 <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
-                  Domain: bit.ly
+                  Domain: {import.meta.env.VITE_API_BASE_URL}
                   <Lock size={14} className="text-gray-500" />
                 </label>
               </div>
@@ -142,10 +157,10 @@ export const Dashboard: React.FC = () => {
                   </div>
                   <button 
                     onClick={handleCreate}
-                    disabled={!url || isQuotaExceeded}
+                    disabled={!url || (isQuotaExceeded && activeTab === 'link')}
                     className="whitespace-nowrap px-6 py-3 bg-blue-600 text-white font-medium rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                   >
-                    {isQuotaExceeded ? 'Upgrade for more links' : 'Create your Short link'}
+                    {isQuotaExceeded && activeTab === 'link' ? 'Upgrade for more links' : `Create your ${activeTab === 'link' ? 'Short link' : 'QR Code'}`}
                   </button>
                 </div>
 
@@ -157,18 +172,20 @@ export const Dashboard: React.FC = () => {
               </div>
 
               {/* Checkbox Options */}
-              <div className="flex items-center gap-2 pt-2">
-                <input
-                  type="checkbox"
-                  id="qr-checkbox"
-                  checked={createQrCode}
-                  onChange={(e) => setCreateQrCode(e.target.checked)}
-                  className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                />
-                <label htmlFor="qr-checkbox" className="text-sm text-gray-700">
-                  Also create a QR Code for this link
-                </label>
-              </div>
+              {activeTab === 'link' && (
+                <div className="flex items-center gap-2 pt-2">
+                  <input
+                    type="checkbox"
+                    id="qr-checkbox"
+                    checked={createQrCode}
+                    onChange={(e) => setCreateQrCode(e.target.checked)}
+                    className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                  />
+                  <label htmlFor="qr-checkbox" className="text-sm text-gray-700">
+                    Also create a QR Code for this link
+                  </label>
+                </div>
+              )}
               
               {/* Promo Banner */}
               <div className="mt-8 bg-blue-50/50 border border-blue-100 rounded-lg p-4 flex items-center justify-center gap-2 text-sm text-blue-800">

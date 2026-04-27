@@ -41,7 +41,7 @@ const LinkQRCode: React.FC<LinkQRCodeProps> = ({ link }) => {
                 <QRCodeSVG
                   value={shortUrl}
                   size={114}
-                  fgColor={qrCode?.fgColor ?? '#273144'}
+                  fgColor={qrCode?.fgColor ?? '#e9e9e9ff'}
                   bgColor="#ffffff"
                   level={(qrCode?.errorCorrection ?? 'Q') as 'L' | 'M' | 'Q' | 'H'}
                 />
@@ -62,7 +62,7 @@ const LinkQRCode: React.FC<LinkQRCodeProps> = ({ link }) => {
                 </a>
               ) : (
                 <button
-                  onClick={() => navigate('/dashboard/qr/create')}
+                  onClick={() => navigate(`/dashboard/qr/create?url=${encodeURIComponent(shortUrl)}`)}
                   className="flex items-center gap-2 px-4 py-2 border border-gray-200 rounded text-sm font-medium text-[#273144] bg-white hover:bg-gray-50 transition-colors"
                 >
                   Create QR Code

@@ -123,34 +123,11 @@ export const Sidebar: React.FC = () => {
         />
         <NavItem
           isCollapsed={isCollapsed}
-          to="/dashboard/pages"
-          icon={<FileText size={18} />}
-          label="Pages"
-        />
-        <NavItem
-          isCollapsed={isCollapsed}
           to="/dashboard/analytics"
           icon={<BarChart2 size={18} />}
-          label="Analytics"
+          label="Click Stream"
         />
-        <NavItem
-          isCollapsed={isCollapsed}
-          to="/dashboard/campaigns"
-          icon={<FolderOpen size={18} />}
-          label="Campaigns"
-        />
-        <NavItem
-          isCollapsed={isCollapsed}
-          to="/dashboard/domains"
-          icon={<Globe size={18} />}
-          label="Custom domains"
-        />
-        <NavItem
-          isCollapsed={isCollapsed}
-          to="/dashboard/integrations"
-          icon={<Blocks size={18} />}
-          label="Integrations"
-        />
+      
         <div className="pt-4 mt-2 border-t border-gray-100">
           <NavItem
             isCollapsed={isCollapsed}

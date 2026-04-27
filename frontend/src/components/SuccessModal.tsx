@@ -8,7 +8,7 @@ import { useCopyToClipboard } from '../hooks/useCopyToClipboard';
 interface SuccessModalProps {
   isOpen: boolean;
   onClose: () => void;
-  shortUrl: string;
+  shortUrl?: string;
   qrCodeUrl?: string;  // Optional Cloudinary URL of the generated QR code
 }
 
@@ -39,6 +39,7 @@ export const SuccessModal: React.FC<SuccessModalProps> = React.memo(({ isOpen, o
   };
 
   const handleShare = (platform: string) => {
+    if (!shortUrl) return;
     const fullUrl = shortUrl.startsWith('http') ? shortUrl : `https://${shortUrl}`;
     const encodedUrl = encodeURIComponent(fullUrl);
     let shareUrl = '';
@@ -71,10 +72,9 @@ export const SuccessModal: React.FC<SuccessModalProps> = React.memo(({ isOpen, o
       />
       <div className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[90%] max-w-lg bg-white rounded-2xl shadow-xl z-[60] overflow-hidden flex flex-col animate-in fade-in zoom-in duration-200">
         
-        {/* Header */}
         <div className="flex items-center justify-between px-8 py-6 pb-2">
           <h2 className="text-2xl font-bold flex items-center gap-2">
-            Your link is ready! <span role="img" aria-label="party">🎉</span>
+            {shortUrl ? 'Your link is ready!' : 'Your QR Code is ready!'} <span role="img" aria-label="party">🎉</span>
           </h2>
           <button 
             onClick={onClose}
@@ -87,40 +87,44 @@ export const SuccessModal: React.FC<SuccessModalProps> = React.memo(({ isOpen, o
         {/* Body content */}
         <div className="px-8 pb-8 flex flex-col gap-6">
           <p className="text-gray-600">
-            Copy the link below to share it or choose a platform to share it to.
+            {shortUrl 
+              ? 'Copy the link below to share it or choose a platform to share it to.' 
+              : 'Download your QR code below to share it.'}
           </p>
 
           {/* Link box */}
-          <div className="bg-blue-50/50 border border-blue-100 rounded-xl p-8 flex flex-col items-center justify-center gap-6 mt-2">
-            <span className="text-xl truncate w-full font-bold text-blue-600 select-all">
-              {shortUrl}
-            </span>
-            
-            <div className="flex items-center gap-4">
-              <button 
-                onClick={() => navigate('/links')}
-                className="flex items-center gap-2 px-6 py-2.5 rounded-md font-medium text-blue-600 border border-blue-600 hover:bg-blue-50 transition-colors"
-              >
-                <BarChart2 size={18} />
-                View link details
-              </button>
+          {shortUrl && (
+            <div className="bg-blue-50/50 border border-blue-100 rounded-xl p-8 flex flex-col items-center justify-center gap-6 mt-2">
+              <span className="text-xl truncate w-full font-bold text-blue-600 select-all">
+                {shortUrl}
+              </span>
               
-              <button 
-                onClick={handleCopy}
-                className="flex items-center gap-2 px-6 py-2.5 rounded-md font-medium text-white bg-blue-600 hover:bg-blue-700 transition-colors focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-              >
-                {copiedValue ? <Check size={18} /> : <Copy size={18} />}
-                {copiedValue ? 'Copied!' : 'Copy link'}
-              </button>
+              <div className="flex items-center gap-4">
+                <button 
+                  onClick={() => navigate('/links')}
+                  className="flex items-center gap-2 px-6 py-2.5 rounded-md font-medium text-blue-600 border border-blue-600 hover:bg-blue-50 transition-colors"
+                >
+                  <BarChart2 size={18} />
+                  View link details
+                </button>
+                
+                <button 
+                  onClick={handleCopy}
+                  className="flex items-center gap-2 px-6 py-2.5 rounded-md font-medium text-white bg-blue-600 hover:bg-blue-700 transition-colors focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                >
+                  {copiedValue ? <Check size={18} /> : <Copy size={18} />}
+                  {copiedValue ? 'Copied!' : 'Copy link'}
+                </button>
+              </div>
             </div>
-          </div>
+          )}
 
-          {/* QR Code preview (if generated alongside the link) */}
+          {/* QR Code preview */}
           {qrCodeUrl && (
-            <div className="flex flex-col items-center gap-3 border-t border-gray-100 pt-4">
-              <p className="text-sm text-gray-500 font-medium">QR Code generated</p>
-              <img src={qrCodeUrl} alt="QR Code" className="w-28 h-28 object-contain border border-gray-200 rounded-lg" />
-              <div className="flex gap-3">
+            <div className={`flex flex-col items-center gap-3 ${shortUrl ? 'border-t border-gray-100 pt-4' : ''}`}>
+              {shortUrl && <p className="text-sm text-gray-500 font-medium">QR Code generated</p>}
+              <img src={qrCodeUrl} alt="QR Code" className={`${shortUrl ? 'w-28 h-28' : 'w-48 h-48'} object-contain border border-gray-200 rounded-lg shadow-sm`} />
+              <div className="flex gap-3 mt-2">
                 <a
                   href={qrCodeUrl}
                   download="qr-code.png"
@@ -142,14 +146,16 @@ export const SuccessModal: React.FC<SuccessModalProps> = React.memo(({ isOpen, o
           )}
 
           {/* Social share icons */}
-          <div className="flex items-center justify-center gap-4 pt-4 mt-2 mb-2">
-            <SocialIconItem Icon={MessageCircle} label="WhatsApp" onClick={() => handleShare('whatsapp')} />
-            <SocialIconItem Icon={FaFacebook} label="Facebook" onClick={() => handleShare('facebook')} />
-            <SocialIconItem Icon={FaSquareInstagram} label="Instagram" />
-            <SocialIconItem Icon={X} label="X" onClick={() => handleShare('x')} />
-            <SocialIconItem Icon={AtSign} label="Threads" />
-            <SocialIconItem Icon={Mail} label="Email" onClick={() => handleShare('email')} />
-          </div>
+          {shortUrl && (
+            <div className="flex items-center justify-center gap-4 pt-4 mt-2 mb-2">
+              <SocialIconItem Icon={MessageCircle} label="WhatsApp" onClick={() => handleShare('whatsapp')} />
+              <SocialIconItem Icon={FaFacebook} label="Facebook" onClick={() => handleShare('facebook')} />
+              <SocialIconItem Icon={FaSquareInstagram} label="Instagram" />
+              <SocialIconItem Icon={X} label="X" onClick={() => handleShare('x')} />
+              <SocialIconItem Icon={AtSign} label="Threads" />
+              <SocialIconItem Icon={Mail} label="Email" onClick={() => handleShare('email')} />
+            </div>
+          )}
 
         </div>
       </div>
