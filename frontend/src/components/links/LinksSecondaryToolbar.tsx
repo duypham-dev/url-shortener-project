@@ -1,5 +1,5 @@
 import React from "react";
-import { ChevronDown, LayoutGrid, List, Lock } from "lucide-react";
+import { ChevronDown } from "lucide-react";
 
 const LinksSecondaryToolbarComponent: React.FC = () => {
   return (

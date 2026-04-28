@@ -51,6 +51,8 @@ function isValidClickEvent(data: unknown): data is ClickEventMessage {
   const hasValidBrowser = d.browser === null || typeof d.browser === 'string';
   const hasValidOs = d.os === null || typeof d.os === 'string';
   const hasValidReferrer = d.referrer === null || typeof d.referrer === 'string';
+  const hasValidInteractionType =
+    d.interactionType === 'CLICK' || d.interactionType === 'SCAN';
 
   return (
     typeof d.shortCode === 'string' && d.shortCode.length > 0 &&
@@ -63,7 +65,8 @@ function isValidClickEvent(data: unknown): data is ClickEventMessage {
     hasValidUrlMappingId &&
     hasValidUserId &&
     hasValidBrowser &&
-    hasValidOs
+    hasValidOs &&
+    hasValidInteractionType
   );
 }
 
@@ -139,6 +142,9 @@ const startConsumer = async () => {
             user_agent: clickData.userAgent ?? null,
             referrer: clickData.referrer ?? null,
             clicked_at: clickedAt,
+            // InteractionType: CLICK for regular link hits, SCAN for QR code scans
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            interaction_type: (clickData.interactionType ?? 'CLICK') as any,
           },
         });
       } catch (error) {
