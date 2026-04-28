@@ -1,7 +1,7 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
 import type { LinkItem } from "../types/url.type";
-import { Copy, Edit2, Share2, BarChart2, MoreHorizontal, Calendar, Tag, Lock, QrCode } from "lucide-react";
+import { Copy, Edit2, Share2, BarChart2, MoreHorizontal, Calendar, Tag, QrCode } from "lucide-react";
 import { formatDate } from "../utils/date";
 import { useCopyToClipboard } from "../hooks/useCopyToClipboard";
 import { getShortUrlDisplay } from "../utils/url";
@@ -106,7 +106,6 @@ export const LinkCard: React.FC<LinkCardProps> = React.memo(({ link }) => {
                onClick={() => navigate(`/dashboard/links/${link.short_code}/analytics`)}
                className="px-2 py-1 bg-gray-50 border border-gray-200 rounded flex items-center gap-1.5 text-gray-700 cursor-pointer hover:bg-gray-100 transition-colors"
              >
-               <Lock size={12} className="text-gray-400" />
                Click data
              </button>
              

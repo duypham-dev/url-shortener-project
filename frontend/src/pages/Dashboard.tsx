@@ -4,6 +4,7 @@ import { createShortenUrl } from '../api/link.api';
 import { SuccessModal } from '../components/SuccessModal';
 import { useQueryClient } from '@tanstack/react-query';
 import { usePlanStore, selectPlanName, selectRemainingLinks } from '../store/usePlanStore';
+import type { QrCodeItem } from '../types/qr.type';
 
 export const Dashboard: React.FC = () => {
   const queryClient = useQueryClient();
@@ -14,7 +15,7 @@ export const Dashboard: React.FC = () => {
   // Modal state
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [generatedShortUrl, setGeneratedShortUrl] = useState('');
-  const [generatedQrUrl, setGeneratedQrUrl] = useState<string | undefined>(undefined);
+  const [generatedQr, setGeneratedQr] = useState<QrCodeItem | undefined>(undefined);
 
   // Plan data from shared store (fetched once in DashboardLayout)
   const planName = usePlanStore(selectPlanName);
@@ -42,7 +43,7 @@ export const Dashboard: React.FC = () => {
       
       if (actualShortUrl) {
         setGeneratedShortUrl(actualShortUrl);
-        setGeneratedQrUrl(response?.qrCode?.cloudinaryUrl ?? undefined);
+        setGeneratedQr(response?.qrCode);
         setIsModalOpen(true);
         setUrl('');
         queryClient.invalidateQueries({ queryKey: ['userLinks'] });
@@ -166,7 +167,7 @@ export const Dashboard: React.FC = () => {
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         shortUrl={generatedShortUrl}
-        qrCodeUrl={generatedQrUrl}
+        qrCode={generatedQr}
       />
     </>
   );

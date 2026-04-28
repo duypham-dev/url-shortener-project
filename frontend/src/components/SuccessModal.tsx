@@ -4,12 +4,14 @@ import { X, Copy, BarChart2, Check, Mail, MessageCircle, AtSign } from 'lucide-r
 import { FaFacebook, FaSquareInstagram } from 'react-icons/fa6';
 import { useNavigate } from 'react-router-dom';
 import { useCopyToClipboard } from '../hooks/useCopyToClipboard';
+import { QRCodeSVG } from 'qrcode.react';
+import type { QrCodeItem } from '../types/qr.type';
 
 interface SuccessModalProps {
   isOpen: boolean;
   onClose: () => void;
   shortUrl?: string;
-  qrCodeUrl?: string;  // Optional Cloudinary URL of the generated QR code
+  qrCode?: QrCodeItem;
 }
 
 const SocialIconItem = React.memo(({ Icon, label, onClick }: { Icon: React.FC<any>, label: string, onClick?: () => void }) => (
@@ -24,7 +26,7 @@ const SocialIconItem = React.memo(({ Icon, label, onClick }: { Icon: React.FC<an
   </button>
 ));
 
-export const SuccessModal: React.FC<SuccessModalProps> = React.memo(({ isOpen, onClose, shortUrl, qrCodeUrl }) => {
+export const SuccessModal: React.FC<SuccessModalProps> = React.memo(({ isOpen, onClose, shortUrl, qrCode }) => {
   const [copiedValue, copy] = useCopyToClipboard();
   const navigate = useNavigate();
 
@@ -36,6 +38,31 @@ export const SuccessModal: React.FC<SuccessModalProps> = React.memo(({ isOpen, o
        const fullUrl = shortUrl.startsWith('http') ? shortUrl : `https://${shortUrl}`;
        copy(fullUrl);
     }
+  };
+
+  const handleDownloadQr = () => {
+    if (!qrCode) return;
+    const svgEl = document.getElementById("success-modal-qr-svg");
+    if (!svgEl) return;
+    
+    // Default size for PNG
+    const size = 300; 
+    const canvas = document.createElement("canvas");
+    canvas.width = size;
+    canvas.height = size;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+    
+    const img = new Image();
+    const svgData = new XMLSerializer().serializeToString(svgEl);
+    img.src = `data:image/svg+xml;base64,${btoa(unescape(encodeURIComponent(svgData)))}`;
+    img.onload = () => {
+      ctx.drawImage(img, 0, 0, size, size);
+      const a = document.createElement("a");
+      a.href = canvas.toDataURL("image/png");
+      a.download = `qr-${qrCode.id}.png`;
+      a.click();
+    };
   };
 
   const handleShare = (platform: string) => {
@@ -120,20 +147,26 @@ export const SuccessModal: React.FC<SuccessModalProps> = React.memo(({ isOpen, o
           )}
 
           {/* QR Code preview */}
-          {qrCodeUrl && (
+          {qrCode && (
             <div className={`flex flex-col items-center gap-3 ${shortUrl ? 'border-t border-gray-100 pt-4' : ''}`}>
               {shortUrl && <p className="text-sm text-gray-500 font-medium">QR Code generated</p>}
-              <img src={qrCodeUrl} alt="QR Code" className={`${shortUrl ? 'w-28 h-28' : 'w-48 h-48'} object-contain border border-gray-200 rounded-lg shadow-sm`} />
+              <div className={`p-2 bg-white rounded-lg shadow-sm border border-gray-200 flex justify-center items-center`}>
+                <QRCodeSVG
+                  id="success-modal-qr-svg"
+                  value={qrCode.destinationUrl}
+                  size={shortUrl ? 112 : 192} // 28 * 4 or 48 * 4
+                  fgColor={qrCode.fgColor}
+                  bgColor={qrCode.bgColor}
+                  level={qrCode.errorCorrection as 'L' | 'M' | 'Q' | 'H'}
+                />
+              </div>
               <div className="flex gap-3 mt-2">
-                <a
-                  href={qrCodeUrl}
-                  download="qr-code.png"
-                  target="_blank"
-                  rel="noreferrer"
+                <button
+                  onClick={handleDownloadQr}
                   className="text-sm text-blue-600 hover:underline font-medium"
                 >
                   Download PNG
-                </a>
+                </button>
                 <span className="text-gray-300">·</span>
                 <button
                   onClick={() => { onClose(); navigate('/dashboard/qr'); }}

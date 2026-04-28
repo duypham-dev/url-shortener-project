@@ -57,7 +57,7 @@ router.get(
   getQrCodeByIdHandler,
 );
 
-// DELETE /api/v1/qr-codes/:id — soft delete
+// DELETE /api/v1/qr-codes/:id — soft delete (inactive)
 router.delete(
   "/qr-codes/:id",
   verifyToken,

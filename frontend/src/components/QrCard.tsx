@@ -38,38 +38,23 @@ export const QrCard: React.FC<QrCardProps> = React.memo(
 
     // Download the QR code as PNG
     const handleDownload = useCallback(async () => {
-      if (qrCode.cloudinaryUrl) {
-        try {
-          const response = await fetch(qrCode.cloudinaryUrl);
-          const blob = await response.blob();
-          const url = URL.createObjectURL(blob);
-          const a = document.createElement("a");
-          a.href = url;
-          a.download = `qr-${qrCode.id}.png`;
-          a.click();
-          URL.revokeObjectURL(url);
-        } catch {
-          window.open(qrCode.cloudinaryUrl, "_blank");
-        }
-      } else {
-        const svgEl = document.getElementById(`qr-svg-${qrCode.id}`)?.querySelector("svg");
-        if (!svgEl) return;
-        const canvas = document.createElement("canvas");
-        canvas.width = 300;
-        canvas.height = 300;
-        const ctx = canvas.getContext("2d");
-        if (!ctx) return;
-        const img = new Image();
-        const svgData = new XMLSerializer().serializeToString(svgEl);
-        img.src = `data:image/svg+xml;base64,${btoa(svgData)}`;
-        img.onload = () => {
-          ctx.drawImage(img, 0, 0, 300, 300);
-          const a = document.createElement("a");
-          a.href = canvas.toDataURL("image/png");
-          a.download = `qr-${qrCode.id}.png`;
-          a.click();
-        };
-      }
+      const svgEl = document.getElementById(`qr-svg-${qrCode.id}`)?.querySelector("svg");
+      if (!svgEl) return;
+      const canvas = document.createElement("canvas");
+      canvas.width = 300;
+      canvas.height = 300;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) return;
+      const img = new Image();
+      const svgData = new XMLSerializer().serializeToString(svgEl);
+      img.src = `data:image/svg+xml;base64,${btoa(unescape(encodeURIComponent(svgData)))}`;
+      img.onload = () => {
+        ctx.drawImage(img, 0, 0, 300, 300);
+        const a = document.createElement("a");
+        a.href = canvas.toDataURL("image/png");
+        a.download = `qr-${qrCode.id}.png`;
+        a.click();
+      };
     }, [qrCode]);
 
     return (
@@ -80,21 +65,13 @@ export const QrCard: React.FC<QrCardProps> = React.memo(
             id={`qr-svg-${qrCode.id}`}
             className="w-20 h-20 shrink-0 border border-gray-200 rounded-lg overflow-hidden flex items-center justify-center bg-white p-1"
           >
-            {qrCode.cloudinaryUrl ? (
-              <img
-                src={qrCode.cloudinaryUrl}
-                alt="QR Code"
-                className="w-full h-full object-contain"
-              />
-            ) : (
-              <QRCodeSVG
-                value={qrCode.destinationUrl}
-                size={72}
-                fgColor={qrCode.fgColor}
-                bgColor={qrCode.bgColor}
-                level={qrCode.errorCorrection as "L" | "M" | "Q" | "H"}
-              />
-            )}
+            <QRCodeSVG
+              value={qrCode.destinationUrl}
+              size={72}
+              fgColor={qrCode.fgColor}
+              bgColor={qrCode.bgColor}
+              level={qrCode.errorCorrection as "L" | "M" | "Q" | "H"}
+            />
           </div>
 
           {/* Main Content */}

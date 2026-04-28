@@ -8,7 +8,6 @@ export interface QrCodeItem {
   displayUrl: string;       // clean URL without ?r=qr (for display)
   shortCode: string | null;
   title: string | null;
-  cloudinaryUrl: string | null;
   fgColor: string;
   bgColor: string;
   errorCorrection: string;

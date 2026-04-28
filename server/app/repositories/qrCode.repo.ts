@@ -25,8 +25,6 @@ export interface CreateQrCodeData {
   bg_color: string;
   error_correction: string;
   size: number;
-  cloudinary_public_id?: string | null;
-  cloudinary_url?: string | null;
 }
 
 export interface GetUserQrCodesOptions {
@@ -44,8 +42,6 @@ export interface UpdateQrCodeData {
   bg_color?: string;
   error_correction?: string;
   size?: number;
-  cloudinary_public_id?: string | null;
-  cloudinary_url?: string | null;
   updated_at?: Date;
 }
 
@@ -65,8 +61,6 @@ export const createQrCodeRepo = async (data: CreateQrCodeData) => {
       bg_color: data.bg_color,
       error_correction: data.error_correction,
       size: data.size,
-      cloudinary_public_id: data.cloudinary_public_id ?? null,
-      cloudinary_url: data.cloudinary_url ?? null,
     },
   });
 };
@@ -120,8 +114,8 @@ export const getUserQrCodesRepo = async (
       bg_color: true,
       error_correction: true,
       size: true,
-      cloudinary_url: true,
-      cloudinary_public_id: true,
+
+
       scan_count: true,
       is_active: true,
       created_at: true,
@@ -157,8 +151,6 @@ export const getQrCodeByShortCodeRepo = async (
       bg_color: true,
       error_correction: true,
       size: true,
-      cloudinary_url: true,
-      cloudinary_public_id: true,
       scan_count: true,
       is_active: true,
       created_at: true,
@@ -192,7 +184,7 @@ export const softDeleteQrCodeRepo = async (id: bigint, userId: number) => {
   return prisma.qr_codes.update({
     where: { id, user_id: userId },
     data: { is_active: false, updated_at: new Date() },
-    select: { cloudinary_public_id: true, url_mapping_id: true },
+    select: {  url_mapping_id: true },
   });
 };
 

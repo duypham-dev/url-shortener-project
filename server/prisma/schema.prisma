@@ -153,10 +153,6 @@ model qr_codes {
   error_correction String   @default("Q") @db.VarChar(1)  // L, M, Q, H
   size             Int      @default(300)
 
-  // Cloudinary storage
-  cloudinary_public_id  String?  @db.VarChar(255)
-  cloudinary_url        String?
-
   // Status
   is_active  Boolean  @default(true)
   scan_count Int      @default(0)
