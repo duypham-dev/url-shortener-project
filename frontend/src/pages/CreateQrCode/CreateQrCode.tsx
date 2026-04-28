@@ -6,7 +6,7 @@
 
 import React, { useState, useCallback } from "react";
 import { QRCodeSVG } from "qrcode.react";
-import { Download, X, HelpCircle } from "lucide-react";
+import { X, HelpCircle } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 
@@ -71,7 +71,6 @@ const CreateQrCode: React.FC<CreateQrCodePanelProps> = ({
   // Submission state
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
-  const [createdQr, setCreatedQr] = useState<QrCodeItem | null>(null);
 
   const isQuotaExceeded = remainingQrCodes !== null && remainingQrCodes <= 0;
 
@@ -98,13 +97,14 @@ const CreateQrCode: React.FC<CreateQrCodePanelProps> = ({
           size,
         });
 
-        setCreatedQr(qr);
         // Invalidate relevant caches so the parent page refreshes
         queryClient.invalidateQueries({ queryKey: ["userQrCodes"] });
         queryClient.invalidateQueries({ queryKey: ["userLinks"] });
         queryClient.invalidateQueries({ queryKey: ["planContext"] });
         queryClient.invalidateQueries({ queryKey: ["qrByShortCode", shortCode] });
+
         onSuccess(qr);
+        onClose();
       } catch (err: unknown) {
         const msg =
           err && typeof err === "object" && "message" in err
@@ -127,61 +127,9 @@ const CreateQrCode: React.FC<CreateQrCodePanelProps> = ({
       canUseQr,
       queryClient,
       onSuccess,
+      onClose,
     ],
   );
-
-  // ---- Success state: show preview + actions ----
-  if (createdQr) {
-    return (
-      <div className="bg-white rounded-xl p-6 border border-gray-100 text-center">
-        <div className="text-3xl mb-2">🎉</div>
-        <h2 className="text-xl font-bold text-gray-900 mb-1">QR Code Ready!</h2>
-        <p className="text-gray-500 mb-5 text-sm">
-          Your QR code has been generated and saved.
-        </p>
-
-        {/* Preview */}
-        <div className="inline-block border border-gray-200 rounded-lg p-4 bg-white mb-5">
-          {createdQr.cloudinaryUrl ? (
-            <img
-              src={createdQr.cloudinaryUrl}
-              alt="Generated QR Code"
-              className="w-40 h-40 object-contain"
-            />
-          ) : (
-            <QRCodeSVG
-              value={createdQr.destinationUrl}
-              size={160}
-              fgColor={createdQr.fgColor}
-              bgColor={createdQr.bgColor}
-              level={createdQr.errorCorrection as "L" | "M" | "Q" | "H"}
-            />
-          )}
-        </div>
-
-        <div className="flex flex-col sm:flex-row gap-3 justify-center">
-          {createdQr.cloudinaryUrl && (
-            <a
-              href={createdQr.cloudinaryUrl}
-              download={`qr-${createdQr.id}.png`}
-              target="_blank"
-              rel="noreferrer"
-              className="flex items-center justify-center gap-2 px-5 py-2.5 bg-[#232323] text-white rounded-md font-medium hover:bg-black transition-colors"
-            >
-              <Download size={16} />
-              Download PNG
-            </a>
-          )}
-          <button
-            onClick={() => navigate("/dashboard/qr")}
-            className="px-5 py-2.5 border border-gray-300 rounded-md font-medium text-gray-700 hover:bg-gray-50 transition-colors"
-          >
-            View all QR Codes
-          </button>
-        </div>
-      </div>
-    );
-  }
 
   // ---- Form state ----
   return (

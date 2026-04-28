@@ -7,7 +7,6 @@
 import express from "express";
 import { verifyToken } from "../middlewares/verifyToken.middleware.js";
 import { validate } from "../middlewares/validate.middleware.js";
-import { enforceCreateQrQuota } from "../middlewares/qrQuota.middleware.js";
 import {
   createQrCodeSchema,
   getQrCodesQuerySchema,

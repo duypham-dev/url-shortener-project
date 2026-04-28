@@ -1,10 +1,3 @@
-/**
- * qrCode.controller.ts
- *
- * HTTP layer for QR code endpoints.
- * All business logic delegated to qrCode.service.ts.
- * Errors forwarded to global errorHandler via next(error).
- */
 import type { NextFunction, Request, Response } from "express";
 import { UnauthorizedError, NotFoundError } from "../errors/app.error.js";
 import {
@@ -15,11 +8,11 @@ import {
   getQrCodeByShortCode,
   createQrCodeFromExistingLink,
 } from "../services/qrCode.service.js";
+import { assertCanCreateLink } from "../services/subscriptionAccess.service.js";
 
 // ----------------------------------------------------------------
 // POST /api/v1/qr-codes
 // ----------------------------------------------------------------
-
 export const createQrCodeHandler = async (
   req: Request,
   res: Response,
@@ -28,6 +21,12 @@ export const createQrCodeHandler = async (
   try {
     const userId = req.user?.userId;
     if (!userId) throw new UnauthorizedError();
+    
+    await assertCanCreateLink({
+      userId,
+      isCustom: false,
+      generateQr: true,
+    })
 
     const qrCode = await createQrCodeFromExistingLink(req.body, userId);
 

@@ -1,17 +1,3 @@
-/**
- * subscriptionAccess.service.ts
- *
- * Central service for checking user's active plan, quota, and subscription status.
- *
- * Design decisions:
- * - getActivePlanContext: Runs subscription + usage queries in parallel (2 queries).
- *   Pending payment check is EXCLUDED from this path — it's only needed by
- *   the /me/plan API endpoint, not by quota enforcement middleware.
- * - assertCanCreateLink: Thin wrapper that calls getActivePlanContext then
- *   checks quota limits. Used by quota middleware on link creation.
- * - assertNoActiveSubscription: Guard for payment creation — prevents duplicate
- *   subscriptions per the "one plan per user per cycle" business rule.
- */
 import type { PlanTier } from "../../generated/prisma/enums";
 import {
   ConflictError,
@@ -26,7 +12,8 @@ import {
   getPendingPaymentRepo,
   hasActiveSubscriptionRepo,
   getActivePlanCreateQuota,
-  getFreePlanCreateQuota 
+  getFreePlanCreateQuota,
+  getAnalyticsAccess
 } from "../repositories/subscription.repo";
 
 
@@ -139,7 +126,7 @@ const buildUsageSummary = (
 };
 
 // ----------------------------------------------------------------
-// Core context fetcher — used by quota middleware & analytics
+// Core context fetcher — used by analytics
 // Runs 2 queries in parallel (subscription + usage).
 // ----------------------------------------------------------------
 
@@ -180,6 +167,19 @@ export const getActivePlanContext = async (
 };
 
 // ----------------------------------------------------------------
+// Check analytics access
+// ----------------------------------------------------------------
+export const assertAnalyticsAccess = async (
+  userId: number,
+): Promise<void> => {
+  const result = await getAnalyticsAccess(userId);
+
+  if (!result?.subscription_plans?.allow_analytics) {
+    throw new ForbiddenError("Analytics feature is only available for paid accounts.");
+  }
+};  
+
+// ----------------------------------------------------------------
 // Full context fetcher — used only by GET /subscriptions/me/plan
 // Adds pending payment check on top of base context.
 // ----------------------------------------------------------------
@@ -204,8 +204,8 @@ export const getFullPlanContext = async (
 
 export interface LinkQuotaCheckInput {
   userId: number;
-  isCustom: boolean;
-  generateQr?: boolean;
+  isCustom?: boolean;
+  generateQr: boolean;
 }
 
 /**
@@ -228,14 +228,19 @@ export const assertCanCreateLink = async (
     throw new NotFoundError("Cannot find active free plan.");
   }
 
-  const isLinkQuotaExceeded =
-    activePlanQuota.max_links !== -1 &&
-    (usage ? usage.link_count : 0) >= activePlanQuota.max_links;
-
-  const isCustomQuotaExceeded =
-    input.isCustom &&
+  
+  if(input.isCustom){
+    const isCustomQuotaExceeded =
     activePlanQuota.max_custom_links !== -1 &&
     (usage ? usage.custom_link_count : 0) >= activePlanQuota.max_custom_links;
+
+    if(isCustomQuotaExceeded){
+      throw new QuotaExceededError(
+        "Bạn đã vượt giới hạn link tùy chỉnh của gói hiện tại.",
+      );
+    }
+    return;
+  }
 
   if(input.generateQr){
     const isQrQuotaExceeded =
@@ -247,16 +252,15 @@ export const assertCanCreateLink = async (
         "Bạn đã vượt giới hạn số QR code trong tháng của gói hiện tại.",
       );
     }
-  }
-
-  if (!isLinkQuotaExceeded && !isCustomQuotaExceeded) {
     return;
   }
 
-  if (isCustomQuotaExceeded) {
-    throw new QuotaExceededError(
-      "Bạn đã vượt giới hạn link tùy chỉnh của gói hiện tại.",
-    );
+  const isLinkQuotaExceeded =
+    activePlanQuota.max_links !== -1 &&
+    (usage ? usage.link_count : 0) >= activePlanQuota.max_links;
+
+  if (!isLinkQuotaExceeded) {
+    return;
   }
 
   throw new QuotaExceededError(
@@ -277,38 +281,4 @@ export const assertNoActiveSubscription = async (
       "Bạn đang có gói cước đang hoạt động. Vui lòng hủy gói hiện tại trước khi đăng ký gói mới.",
     );
   }
-};
-
-/**
- * Asserts the user can create a new QR code within their plan limits.
- * Throws ForbiddenError if the plan doesn't include QR (max_qr_codes === 0).
- * Throws QuotaExceededError if the monthly quota is exhausted.
- */
-export const assertCanCreateQrCode = async (
-  userId: number,
-): Promise<ActivePlanContext> => {
-  const context = await getActivePlanContext(userId);
-
-  const { max_qr_codes } = context.plan;
-  const { qrCodeCount } = context.usage;
-
-  if (max_qr_codes === 0) {
-    throw new ForbiddenError(
-      "QR codes are not available on your current plan. Please upgrade to use this feature.",
-    );
-  }
-
-  if (max_qr_codes !== -1 && qrCodeCount >= max_qr_codes) {
-    throw new QuotaExceededError(
-      "You have reached your monthly QR code limit. Please upgrade your plan for more.",
-      {
-        planName: context.plan.name,
-        tier: context.plan.tier,
-        maxQrCodes: max_qr_codes,
-        currentQrCodes: qrCodeCount,
-      },
-    );
-  }
-
-  return context;
 };

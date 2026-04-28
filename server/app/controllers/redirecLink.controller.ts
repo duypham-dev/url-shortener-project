@@ -115,7 +115,7 @@ const redirectLink = async (
       throw new NotFoundError("URL not found");
     }
 
-    // Populate cache for subsequent requests (fire-and-forget)
+    // Populate cacthe for subsequent requess (fire-and-forget)
     void cacheLink(shortCode, longUrl);
 
     if (isUnique) {

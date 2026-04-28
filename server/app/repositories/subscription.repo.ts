@@ -166,6 +166,27 @@ export const getActivePlanCreateQuota = async (userId: number) => {
   });
 };  
 
+// Check analytics access
+export const getAnalyticsAccess = async (userId: number) => {
+  return prisma.subscriptions.findFirst({
+    where: {
+      user_id: userId,
+      status: "active",
+      expires_at: { gt: new Date() },
+    },
+    orderBy: {
+      expires_at: "desc",
+    },
+    select: {
+      subscription_plans: {
+        select: {
+          allow_analytics: true,
+        },
+      },
+    },
+  });
+};
+
 /**
  * Lightweight existence check — returns true if user has any active subscription.
  * Used as a guard before creating new payments.

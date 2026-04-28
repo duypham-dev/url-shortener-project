@@ -12,6 +12,7 @@ import type { LinkItem } from '../types/url.type';
 import { getQrCodeByShortCode } from '../api/qrCode.api';
 import type { QrCodeItem } from '../types/qr.type';
 import CreateQrCode from '../pages/CreateQrCode/CreateQrCode';
+import toast, { Toaster } from 'react-hot-toast';
 
 interface LinkQRCodeProps {
   link: LinkItem;
@@ -31,14 +32,16 @@ const LinkQRCode: React.FC<LinkQRCodeProps> = ({ link }) => {
 
   // Callback once a new QR is successfully created
   const handleQrCreated = (newQr: QrCodeItem) => {
-    // The panel will transition to its own success state;
-    // parent queries are already invalidated inside CreateQrCode.
-    console.log('QR created:', newQr.id);
+    toast.success('QR code created successfully!');
   };
 
   return (
     <div className="w-full bg-white rounded-xl p-6 font-sans border border-gray-100">
       {/* ── Existing QR or "no QR yet" state ── */}
+      <Toaster 
+      containerStyle={{
+        top: 100,
+      }}/>
       {!showCreatePanel && (
         <div className="flex flex-col sm:flex-row gap-8">
           <div className="flex-1">

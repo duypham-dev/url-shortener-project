@@ -11,7 +11,6 @@
  */
 import QRCode from "qrcode";
 import { logger } from "../utils/logger.js";
-import { assertCanCreateQrCode } from "./subscriptionAccess.service.js";
 import {
   uploadQrCodeToCloudinary,
   deleteQrCodeFromCloudinary,
@@ -29,6 +28,7 @@ import {
 } from "../repositories/qrCode.repo.js";
 import { getLinkByIdAndUserIdRepo } from "../repositories/link.repo.js";
 import config from "config";
+import dotenv from "dotenv";
 import { NotFoundError, ConflictError } from "../errors/app.error.js";
 
 // ----------------------------------------------------------------
@@ -174,8 +174,6 @@ export const createQrCodeFromExistingLink = async (
   },
   userId: number
 ): Promise<QrCodeSummary> => {
-  await assertCanCreateQrCode(userId);
-
   const link = await getLinkByIdAndUserIdRepo(input.urlMappingId, userId);
   if (!link) {
     throw new NotFoundError("Link not found or you don't have access.");
@@ -187,9 +185,7 @@ export const createQrCodeFromExistingLink = async (
     throw new ConflictError("Link short code is not ready yet.");
   }
 
-  const baseUrl = config.has("SHORT_LINK_BASE_URL")
-    ? config.get<string>("SHORT_LINK_BASE_URL")
-    : "http://localhost:3000";
+  const baseUrl = process.env.SHORT_LINK_BASE_URL ?? 'http://localhost:3000/api/v1';
 
   const destinationUrl = `${baseUrl}/${link.short_code}`;
 
@@ -222,7 +218,7 @@ export const createQrCodeFromExistingLink = async (
 // ----------------------------------------------------------------
 
 export const createQrCodeForLink = async (input: {
-  destinationUrl: string;  // the plain short URL (e.g. https://short.ly/abc)
+  destinationUrl: string;  // the plain short URL
   urlMappingId: bigint;
   shortCode: string;
   userId: number;
@@ -284,8 +280,6 @@ export const createQrCodeForLink = async (input: {
     is_active: row.is_active ?? true,
   });
 };
-
-
 
 // ----------------------------------------------------------------
 // List QR codes (paginated)

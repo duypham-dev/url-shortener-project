@@ -3,7 +3,7 @@ import generateShortLink from "../services/generateLink.service.js";
 import { getLinkInfoByShortCode } from "../services/link.service.js";
 import { getUserLinks } from "../services/link.service.js";
 import { createQrCodeForLink } from "../services/qrCode.service.js";
-import { assertCanCreateQrCode, assertCanCreateLink } from "../services/subscriptionAccess.service.js";
+import { assertCanCreateLink } from "../services/subscriptionAccess.service.js";
 
 import {
   NotFoundError,
@@ -25,12 +25,6 @@ interface ShortenResponseBody {
   originalUrl: string;
 }
 
-const detectCustomLinkRequest = (req: Request): boolean => {
-  const body = req.body as Record<string, unknown> | undefined;
-  if (!body) return false;
-
-  return Boolean(body.isCustom || body.customCode || body.customAlias || body.alias);
-};
 
 // Controller function to generate short URL
 export const genShortLink = async (
@@ -50,7 +44,7 @@ export const genShortLink = async (
     // Check link quota
     await assertCanCreateLink({
       userId,
-      isCustom: detectCustomLinkRequest(req),
+      isCustom: false,
       generateQr,
     });
 
