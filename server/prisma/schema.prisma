@@ -9,30 +9,32 @@ datasource db {
 }
 
 model click_logs {
-  id             BigInt    @id @default(autoincrement())
-  url_mapping_id BigInt   // Khóa ngoại trỏ đến ID của bảng url_mappings
-  short_code     String    @db.VarChar(10)
-  user_id        Int?      
-  
-  clicked_at     DateTime? @default(now()) @db.Timestamptz(6)
-  ip_address     String?   @db.Inet
-  
+  id               BigInt          @id @default(autoincrement())
+  url_mapping_id   BigInt          // FK → url_mappings.id
+  short_code       String          @db.VarChar(10)
+  user_id          Int?
 
-  browser        String?   @db.VarChar(50)
-  os             String?   @db.VarChar(50)
-  device_type    String?   @db.VarChar(50)
-  
-  user_agent     String?   // Vẫn giữ chuỗi thô để dự phòng/debug
-  referrer       String?   @db.VarChar(255)
-  country        String?   @db.VarChar(100)
+  clicked_at       DateTime?       @default(now()) @db.Timestamptz(6)
+  ip_address       String?         @db.Inet
+
+  // Interaction type: CLICK for link clicks, SCAN for QR code scans
+  interaction_type InteractionType @default(CLICK)
+
+  browser          String?         @db.VarChar(50)
+  os               String?         @db.VarChar(50)
+  device_type      String?         @db.VarChar(50)
+
+  user_agent       String?         // raw UA string for debug
+  referrer         String?         @db.VarChar(255)
+  country          String?         @db.VarChar(100)
 
   // Relations
-  url_mappings   url_mappings? @relation(fields: [url_mapping_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
-  users          users?        @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  url_mappings     url_mappings?   @relation(fields: [url_mapping_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  users            users?          @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
-  // Các Index tối ưu cho truy vấn Time-series và Realtime
   @@index([user_id, clicked_at(sort: Desc)], map: "idx_logs_realtime_stream")
   @@index([short_code, clicked_at(sort: Desc)], map: "idx_logs_by_link")
+  @@index([url_mapping_id, interaction_type], map: "idx_logs_interaction_type")
 }
 
 model payments {
@@ -47,7 +49,7 @@ model payments {
   provider_payload Json?
   paid_at          DateTime?      @db.Timestamptz(6)
   created_at       DateTime?      @default(now()) @db.Timestamptz(6)
-  
+
   subscriptions    subscriptions? @relation(fields: [subscription_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
   users            users          @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
@@ -66,7 +68,7 @@ model subscription_plans {
   currency            String          @default("VND") @db.VarChar(10)
   max_links           Int             @default(5)
   max_custom_links    Int             @default(0)
-  max_qr_codes        Int             @default(0)  // 0=disabled, -1=unlimited
+  max_qr_codes        Int             @default(0)   // 0=disabled, -1=unlimited
   reset_period        ResetPeriod     @default(monthly)
   allow_analytics     Boolean         @default(false)
   allow_expiry        Boolean         @default(false)
@@ -75,7 +77,7 @@ model subscription_plans {
   is_active           Boolean         @default(true)
   sort_order          Int             @default(0)
   created_at          DateTime?       @default(now()) @db.Timestamptz(6)
-  
+
   subscriptions       subscriptions[]
 }
 
@@ -87,7 +89,7 @@ model subscriptions {
   started_at         DateTime           @default(now()) @db.Timestamptz(6)
   expires_at         DateTime           @db.Timestamptz(6)
   created_at         DateTime?          @default(now()) @db.Timestamptz(6)
-  
+
   payments           payments[]
   subscription_plans subscription_plans @relation(fields: [plan_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
   users              users              @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
@@ -104,15 +106,14 @@ model url_mappings {
   title      String?   @db.VarChar(255)
   is_custom  Boolean?  @default(false)
   is_active  Boolean?  @default(true)
-  has_qr     Boolean   @default(false)  // true when a qr_codes row is linked
-  
-  // Đã xóa cột click_count
-  
+  has_qr     Boolean   @default(false)   // true when a qr_codes row is linked
+
   created_at DateTime? @default(now()) @db.Timestamptz(6)
   expires_at DateTime? @db.Timestamptz(6)
-  
+
   click_logs click_logs[]
-  qr_codes   qr_codes[]
+  // 1-to-1: a url_mapping can have at most one QR code
+  qr_codes   qr_codes?
   users      users        @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
   @@index([expires_at], map: "idx_url_expires_at")
@@ -126,7 +127,7 @@ model user_link_monthly_usage {
   link_count        Int    @default(0)
   custom_link_count Int    @default(0)
   qr_code_count     Int    @default(0)  // QR codes created this month
-  
+
   users             users  @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
   @@id([user_id, year_month])
@@ -135,18 +136,22 @@ model user_link_monthly_usage {
 model qr_codes {
   id              BigInt    @id @default(autoincrement())
   user_id         Int
-  url_mapping_id  BigInt?   // nullable — QR can exist without a short link
 
-  // QR content
+  // Non-nullable: every QR code MUST be backed by a short link.
+  // @unique enforces the strict 1-to-1 relationship with url_mappings.
+  url_mapping_id  BigInt    @unique
+
+  // The URL encoded inside the QR image (includes ?r=qr tracking param)
   destination_url String
+  // Denormalized short_code for quick access (mirrors url_mappings.short_code)
   short_code      String?   @db.VarChar(10)
 
   // Visual config (persisted so user can re-download with same style)
-  title           String?   @db.VarChar(255)
-  fg_color        String    @default("#000000") @db.VarChar(7)
-  bg_color        String    @default("#ffffff") @db.VarChar(7)
+  title            String?  @db.VarChar(255)
+  fg_color         String   @default("#000000") @db.VarChar(7)
+  bg_color         String   @default("#ffffff") @db.VarChar(7)
   error_correction String   @default("Q") @db.VarChar(1)  // L, M, Q, H
-  size            Int       @default(300)
+  size             Int      @default(300)
 
   // Cloudinary storage
   cloudinary_public_id  String?  @db.VarChar(255)
@@ -159,11 +164,11 @@ model qr_codes {
   created_at DateTime? @default(now()) @db.Timestamptz(6)
   updated_at DateTime? @default(now()) @db.Timestamptz(6)
 
-  users        users         @relation(fields: [user_id], references: [id], onDelete: Cascade)
-  url_mappings url_mappings? @relation(fields: [url_mapping_id], references: [id], onDelete: SetNull)
+  users        users        @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  // 1-to-1 side: url_mapping_id is @unique → Prisma models this as a singular relation
+  url_mappings url_mappings @relation(fields: [url_mapping_id], references: [id], onDelete: Cascade)
 
   @@index([user_id, created_at(sort: Desc)], map: "idx_qr_user_created")
-  @@index([url_mapping_id], map: "idx_qr_url_mapping")
   @@index([short_code], map: "idx_qr_short_code")
 }
 
@@ -175,13 +180,22 @@ model users {
   role                    String?                   @default("user") @db.VarChar(50)
   created_at              DateTime?                 @default(now()) @db.Timestamptz(6)
   updated_at              DateTime?                 @default(now()) @db.Timestamptz(6)
-  
-  click_logs              click_logs[]              // Quan hệ mới thêm từ click_logs
+
+  click_logs              click_logs[]
   payments                payments[]
   qr_codes                qr_codes[]
   subscriptions           subscriptions[]
   url_mappings            url_mappings[]
   user_link_monthly_usage user_link_monthly_usage[]
+}
+
+// ----------------------------------------------------------------
+// Enums
+// ----------------------------------------------------------------
+
+enum InteractionType {
+  CLICK
+  SCAN
 }
 
 enum PaymentStatus {

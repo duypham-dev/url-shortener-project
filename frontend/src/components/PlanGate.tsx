@@ -1,4 +1,4 @@
-import { ArrowLeft, ChevronLeft, Lock, Crown } from "lucide-react";
+import { ArrowLeft, Lock, Crown } from "lucide-react";
 
 const PlanGatedOverlay = ({ onBack, onUpgrade }: { onBack: () => void, onUpgrade: () => void }) => (
   <div className="max-w-2xl mx-auto py-8 px-4 sm:px-0">

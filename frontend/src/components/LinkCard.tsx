@@ -1,7 +1,7 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
 import type { LinkItem } from "../types/url.type";
-import { Copy, Edit2, Share2, BarChart2, MoreHorizontal, Calendar, Tag, Lock } from "lucide-react";
+import { Copy, Edit2, Share2, BarChart2, MoreHorizontal, Calendar, Tag, Lock, QrCode } from "lucide-react";
 import { formatDate } from "../utils/date";
 import { useCopyToClipboard } from "../hooks/useCopyToClipboard";
 import { getShortUrlDisplay } from "../utils/url";
@@ -19,7 +19,16 @@ export const LinkCard: React.FC<LinkCardProps> = React.memo(({ link }) => {
 
   const navigateToAnalytics = (link: LinkItem) => {
     navigate(`/dashboard/links/${link.short_code}/analytics`, { state: { link } });
-  }
+  };
+
+  /**
+   * Navigate to the analytics page for this link.
+   * The CreateQrCode panel is embedded there, so the user can
+   * create or manage the QR in the correct context.
+   */
+  const handleQrClick = () => {
+    navigate(`/dashboard/links/${link.short_code}/analytics`);
+  };
 
   return (
     <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 mb-4 hover:shadow-md transition-shadow">
@@ -53,6 +62,13 @@ export const LinkCard: React.FC<LinkCardProps> = React.memo(({ link }) => {
                 title="Xem phân tích"
               >
                 <BarChart2 size={16} />
+              </button>
+              <button
+                onClick={handleQrClick}
+                className={`p-1 rounded-md transition-colors ${link.has_qr ? 'text-blue-600 hover:bg-blue-50' : 'hover:bg-gray-100'}`}
+                title={link.has_qr ? "View QR Code" : "Create QR Code"}
+              >
+                <QrCode size={16} />
               </button>
               <button className="p-1 hover:bg-gray-100 rounded-md transition-colors"><MoreHorizontal size={16} /></button>
             </div>

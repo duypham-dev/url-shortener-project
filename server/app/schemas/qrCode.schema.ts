@@ -12,16 +12,12 @@ const HEX_COLOR_REGEX = /^#[0-9A-Fa-f]{6}$/;
 const ERROR_CORRECTION_VALUES = ["L", "M", "Q", "H"] as const;
 
 // ----------------------------------------------------------------
-// POST /api/v1/qr-codes — create a standalone or linked QR code
+// POST /api/v1/qr-codes — create a QR code for an existing link
 // ----------------------------------------------------------------
 
 export const createQrCodeSchema = z.object({
   body: z.object({
-    destinationUrl: z.url(),
-    urlMappingId: z
-      .string()
-      .regex(/^\d+$/, "urlMappingId must be a numeric string")
-      .optional(),
+    urlMappingId: z.coerce.bigint(),
     title: z.string().max(255).optional(),
     fgColor: z
       .string()

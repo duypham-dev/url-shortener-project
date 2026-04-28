@@ -76,7 +76,7 @@ export const useLinkFilters = () => {
     });
   }, [setSearchParams]);
 
-  const handleLinkFiltersChange = useCallback((filter: LinkFilters) => {
+  const handleLinkFiltersChange = useCallback((_filter: LinkFilters) => {
     // Note: Link filters are not synced to URL yet as backend doesn't support them fully
   }, []);
 

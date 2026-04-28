@@ -29,7 +29,6 @@ import { LinkAnalytics } from "./pages/LinkAnalytics";
 import CreateLink from "./pages/CreateLink/CreateLink";
 import { RealtimeAnalytics } from "./pages/RealtimeAnalytics.tsx";
 import { QrCodes } from "./pages/QrCodes";
-import CreateQrCode from "./pages/CreateQrCode/CreateQrCode";
 
 const App: React.FC = () => {
   // Kiểm tra trạng thái đăng nhập ngay khi ứng dụng mount (F5)
@@ -91,7 +90,6 @@ const App: React.FC = () => {
            <Route path="links/create" element={<CreateLink />} />
           <Route path="links/:shortCode/analytics" element={<LinkAnalytics />} />
           <Route path="qr" element={<QrCodes />} />
-          <Route path="qr/create" element={<CreateQrCode />} />
           <Route path="pages" element={<p>pages page</p>} />
           <Route path="analytics" element={<RealtimeAnalytics />} />
           <Route path="campaigns" element={<p>campaigns page</p>} />

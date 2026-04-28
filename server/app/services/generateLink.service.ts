@@ -1,3 +1,8 @@
+/**
+ * generateLink.service.ts
+ *
+ * Generates a short code using a BigInt-to-base62 encoding strategy.
+ */
 import { prisma } from "../libs/prisma";
 import encodeIdToBase62 from '../utils/generateShortLink';
 
@@ -9,14 +14,11 @@ export interface GenerateLinkResult {
 
 export default async function generateShortLink(
   longUrl: string,
-  userId: number // Obligatory
+  userId: number,
 ): Promise<GenerateLinkResult> {
   const BASE_URL = process.env.SHORT_LINK_BASE_URL ?? 'https://short.ly';
 
-  // Use a transaction to ensure atomicity of the two steps: creating the record and updating it with the code
   const result = await prisma.$transaction(async (tx) => {
-    // Create a new URL mapping record with the long URL and user ID. 
-    // The short_code will be generated after we get the ID.
     const newMapping = await tx.url_mappings.create({
       data: {
         long_url: longUrl,
@@ -24,10 +26,8 @@ export default async function generateShortLink(
       },
     });
 
-    // Create the short code based on the new record's ID
     const code = encodeIdToBase62(newMapping.id);
-    console.log(`Generated code ${code} for URL ID ${newMapping.id}`);
-    // Update the record with the generated short code
+
     await tx.url_mappings.update({
       where: { id: newMapping.id },
       data: { short_code: code },

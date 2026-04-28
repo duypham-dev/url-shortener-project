@@ -4,6 +4,7 @@ import React, { useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 
+
 // Hooks
 import { useQrCodes } from "../hooks/useQrCodes";
 import { useQrFilters } from "../hooks/useQrFilters";
@@ -46,10 +47,6 @@ export const QrCodes: React.FC = () => {
   // Data
   const { qrCodes, isLoading, error } = useQrCodes(filters.queryParams);
 
-  const handleCreateQr = useCallback(() => {
-    navigate("/dashboard/qr/create");
-  }, [navigate]);
-
   const handleDelete = useCallback(
     async (id: string) => {
       if (!confirm("Delete this QR code? This cannot be undone.")) return;
@@ -62,6 +59,8 @@ export const QrCodes: React.FC = () => {
     },
     [queryClient],
   );
+
+
 
   // Plan gate for free-tier users
   if (!isPlanLoading && !canUseQr) {
@@ -83,7 +82,6 @@ export const QrCodes: React.FC = () => {
   return (
     <div className="w-full max-w-6xl mx-auto py-2 font-sans text-gray-900 pb-20">
       <QrPageHeader
-        onCreateQr={handleCreateQr}
         remainingQrCodes={remainingQrCodes}
         planName={planName}
         isPlanLoading={isPlanLoading}

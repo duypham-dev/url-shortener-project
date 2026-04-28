@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
-import { Link as LinkIcon, QrCode, Lock, HelpCircle } from 'lucide-react';
+import { Lock, HelpCircle } from 'lucide-react';
 import { createShortenUrl } from '../api/link.api';
-import { createQrCode as createQrCodeApi } from '../api/qrCode.api';
 import { SuccessModal } from '../components/SuccessModal';
 import { useQueryClient } from '@tanstack/react-query';
 import { usePlanStore, selectPlanName, selectRemainingLinks } from '../store/usePlanStore';
@@ -10,7 +9,6 @@ export const Dashboard: React.FC = () => {
   const queryClient = useQueryClient();
   const [url, setUrl] = useState('');
   const [createQrCode, setCreateQrCode] = useState(false);
-  const [activeTab, setActiveTab] = useState<'link' | 'qr'>('link');
   const [createError, setCreateError] = useState<string | null>(null);
   
   // Modal state
@@ -29,53 +27,39 @@ export const Dashboard: React.FC = () => {
   const handleCreate = async () => {
     if (!url) return;
 
-    if (isQuotaExceeded && activeTab === 'link') {
+    if (isQuotaExceeded) {
       setCreateError('Bạn đã hết quota tạo link trong tháng này. Vui lòng nâng cấp gói.');
       return;
     }
 
     try {
       setCreateError(null);
-      if (activeTab === 'link') {
-        const response = await createShortenUrl(url, {
-          generateQr: createQrCode,
-        });
-        
-        const actualShortUrl = response?.shortUrl || "";
-        
-        if (actualShortUrl) {
-          setGeneratedShortUrl(actualShortUrl);
-          setGeneratedQrUrl(response?.qrCode?.cloudinaryUrl ?? undefined);
-          setIsModalOpen(true);
-          setUrl('');
-          queryClient.invalidateQueries({ queryKey: ['userLinks'] });
-          if (createQrCode) {
-            queryClient.invalidateQueries({ queryKey: ['userQrCodes'] });
-          }
-          // Refresh only the usage/quota data after link creation
-          refreshUsage();
-        }
-      } else {
-        const response = await createQrCodeApi({
-          destinationUrl: url,
-        });
-        
-        setGeneratedShortUrl('');
-        setGeneratedQrUrl(response?.cloudinaryUrl ?? undefined);
+      const response = await createShortenUrl(url, {
+        generateQr: createQrCode,
+      });
+      
+      const actualShortUrl = response?.shortUrl || "";
+      
+      if (actualShortUrl) {
+        setGeneratedShortUrl(actualShortUrl);
+        setGeneratedQrUrl(response?.qrCode?.cloudinaryUrl ?? undefined);
         setIsModalOpen(true);
         setUrl('');
-        queryClient.invalidateQueries({ queryKey: ['userQrCodes'] });
+        queryClient.invalidateQueries({ queryKey: ['userLinks'] });
+        if (createQrCode) {
+          queryClient.invalidateQueries({ queryKey: ['userQrCodes'] });
+        }
+        // Refresh only the usage/quota data after link creation
+        refreshUsage();
       }
     } catch (error) {
       console.error('Error creating:', error); 
       const message =
         typeof error === 'object' && error && 'message' in error
           ? String(error.message)
-          : `Không thể tạo ${activeTab === 'link' ? 'short link' : 'QR code'}. Vui lòng thử lại.`;
+          : `Không thể tạo short link. Vui lòng thử lại.`;
       setCreateError(message);
-      if (activeTab === 'link') {
-        refreshUsage();
-      }
+      refreshUsage();
     }
   };
 
@@ -84,39 +68,14 @@ export const Dashboard: React.FC = () => {
       <div className="flex items-center justify-center mt-0 mx-auto border border-gray-300 rounded-lg p-6 bg-white">
         <div className="w-full max-w-200">
           
-          {/* Tabs switch */}
-          <div className="relative flex items-center p-1 max-w-fit mx-auto mb-8">
-           <div 
-              className={`absolute top-1 bottom-1 w-[calc(50%-4px)] bg-white rounded-full shadow-sm transition-transform duration-300 ease-in-out ${
-                activeTab === 'link' ? 'translate-x-0' : 'translate-x-full'
-              }`}
-            ></div>
-            <button 
-              onClick={() => setActiveTab('link')}
-              className={`relative z-10 flex items-center gap-2 px-6 py-2.5 rounded-full font-medium transition-all ${
-                activeTab === 'link' ? 'text-black' : 'text-gray-500'
-              }`}
-            >
-              <LinkIcon size={18} />
-              Short link
-            </button>
-            <button 
-              onClick={() => setActiveTab('qr')}
-              className={`relative z-10 flex items-center gap-2 px-6 py-2.5 rounded-full font-medium transition-all ${
-                activeTab === 'qr' ? 'text-black' : 'text-gray-500'
-              }`}
-            >
-              <QrCode size={18} />
-              QR Code
-            </button>
-          </div>
+
 
           {/* Main Card */}
           <div className="bg-white rounded-xl overflow-hidden">
             {/* Card Header */}
             <div className="px-8 py-6 border-b border-gray-100 flex items-center justify-between">
               <h2 className="text-xl font-bold text-gray-900">
-                Quick create: {activeTab === 'link' ? 'Short link' : 'QR Code'}
+                Quick create: Short link
               </h2>
               <div className="flex items-center gap-1 text-sm text-gray-600">
                 {isPlanLoading
@@ -157,10 +116,10 @@ export const Dashboard: React.FC = () => {
                   </div>
                   <button 
                     onClick={handleCreate}
-                    disabled={!url || (isQuotaExceeded && activeTab === 'link')}
+                    disabled={!url || isQuotaExceeded}
                     className="whitespace-nowrap px-6 py-3 bg-blue-600 text-white font-medium rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                   >
-                    {isQuotaExceeded && activeTab === 'link' ? 'Upgrade for more links' : `Create your ${activeTab === 'link' ? 'Short link' : 'QR Code'}`}
+                    {isQuotaExceeded ? 'Upgrade for more links' : `Create your Short link`}
                   </button>
                 </div>
 
@@ -172,20 +131,18 @@ export const Dashboard: React.FC = () => {
               </div>
 
               {/* Checkbox Options */}
-              {activeTab === 'link' && (
-                <div className="flex items-center gap-2 pt-2">
-                  <input
-                    type="checkbox"
-                    id="qr-checkbox"
-                    checked={createQrCode}
-                    onChange={(e) => setCreateQrCode(e.target.checked)}
-                    className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                  />
-                  <label htmlFor="qr-checkbox" className="text-sm text-gray-700">
-                    Also create a QR Code for this link
-                  </label>
-                </div>
-              )}
+              <div className="flex items-center gap-2 pt-2">
+                <input
+                  type="checkbox"
+                  id="qr-checkbox"
+                  checked={createQrCode}
+                  onChange={(e) => setCreateQrCode(e.target.checked)}
+                  className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                />
+                <label htmlFor="qr-checkbox" className="text-sm text-gray-700">
+                  Also create a QR Code for this link
+                </label>
+              </div>
               
               {/* Promo Banner */}
               <div className="mt-8 bg-blue-50/50 border border-blue-100 rounded-lg p-4 flex items-center justify-center gap-2 text-sm text-blue-800">

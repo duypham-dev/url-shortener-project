@@ -3,13 +3,13 @@ import generateShortLink from "../services/generateLink.service.js";
 import { getLinkInfoByShortCode } from "../services/link.service.js";
 import { getUserLinks } from "../services/link.service.js";
 import { createQrCodeForLink } from "../services/qrCode.service.js";
-import { assertCanCreateQrCode } from "../services/subscriptionAccess.service.js";
+import { assertCanCreateQrCode, assertCanCreateLink } from "../services/subscriptionAccess.service.js";
 
 import {
-  BadRequestError,
   NotFoundError,
   UnauthorizedError,
 } from "../errors/app.error.js";
+
 
 interface ShortenRequestBody {
   originalUrl: string;
@@ -24,6 +24,13 @@ interface ShortenResponseBody {
   shortUrl: string;
   originalUrl: string;
 }
+
+const detectCustomLinkRequest = (req: Request): boolean => {
+  const body = req.body as Record<string, unknown> | undefined;
+  if (!body) return false;
+
+  return Boolean(body.isCustom || body.customCode || body.customAlias || body.alias);
+};
 
 // Controller function to generate short URL
 export const genShortLink = async (
@@ -40,10 +47,12 @@ export const genShortLink = async (
       throw new UnauthorizedError("Unauthorized.");
     }
 
-    // If QR creation is requested, assert QR quota before creating the link
-    if (generateQr) {
-      await assertCanCreateQrCode(userId);
-    }
+    // Check link quota
+    await assertCanCreateLink({
+      userId,
+      isCustom: detectCustomLinkRequest(req),
+      generateQr,
+    });
 
     // Call generate short URL service
     const { shortUrl, shortCode, urlMappingId } = await generateShortLink(originalUrl, userId);

@@ -34,12 +34,11 @@ router.get(
   getQrCodeByShortCodeHandler,
 );
 
-// POST /api/v1/qr-codes — create a new QR code
+// POST /api/v1/qr-codes — create QR code for an existing short link
 router.post(
   "/qr-codes",
   verifyToken,
   validate(createQrCodeSchema),
-  enforceCreateQrQuota,
   createQrCodeHandler,
 );
 

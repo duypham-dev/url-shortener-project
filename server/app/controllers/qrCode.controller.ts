@@ -8,12 +8,12 @@
 import type { NextFunction, Request, Response } from "express";
 import { UnauthorizedError, NotFoundError } from "../errors/app.error.js";
 import {
-  createQrCode,
   getUserQrCodes,
   getQrCodeById,
   deleteQrCode,
   regenerateQrCode,
   getQrCodeByShortCode,
+  createQrCodeFromExistingLink,
 } from "../services/qrCode.service.js";
 
 // ----------------------------------------------------------------
@@ -29,7 +29,7 @@ export const createQrCodeHandler = async (
     const userId = req.user?.userId;
     if (!userId) throw new UnauthorizedError();
 
-    const qrCode = await createQrCode(req.body, userId);
+    const qrCode = await createQrCodeFromExistingLink(req.body, userId);
 
     res.status(201).json({
       success: true,
@@ -172,3 +172,4 @@ export const getQrCodeByShortCodeHandler = async (
     next(error);
   }
 };
+

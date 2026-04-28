@@ -9,7 +9,7 @@ import type {
 } from "../types/qr.type";
 
 // ----------------------------------------------------------------
-// Create a QR code
+// Create a QR code for an existing short link
 // ----------------------------------------------------------------
 
 export const createQrCode = async (
@@ -91,3 +91,4 @@ export const getQrCodeByShortCode = async (
   )) as ApiEnvelope<QrCodeItem | null>;
   return response.data;
 };
+

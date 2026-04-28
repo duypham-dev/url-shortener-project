@@ -58,6 +58,19 @@ export const getFallbackFreePlanRepo = async () => {
   });
 };
 
+export const getFreePlanCreateQuota = async () => {
+  return prisma.subscription_plans.findFirst({
+    where: {
+      tier: "free",
+    },
+    select: {
+      max_links: true,
+      max_custom_links: true,
+      max_qr_codes: true,
+    },
+  });
+};
+
 export const getActiveSubscriptionPlans = async () => {
   return prisma.subscription_plans.findMany({
     where: {
@@ -130,6 +143,28 @@ export const getActiveSubscriptionRepo = async (userId: number) => {
     },
   });
 };
+
+export const getActivePlanCreateQuota = async (userId: number) => {
+  return prisma.subscriptions.findFirst({
+    where: {
+      user_id: userId,
+      status: "active",
+      expires_at: { gt: new Date() },
+    },
+    orderBy: {
+      expires_at: "desc",
+    },
+    select: {
+      subscription_plans: {
+        select: {
+          max_links: true,
+          max_custom_links: true,
+          max_qr_codes: true,
+        },
+      },
+    },
+  });
+};  
 
 /**
  * Lightweight existence check — returns true if user has any active subscription.

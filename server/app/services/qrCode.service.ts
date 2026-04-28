@@ -2,16 +2,16 @@
  * qrCode.service.ts
  *
  * Business logic for QR code lifecycle:
- *   create → list → get → delete → regenerate
+ *   create-for-link → list → get → delete → regenerate
  *
- * Cloudinary upload is attempted; on failure the record is still saved
- * with cloudinary_url = null so the frontend falls back to <QRCodeSVG>.
+ * Notes:
+ *   - Every QR code must be linked to an existing short link via url_mapping_id.
+ *   - The URL embedded in QR images uses the ?r=qr marker for scan tracking.
+ *   - Cloudinary upload is best-effort; fallback rendering still works without it.
  */
 import QRCode from "qrcode";
 import { logger } from "../utils/logger.js";
-import {
-  assertCanCreateQrCode,
-} from "./subscriptionAccess.service.js";
+import { assertCanCreateQrCode } from "./subscriptionAccess.service.js";
 import {
   uploadQrCodeToCloudinary,
   deleteQrCodeFromCloudinary,
@@ -27,7 +27,9 @@ import {
   incrementQrCodeUsageRepo,
   type GetUserQrCodesOptions,
 } from "../repositories/qrCode.repo.js";
-import { NotFoundError } from "../errors/app.error.js";
+import { getLinkByIdAndUserIdRepo } from "../repositories/link.repo.js";
+import config from "config";
+import { NotFoundError, ConflictError } from "../errors/app.error.js";
 
 // ----------------------------------------------------------------
 // Types
@@ -41,21 +43,12 @@ export interface QrGenerationOptions {
   size: number;
 }
 
-export interface CreateQrCodeInput {
-  destinationUrl: string;
-  urlMappingId?: string | null;  // BigInt stringified from frontend
-  title?: string | null;
-  fgColor?: string;
-  bgColor?: string;
-  errorCorrection?: "L" | "M" | "Q" | "H";
-  size?: number;
-}
-
 export interface QrCodeSummary {
   id: string;
   userId: number;
-  urlMappingId: string | null;
-  destinationUrl: string;
+  urlMappingId: string;
+  destinationUrl: string;     // tracking URL ({shortUrl}?r=qr)
+  displayUrl: string;         // clean URL for display (no ?r=qr)
   shortCode: string | null;
   title: string | null;
   cloudinaryUrl: string | null;
@@ -78,10 +71,10 @@ export interface GetUserQrCodesResult {
 // Helper: serialize a DB row to the API summary shape
 // ----------------------------------------------------------------
 
-const serializeQrCode = (row: {
+type QrCodeRow = {
   id: bigint;
   user_id: number;
-  url_mapping_id: bigint | null;
+  url_mapping_id: bigint;
   destination_url: string;
   short_code: string | null;
   title: string | null;
@@ -93,22 +86,41 @@ const serializeQrCode = (row: {
   scan_count: number;
   is_active: boolean;
   created_at: Date | null;
-}): QrCodeSummary => ({
-  id: row.id.toString(),
-  userId: row.user_id,
-  urlMappingId: row.url_mapping_id?.toString() ?? null,
-  destinationUrl: row.destination_url,
-  shortCode: row.short_code,
-  title: row.title,
-  cloudinaryUrl: row.cloudinary_url,
-  fgColor: row.fg_color,
-  bgColor: row.bg_color,
-  errorCorrection: row.error_correction,
-  size: row.size,
-  scanCount: row.scan_count,
-  isActive: row.is_active,
-  createdAt: row.created_at?.toISOString() ?? new Date().toISOString(),
-});
+};
+
+const serializeQrCode = (row: QrCodeRow): QrCodeSummary => {
+  const trackingUrl = row.destination_url;
+  const displayUrl = trackingUrl.replace(/\?r=qr$/, "");
+
+  return {
+    id: row.id.toString(),
+    userId: row.user_id,
+    urlMappingId: row.url_mapping_id.toString(),
+    destinationUrl: trackingUrl,
+    displayUrl,
+    shortCode: row.short_code,
+    title: row.title,
+    cloudinaryUrl: row.cloudinary_url,
+    fgColor: row.fg_color,
+    bgColor: row.bg_color,
+    errorCorrection: row.error_correction,
+    size: row.size,
+    scanCount: row.scan_count,
+    isActive: row.is_active,
+    createdAt: row.created_at?.toISOString() ?? new Date().toISOString(),
+  };
+};
+
+// ----------------------------------------------------------------
+// Helper: current year-month string (UTC)
+// ----------------------------------------------------------------
+
+const getCurrentYearMonth = (): string => {
+  const d = new Date();
+  const y = d.getUTCFullYear();
+  const m = String(d.getUTCMonth() + 1).padStart(2, "0");
+  return `${y}-${m}`;
+};
 
 // ----------------------------------------------------------------
 // QR PNG generation (server-side)
@@ -130,107 +142,108 @@ export const generateQrCodeDataUrl = async (
 };
 
 // ----------------------------------------------------------------
-// Helper: current year-month string (UTC)
+// Helper: upload to Cloudinary (best-effort)
 // ----------------------------------------------------------------
 
-const getCurrentYearMonth = (): string => {
-  const d = new Date();
-  const y = d.getUTCFullYear();
-  const m = String(d.getUTCMonth() + 1).padStart(2, "0");
-  return `${y}-${m}`;
-};
-
-// ----------------------------------------------------------------
-// Create a QR code
-// ----------------------------------------------------------------
-
-export const createQrCode = async (
-  input: CreateQrCodeInput,
+const uploadToCloudinary = async (
+  dataUrl: string,
   userId: number,
-): Promise<QrCodeSummary> => {
-  // 1. Assert quota
-  await assertCanCreateQrCode(userId);
-
-  const fgColor = input.fgColor ?? "#000000";
-  const bgColor = input.bgColor ?? "#ffffff";
-  const errorCorrection = input.errorCorrection ?? "Q";
-  const size = input.size ?? 300;
-  const urlMappingId = input.urlMappingId ? BigInt(input.urlMappingId) : null;
-
-  // 2. Generate PNG data URL server-side
-  const dataUrl = await generateQrCodeDataUrl({
-    destinationUrl: input.destinationUrl,
-    fgColor,
-    bgColor,
-    errorCorrection,
-    size,
-  });
-
-  // 3. Upload to Cloudinary (best-effort)
-  let cloudinaryPublicId: string | null = null;
-  let cloudinaryUrl: string | null = null;
-
+): Promise<{ publicId: string | null; url: string | null }> => {
   try {
     const timestamp = Date.now();
     const publicId = `shortlink/qr_codes/${userId}/qr_${timestamp}`;
     const uploaded = await uploadQrCodeToCloudinary(dataUrl, publicId);
-    cloudinaryPublicId = uploaded.publicId;
-    cloudinaryUrl = uploaded.secureUrl;
+    return { publicId: uploaded.publicId, url: uploaded.secureUrl };
   } catch (err) {
     logger.warn("QR: Cloudinary upload failed, storing without URL", { error: err });
+    return { publicId: null, url: null };
   }
-
-  // 4. Insert DB row
-  const row = await createQrCodeRepo({
-    user_id: userId,
-    url_mapping_id: urlMappingId,
-    destination_url: input.destinationUrl,
-    short_code: null, // filled later if linked to a short link
-    title: input.title ?? null,
-    fg_color: fgColor,
-    bg_color: bgColor,
-    error_correction: errorCorrection,
-    size,
-    cloudinary_public_id: cloudinaryPublicId,
-    cloudinary_url: cloudinaryUrl,
-  });
-
-  // 5. Mark url_mapping.has_qr = true (if linked)
-  if (urlMappingId) {
-    try {
-      await setUrlMappingHasQrRepo(urlMappingId, true);
-    } catch (err) {
-      logger.warn("QR: failed to set has_qr on url_mapping", { urlMappingId, error: err });
-    }
-  }
-
-  // 6. Increment monthly quota usage
-  await incrementQrCodeUsageRepo(userId, getCurrentYearMonth());
-
-  return serializeQrCode({ ...row, is_active: row.is_active ?? true });
 };
 
 // ----------------------------------------------------------------
-// Create a QR code linked to a short link (called from link creation flow)
+// Create a QR code for an existing link
+// ----------------------------------------------------------------
+export const createQrCodeFromExistingLink = async (
+  input: {
+    urlMappingId: bigint;
+    fgColor?: string;
+    bgColor?: string;
+    errorCorrection?: "L" | "M" | "Q" | "H";
+    size?: number;
+    title?: string | null;
+  },
+  userId: number
+): Promise<QrCodeSummary> => {
+  await assertCanCreateQrCode(userId);
+
+  const link = await getLinkByIdAndUserIdRepo(input.urlMappingId, userId);
+  if (!link) {
+    throw new NotFoundError("Link not found or you don't have access.");
+  }
+  if (link.has_qr) {
+    throw new ConflictError("This link already has a QR code.");
+  }
+  if (!link.short_code) {
+    throw new ConflictError("Link short code is not ready yet.");
+  }
+
+  const baseUrl = config.has("SHORT_LINK_BASE_URL")
+    ? config.get<string>("SHORT_LINK_BASE_URL")
+    : "http://localhost:3000";
+
+  const destinationUrl = `${baseUrl}/${link.short_code}`;
+
+  const qrCode = await createQrCodeForLink({
+    destinationUrl,
+    urlMappingId: input.urlMappingId,
+    shortCode: link.short_code,
+    userId,
+    ...(input.title !== undefined ? { title: input.title } : {}),
+    ...(input.fgColor ? { fgColor: input.fgColor } : {}),
+    ...(input.bgColor ? { bgColor: input.bgColor } : {}),
+    ...(input.errorCorrection ? { errorCorrection: input.errorCorrection } : {}),
+    ...(input.size ? { size: input.size } : {}),
+  });
+
+  if (!qrCode) {
+    throw new Error("Failed to create QR code.");
+  }
+
+  return qrCode;
+};
+
+// ----------------------------------------------------------------
+// Create a QR code linked to an already-existing short link.
+// Called from the link creation flow when generateQr=true.
+//
+// The companion short link already exists.
+// No link quota check needed here — the link was already counted.
+// QR quota IS consumed.
 // ----------------------------------------------------------------
 
 export const createQrCodeForLink = async (input: {
-  destinationUrl: string;      // the short URL itself
+  destinationUrl: string;  // the plain short URL (e.g. https://short.ly/abc)
   urlMappingId: bigint;
   shortCode: string;
   userId: number;
+  title?: string | null;
   fgColor?: string;
   bgColor?: string;
+  errorCorrection?: "L" | "M" | "Q" | "H";
+  size?: number;
 }): Promise<QrCodeSummary | null> => {
   const fgColor = input.fgColor ?? "#000000";
   const bgColor = input.bgColor ?? "#ffffff";
-  const errorCorrection = "Q" as const;
-  const size = 300;
+  const errorCorrection = input.errorCorrection ?? "Q";
+  const size = input.size ?? 300;
+
+  // Build tracking URL for QR image
+  const trackingUrl = `${input.destinationUrl}?r=qr`;
 
   let dataUrl: string;
   try {
     dataUrl = await generateQrCodeDataUrl({
-      destinationUrl: input.destinationUrl,
+      destinationUrl: trackingUrl,
       fgColor,
       bgColor,
       errorCorrection,
@@ -241,25 +254,15 @@ export const createQrCodeForLink = async (input: {
     return null;
   }
 
-  let cloudinaryPublicId: string | null = null;
-  let cloudinaryUrl: string | null = null;
-
-  try {
-    const timestamp = Date.now();
-    const publicId = `shortlink/qr_codes/${input.userId}/qr_${timestamp}`;
-    const uploaded = await uploadQrCodeToCloudinary(dataUrl, publicId);
-    cloudinaryPublicId = uploaded.publicId;
-    cloudinaryUrl = uploaded.secureUrl;
-  } catch (err) {
-    logger.warn("QR: Cloudinary upload failed for link QR", { error: err });
-  }
+  const { publicId: cloudinaryPublicId, url: cloudinaryUrl } =
+    await uploadToCloudinary(dataUrl, input.userId);
 
   const row = await createQrCodeRepo({
     user_id: input.userId,
     url_mapping_id: input.urlMappingId,
-    destination_url: input.destinationUrl,
+    destination_url: trackingUrl,
     short_code: input.shortCode,
-    title: null,
+    title: input.title ?? null,
     fg_color: fgColor,
     bg_color: bgColor,
     error_correction: errorCorrection,
@@ -271,13 +274,18 @@ export const createQrCodeForLink = async (input: {
   try {
     await setUrlMappingHasQrRepo(input.urlMappingId, true);
   } catch (err) {
-    logger.warn("QR: failed to set has_qr on url_mapping", { urlMappingId: input.urlMappingId, error: err });
+    logger.warn("QR: failed to set has_qr on url_mapping", { error: err });
   }
 
   await incrementQrCodeUsageRepo(input.userId, getCurrentYearMonth());
 
-  return serializeQrCode({ ...row, is_active: row.is_active ?? true });
+  return serializeQrCode({
+    ...row,
+    is_active: row.is_active ?? true,
+  });
 };
+
+
 
 // ----------------------------------------------------------------
 // List QR codes (paginated)
@@ -293,7 +301,12 @@ export const getUserQrCodes = async (
   const hasNextPage = limit !== undefined && rows.length > limit;
   const items = hasNextPage ? rows.slice(0, limit) : rows;
 
-  const qrCodes = items.map(serializeQrCode);
+  const qrCodes = items.map((row) =>
+    serializeQrCode({
+      ...row,
+      is_active: row.is_active ?? true,
+    }),
+  );
 
   const nextCursor =
     hasNextPage && items.length > 0
@@ -326,7 +339,7 @@ export const getQrCodeByShortCode = async (
 ): Promise<QrCodeSummary | null> => {
   const row = await getQrCodeByShortCodeRepo(shortCode, userId);
   if (!row) return null;
-  return serializeQrCode(row);
+  return serializeQrCode({ ...row, is_active: row.is_active ?? true });
 };
 
 // ----------------------------------------------------------------
@@ -348,7 +361,7 @@ export const deleteQrCode = async (
     void deleteQrCodeFromCloudinary(deleted.cloudinary_public_id);
   }
 
-  // If linked to a url_mapping, clear has_qr flag
+  // Clear has_qr flag on the companion url_mapping
   if (deleted.url_mapping_id) {
     try {
       await setUrlMappingHasQrRepo(deleted.url_mapping_id, false);
@@ -385,7 +398,7 @@ export const regenerateQrCode = async (
   const errorCorrection = (newOptions.errorCorrection ?? existing.error_correction) as "L" | "M" | "Q" | "H";
   const size = newOptions.size ?? existing.size;
 
-  // Re-generate PNG
+  // Re-generate PNG using the stored tracking URL (already has ?r=qr)
   const dataUrl = await generateQrCodeDataUrl({
     destinationUrl: existing.destination_url,
     fgColor,
@@ -394,7 +407,6 @@ export const regenerateQrCode = async (
     size,
   });
 
-  // Re-upload (overwrite existing asset or create new one)
   let cloudinaryPublicId = existing.cloudinary_public_id;
   let cloudinaryUrl = existing.cloudinary_url;
 

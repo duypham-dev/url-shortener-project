@@ -3,14 +3,12 @@
 import React from "react";
 
 interface QrPageHeaderProps {
-  onCreateQr: () => void;
   remainingQrCodes: number | null;
   planName: string;
   isPlanLoading: boolean;
 }
 
 const QrPageHeaderComponent: React.FC<QrPageHeaderProps> = ({
-  onCreateQr,
   remainingQrCodes,
   planName,
   isPlanLoading,
@@ -29,13 +27,6 @@ const QrPageHeaderComponent: React.FC<QrPageHeaderProps> = ({
         </h1>
         <p className="text-sm text-gray-500 mt-1">{quotaLabel}</p>
       </div>
-      <button
-        type="button"
-        onClick={onCreateQr}
-        className="bg-[#232323] hover:bg-black text-gray-200 hover:text-white font-medium py-2 px-5 rounded-md transition-colors shadow-sm whitespace-nowrap"
-      >
-        Create QR Code
-      </button>
     </div>
   );
 };

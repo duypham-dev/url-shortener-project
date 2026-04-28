@@ -29,6 +29,7 @@ export interface ClickTrackInput {
   userAgent: string;
   referrer: string | null;
   timestamp: string;
+  interactionType: 'CLICK' | 'SCAN';
 }
 
 export interface ClickEventMessage extends ClickTrackInput {
@@ -37,6 +38,7 @@ export interface ClickEventMessage extends ClickTrackInput {
   browser: string | null;
   os: string | null;
   deviceType: string;
+  // interactionType is inherited from ClickTrackInput
 }
 
 export interface UserLinkSummary {
@@ -44,15 +46,18 @@ export interface UserLinkSummary {
   short_code: string | null;
   long_url: string;
   title: string | null;
+  has_qr: boolean;
   created_at: Date | null;
   click_count: number;
 }
 
-/** Single-link detail — no id needed (not used as a pagination cursor). */
+/** Single-link detail payload returned by GET /links/:shortCode. */
 export interface LinkInfoSummary {
+  id: string;
   short_code: string | null;
   long_url: string;
   title: string | null;
+  has_qr: boolean;
   created_at: Date | null;
   click_count: number;
 }
@@ -120,9 +125,11 @@ export const getLinkInfoByShortCode = async (
   }
 
   return {
+    id: link.id.toString(),
     short_code: link.short_code,
     long_url: link.long_url,
     title: link.title,
+    has_qr: link.has_qr,
     created_at: link.created_at,
     click_count: link._count.click_logs,
   };

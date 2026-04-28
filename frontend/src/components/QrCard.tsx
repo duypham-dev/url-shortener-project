@@ -29,13 +29,16 @@ const getShortUrlDisplay = (shortCode: string | null): string => {
 export const QrCard: React.FC<QrCardProps> = React.memo(
   ({ qrCode, onDelete, onRegenerate }) => {
     const [copiedValue, copy] = useCopyToClipboard();
+
     const shortUrlDisplay = getShortUrlDisplay(qrCode.shortCode);
-    const displayTitle = qrCode.title || qrCode.destinationUrl.substring(0, 60) + "...";
+
+    // Use displayUrl (no ?r=qr) for UI; destinationUrl has the tracking param
+    const displayDestination = qrCode.displayUrl || qrCode.destinationUrl.replace(/\?r=qr$/, "");
+    const displayTitle = qrCode.title || displayDestination.substring(0, 60) + "...";
 
     // Download the QR code as PNG
     const handleDownload = useCallback(async () => {
       if (qrCode.cloudinaryUrl) {
-        // Download from Cloudinary
         try {
           const response = await fetch(qrCode.cloudinaryUrl);
           const blob = await response.blob();
@@ -49,7 +52,6 @@ export const QrCard: React.FC<QrCardProps> = React.memo(
           window.open(qrCode.cloudinaryUrl, "_blank");
         }
       } else {
-        // Generate from SVG using canvas
         const svgEl = document.getElementById(`qr-svg-${qrCode.id}`)?.querySelector("svg");
         if (!svgEl) return;
         const canvas = document.createElement("canvas");
@@ -131,7 +133,7 @@ export const QrCard: React.FC<QrCardProps> = React.memo(
               </div>
             </div>
 
-            {/* Short link chip (if linked) */}
+            {/* Short link chip */}
             {qrCode.shortCode && (
               <div className="flex items-center gap-2 mt-1.5">
                 <a
@@ -152,10 +154,10 @@ export const QrCard: React.FC<QrCardProps> = React.memo(
               </div>
             )}
 
-            {/* Destination URL */}
+            {/* Destination URL (clean — no ?r=qr) */}
             <div className="mt-1.5 text-sm text-gray-500 flex items-center gap-1.5 truncate">
               <ExternalLink size={12} className="shrink-0" />
-              <span className="truncate">{qrCode.destinationUrl}</span>
+              <span className="truncate">{displayDestination}</span>
             </div>
 
             {/* Bottom meta row */}
@@ -169,19 +171,17 @@ export const QrCard: React.FC<QrCardProps> = React.memo(
                 <span>{qrCode.fgColor}</span>
               </div>
 
-              {/* Scan count (only for linked QR codes) */}
-              {qrCode.shortCode && (
-                <div className="flex items-center gap-1.5">
-                  <BarChart2 size={13} />
-                  <span>{qrCode.scanCount} scans</span>
-                </div>
-              )}
+              {/* Scan count */}
+              <div className="flex items-center gap-1.5">
+                <BarChart2 size={13} />
+                <span>{qrCode.scanCount} scans</span>
+              </div>
 
               {/* Link badge */}
               {qrCode.shortCode && (
-                <div className="flex items-center gap-1 bg-blue-50 text-blue-700 rounded-full px-2 py-0.5">
+                <div className="flex items-center gap-1 rounded-full px-2 py-0.5 bg-blue-50 text-blue-700">
                   <QrCode size={11} />
-                  <span>Linked to /{qrCode.shortCode}</span>
+                  <span>{`Linked to /${qrCode.shortCode}`}</span>
                 </div>
               )}
 

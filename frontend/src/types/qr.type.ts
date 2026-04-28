@@ -3,8 +3,9 @@
 export interface QrCodeItem {
   id: string;
   userId: number;
-  urlMappingId: string | null;
-  destinationUrl: string;
+  urlMappingId: string;
+  destinationUrl: string;   // tracking URL ({shortUrl}?r=qr)
+  displayUrl: string;       // clean URL without ?r=qr (for display)
   shortCode: string | null;
   title: string | null;
   cloudinaryUrl: string | null;
@@ -18,8 +19,7 @@ export interface QrCodeItem {
 }
 
 export interface CreateQrCodeInput {
-  destinationUrl: string;
-  urlMappingId?: string;
+  urlMappingId: string;
   title?: string;
   fgColor?: string;
   bgColor?: string;

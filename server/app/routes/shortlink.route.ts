@@ -12,7 +12,6 @@ import { linkController } from "../controllers/link.controller.js";
 
 // Middleware
 import { verifyToken } from "../middlewares/verifyToken.middleware.js";
-import { enforceCreateLinkQuota } from "../middlewares/quota.middleware.js";
 import { validate } from "../middlewares/validate.middleware.js";
 import { redirectRateLimit } from "../middlewares/redirectRateLimit.middleware.js";
 
@@ -59,7 +58,6 @@ router.post(
   "/shorten",
   verifyToken,
   validate(urlSchema),
-  enforceCreateLinkQuota,
   linkController.genShortLink,
 );
 

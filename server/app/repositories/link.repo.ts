@@ -11,6 +11,22 @@ export const getUrlOwnerContextRepo = async (shortCode: string) => {
   });
 };
 
+export const getLinkByIdAndUserIdRepo = async (id: bigint, userId: number) => {
+  return prisma.url_mappings.findFirst({
+    where: {
+      id,
+      user_id: userId,
+      is_active: true,
+      short_code: { not: null },
+    },
+    select: {
+      id: true,
+      short_code: true,
+      has_qr: true,
+    }
+  });
+};
+
 export interface GetUserLinksOptions {
   limit?: number; // max items to return
   cursor?: bigint; // exclusive cursor (id of the last item on the previous page)
@@ -19,13 +35,19 @@ export interface GetUserLinksOptions {
   endDate?: string;
 }
 
+/**
+ * Fetches paginated active links for a user.
+ */
 export const getUserLinksRepo = async (
   userId: number,
   options: GetUserLinksOptions = {},
 ) => {
   const { limit, cursor, search, startDate, endDate } = options;
 
-  const whereClause: Prisma.url_mappingsWhereInput = { user_id: userId, is_active: true };
+  const whereClause: Prisma.url_mappingsWhereInput = {
+    user_id: userId,
+    is_active: true,
+  };
 
   if (search) {
     whereClause.OR = [
@@ -44,13 +66,14 @@ export const getUserLinksRepo = async (
   return await prisma.url_mappings.findMany({
     where: whereClause,
     orderBy: [{ created_at: "desc" }, { id: "desc" }],
-    ...(limit !== undefined ? { take: limit + 1 } : {}), // fetch one extra to determine hasNextPage
+    ...(limit !== undefined ? { take: limit + 1 } : {}),
     ...(cursor !== undefined ? { cursor: { id: cursor }, skip: 1 } : {}),
     select: {
       id: true,
       short_code: true,
       long_url: true,
       title: true,
+      has_qr: true,
       created_at: true,
       _count: {
         select: {
@@ -68,9 +91,11 @@ export const getLinkInfoByShortCodeRepo = async (
   return await prisma.url_mappings.findFirst({
     where: { short_code: shortCode, user_id: userId, is_active: true },
     select: {
+      id: true,
       short_code: true,
       long_url: true,
       title: true,
+      has_qr: true,
       created_at: true,
       _count: {
         select: {
@@ -87,3 +112,25 @@ export const getLongUrlByShortCodeRepo = async (shortCode: string) => {
     select: { long_url: true },
   });
 };
+
+/**
+ * Increments the link_count usage counter for a user in the given month.
+ * Used after creating a regular short link.
+ */
+export const incrementLinkUsageRepo = async (
+  userId: number,
+  yearMonth: string,
+) => {
+  return prisma.user_link_monthly_usage.upsert({
+    where: { user_id_year_month: { user_id: userId, year_month: yearMonth } },
+    update: { link_count: { increment: 1 } },
+    create: {
+      user_id: userId,
+      year_month: yearMonth,
+      link_count: 1,
+      custom_link_count: 0,
+      qr_code_count: 0,
+    },
+  });
+};
+

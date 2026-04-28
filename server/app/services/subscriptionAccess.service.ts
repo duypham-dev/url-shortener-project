@@ -25,7 +25,10 @@ import {
   getActiveSubscriptionRepo,
   getPendingPaymentRepo,
   hasActiveSubscriptionRepo,
+  getActivePlanCreateQuota,
+  getFreePlanCreateQuota 
 } from "../repositories/subscription.repo";
+
 
 const getCurrentYearMonth = (date = new Date()): string => {
   const year = date.getUTCFullYear();
@@ -137,7 +140,7 @@ const buildUsageSummary = (
 
 // ----------------------------------------------------------------
 // Core context fetcher — used by quota middleware & analytics
-// Runs 2 queries in parallel (subscription + usage), no pending payment check.
+// Runs 2 queries in parallel (subscription + usage).
 // ----------------------------------------------------------------
 
 export const getActivePlanContext = async (
@@ -202,6 +205,7 @@ export const getFullPlanContext = async (
 export interface LinkQuotaCheckInput {
   userId: number;
   isCustom: boolean;
+  generateQr?: boolean;
 }
 
 /**
@@ -210,41 +214,53 @@ export interface LinkQuotaCheckInput {
  */
 export const assertCanCreateLink = async (
   input: LinkQuotaCheckInput,
-): Promise<ActivePlanContext> => {
-  const context = await getActivePlanContext(input.userId);
+): Promise<void> => {
+  const yearMonth = getCurrentYearMonth();
+
+  const [plan, usage] = await Promise.all([
+      getActivePlanCreateQuota(input.userId),
+      getPlanUsageRepo(input.userId, yearMonth),
+    ]);
+
+  const activePlanQuota = plan?.subscription_plans ?? await getFreePlanCreateQuota();
+
+  if (!activePlanQuota) {
+    throw new NotFoundError("Cannot find active free plan.");
+  }
 
   const isLinkQuotaExceeded =
-    context.plan.max_links !== -1 &&
-    context.usage.linkCount >= context.plan.max_links;
+    activePlanQuota.max_links !== -1 &&
+    (usage ? usage.link_count : 0) >= activePlanQuota.max_links;
 
   const isCustomQuotaExceeded =
     input.isCustom &&
-    context.plan.max_custom_links !== -1 &&
-    context.usage.customLinkCount >= context.plan.max_custom_links;
+    activePlanQuota.max_custom_links !== -1 &&
+    (usage ? usage.custom_link_count : 0) >= activePlanQuota.max_custom_links;
 
-  if (!isLinkQuotaExceeded && !isCustomQuotaExceeded) {
-    return context;
+  if(input.generateQr){
+    const isQrQuotaExceeded =
+    activePlanQuota.max_qr_codes !== -1 &&
+    (usage ? usage.qr_code_count : 0) >= activePlanQuota.max_qr_codes;
+
+    if(isQrQuotaExceeded){
+      throw new QuotaExceededError(
+        "Bạn đã vượt giới hạn số QR code trong tháng của gói hiện tại.",
+      );
+    }
   }
 
-  const errorDetails = {
-    planName: context.plan.name,
-    tier: context.plan.tier,
-    maxLinks: context.plan.max_links,
-    maxCustomLinks: context.plan.max_custom_links,
-    currentLinks: context.usage.linkCount,
-    currentCustomLinks: context.usage.customLinkCount,
-  };
+  if (!isLinkQuotaExceeded && !isCustomQuotaExceeded) {
+    return;
+  }
 
   if (isCustomQuotaExceeded) {
     throw new QuotaExceededError(
       "Bạn đã vượt giới hạn link tùy chỉnh của gói hiện tại.",
-      errorDetails,
     );
   }
 
   throw new QuotaExceededError(
     "Bạn đã vượt giới hạn số link trong tháng của gói hiện tại.",
-    errorDetails,
   );
 };
 

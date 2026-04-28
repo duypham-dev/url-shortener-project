@@ -4,7 +4,9 @@
  * Repository layer for qr_codes table.
  * All DB access for QR codes goes through here — services must not import prisma directly.
  *
- * Pagination: cursor-based, same pattern as getUserLinksRepo.
+ * Key constraints:
+ *   - url_mapping_id is NON-NULLABLE and UNIQUE (1-to-1 with url_mappings)
+ *   - Every QR code must have a companion short link
  */
 import { prisma } from "../libs/prisma.js";
 import type { Prisma } from "../../generated/prisma/client.js";
@@ -15,8 +17,8 @@ import type { Prisma } from "../../generated/prisma/client.js";
 
 export interface CreateQrCodeData {
   user_id: number;
-  url_mapping_id?: bigint | null;
-  destination_url: string;
+  url_mapping_id: bigint;  // required — every QR must have a companion link
+  destination_url: string; // the tracking URL ({shortUrl}?r=qr)
   short_code?: string | null;
   title?: string | null;
   fg_color: string;
@@ -55,7 +57,7 @@ export const createQrCodeRepo = async (data: CreateQrCodeData) => {
   return prisma.qr_codes.create({
     data: {
       user_id: data.user_id,
-      url_mapping_id: data.url_mapping_id ?? null,
+      url_mapping_id: data.url_mapping_id,
       destination_url: data.destination_url,
       short_code: data.short_code ?? null,
       title: data.title ?? null,
@@ -105,7 +107,7 @@ export const getUserQrCodesRepo = async (
   return prisma.qr_codes.findMany({
     where: whereClause,
     orderBy: [{ created_at: "desc" }, { id: "desc" }],
-    ...(limit !== undefined ? { take: limit + 1 } : {}), // fetch one extra to detect hasNextPage
+    ...(limit !== undefined ? { take: limit + 1 } : {}),
     ...(cursor !== undefined ? { cursor: { id: cursor }, skip: 1 } : {}),
     select: {
       id: true,
@@ -128,9 +130,6 @@ export const getUserQrCodesRepo = async (
 };
 
 // ----------------------------------------------------------------
-// Get by ID (ownership check)
-// ----------------------------------------------------------------
-
 export const getQrCodeByIdRepo = async (id: bigint, userId: number) => {
   return prisma.qr_codes.findFirst({
     where: { id, user_id: userId, is_active: true },
@@ -212,7 +211,7 @@ export const setUrlMappingHasQrRepo = async (
 };
 
 // ----------------------------------------------------------------
-// Increment monthly QR quota usage (upsert pattern, same as link quota)
+// Increment monthly QR quota usage
 // ----------------------------------------------------------------
 
 export const incrementQrCodeUsageRepo = async (
