@@ -9,7 +9,6 @@ import { QRCodeSVG } from "qrcode.react";
 import { X, HelpCircle } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
-
 import { createQrCode } from "../../api/qrCode.api";
 import {
   usePlanStore,
@@ -75,9 +74,7 @@ const CreateQrCode: React.FC<CreateQrCodePanelProps> = ({
   const isQuotaExceeded = remainingQrCodes !== null && remainingQrCodes <= 0;
 
   // Build the preview URL from the short code
-  const previewUrl = shortCode
-    ? `${window.location.origin.replace("5173", "3000")}/${shortCode}`
-    : "https://example.com";
+  const previewUrl = "https://example.com";
 
   const handleSubmit = useCallback(
     async (e: React.FormEvent) => {
