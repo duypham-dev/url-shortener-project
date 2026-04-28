@@ -109,7 +109,7 @@ export const getLinkInfoByShortCodeRepo = async (
 export const getLongUrlByShortCodeRepo = async (shortCode: string) => {
   return await prisma.url_mappings.findUnique({
     where: { short_code: shortCode },
-    select: { long_url: true },
+    select: { long_url: true, has_qr: true } // also select has_qr to determine caching strategy,
   });
 };
 

@@ -114,8 +114,6 @@ export const getUserQrCodesRepo = async (
       bg_color: true,
       error_correction: true,
       size: true,
-
-
       scan_count: true,
       is_active: true,
       created_at: true,
@@ -179,18 +177,24 @@ export const updateQrCodeRepo = async (
 // ----------------------------------------------------------------
 // Soft delete
 // ----------------------------------------------------------------
+export const disableQrCodeRepo = async (id: bigint, userId: number) => {
+  return prisma.$transaction(async (tx) => {
+    const disabledQr = await tx.qr_codes.update({
+      where: { id, user_id: userId },
+      data: { is_active: false, updated_at: new Date() },
+      select: { url_mapping_id: true, short_code: true }, 
+    });
 
-export const softDeleteQrCodeRepo = async (id: bigint, userId: number) => {
-  return prisma.qr_codes.update({
-    where: { id, user_id: userId },
-    data: { is_active: false, updated_at: new Date() },
-    select: {  url_mapping_id: true },
+    // Clear has_qr flag on the companion url_mapping
+    if (disabledQr.url_mapping_id) {
+      await tx.url_mappings.update({
+        where: { id: disabledQr.url_mapping_id },
+        data: { has_qr: false },
+      });
+    }
+    return disabledQr;
   });
 };
-
-// ----------------------------------------------------------------
-// Mark url_mapping.has_qr
-// ----------------------------------------------------------------
 
 export const setUrlMappingHasQrRepo = async (
   urlMappingId: bigint,

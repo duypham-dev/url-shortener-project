@@ -14,9 +14,10 @@ import { logger } from '../utils/logger';
 const CACHE_KEY = (shortCode: string) => `link_short:${shortCode}`;
 const CACHE_TTL_SECONDS = 60 * 60; // 1 hour
 
-export async function getCachedLink(shortCode: string): Promise<string | null> {
+export async function getCachedLink(shortCode: string): Promise<{ longUrl: string; hasActiveQr: boolean } | null> {
   try {
-    return await redis.get(CACHE_KEY(shortCode));
+    const cached = await redis.get(CACHE_KEY(shortCode));
+    return cached ? JSON.parse(cached) : null;
   } catch (error) {
     // Redis is down or unreachable — fall back to DB lookup silently.
     logger.warn('Redis: getCachedLink failed — falling back to DB', { shortCode, error });
@@ -24,11 +25,19 @@ export async function getCachedLink(shortCode: string): Promise<string | null> {
   }
 }
 
-export async function cacheLink(shortCode: string, longUrl: string): Promise<void> {
+export async function cacheLink(shortCode: string, longUrl: string, hasActiveQr: boolean): Promise<void> {
   try {
-    await redis.set(CACHE_KEY(shortCode), longUrl, 'EX', CACHE_TTL_SECONDS);
+    await redis.set(CACHE_KEY(shortCode), JSON.stringify({ longUrl, hasActiveQr }), 'EX', CACHE_TTL_SECONDS);
   } catch (error) {
     // Non-fatal: the redirect already succeeded. Log and move on.
     logger.warn('Redis: cacheLink failed — URL will not be cached', { shortCode, error });
+  }
+}
+
+export async function invalidateCachedLink(shortCode: string): Promise<void> {
+  try {
+    await redis.del(CACHE_KEY(shortCode));
+  } catch (error) {
+    logger.warn('Redis: invalidateCachedLink failed — cache may be stale', { shortCode, error });
   }
 }

@@ -4,16 +4,16 @@ import {
   getUserQrCodesRepo,
   getQrCodeByIdRepo,
   getQrCodeByShortCodeRepo,
-  softDeleteQrCodeRepo,
   updateQrCodeRepo,
   setUrlMappingHasQrRepo,
   incrementQrCodeUsageRepo,
+  disableQrCodeRepo,
   type GetUserQrCodesOptions,
 } from "../repositories/qrCode.repo.js";
 import { getLinkByIdAndUserIdRepo } from "../repositories/link.repo.js";
-import config from "config";
 import dotenv from "dotenv";
 import { NotFoundError, ConflictError } from "../errors/app.error.js";
+import { cacheLink, invalidateCachedLink } from "./linkCache.service.js";
 
 // ----------------------------------------------------------------
 // Types
@@ -31,8 +31,8 @@ export interface QrCodeSummary {
   id: string;
   userId: number;
   urlMappingId: string;
-  destinationUrl: string;     // tracking URL ({shortUrl}?r=qr)
-  displayUrl: string;         // clean URL for display (no ?r=qr)
+  destinationUrl: string; // tracking URL ({shortUrl}?r=qr)
+  displayUrl: string; // clean URL for display (no ?r=qr)
   shortCode: string | null;
   title: string | null;
   fgColor: string;
@@ -115,7 +115,7 @@ export const createQrCodeFromExistingLink = async (
     size?: number;
     title?: string | null;
   },
-  userId: number
+  userId: number,
 ): Promise<QrCodeSummary> => {
   const link = await getLinkByIdAndUserIdRepo(input.urlMappingId, userId);
   if (!link) {
@@ -128,7 +128,8 @@ export const createQrCodeFromExistingLink = async (
     throw new ConflictError("Link short code is not ready yet.");
   }
 
-  const baseUrl = process.env.SHORT_LINK_BASE_URL ?? 'http://localhost:3000/api/v1';
+  const baseUrl =
+    process.env.SHORT_LINK_BASE_URL ?? "http://localhost:3000/api/v1";
 
   const destinationUrl = `${baseUrl}/${link.short_code}`;
 
@@ -140,7 +141,9 @@ export const createQrCodeFromExistingLink = async (
     ...(input.title !== undefined ? { title: input.title } : {}),
     ...(input.fgColor ? { fgColor: input.fgColor } : {}),
     ...(input.bgColor ? { bgColor: input.bgColor } : {}),
-    ...(input.errorCorrection ? { errorCorrection: input.errorCorrection } : {}),
+    ...(input.errorCorrection
+      ? { errorCorrection: input.errorCorrection }
+      : {}),
     ...(input.size ? { size: input.size } : {}),
   });
 
@@ -161,7 +164,7 @@ export const createQrCodeFromExistingLink = async (
 // ----------------------------------------------------------------
 
 export const createQrCodeForLink = async (input: {
-  destinationUrl: string;  // the plain short URL
+  destinationUrl: string; // the plain short URL
   urlMappingId: bigint;
   shortCode: string;
   userId: number;
@@ -199,6 +202,8 @@ export const createQrCodeForLink = async (input: {
 
   try {
     await setUrlMappingHasQrRepo(input.urlMappingId, true);
+    // Invalidate cache for the short code so that the redirect endpoint will fetch the updated has_qr=true value on next hit
+    await invalidateCachedLink(input.shortCode)
   } catch (err) {
     logger.warn("QR: failed to set has_qr on url_mapping", { error: err });
   }
@@ -234,7 +239,7 @@ export const getUserQrCodes = async (
 
   const nextCursor =
     hasNextPage && items.length > 0
-      ? items.at(-1)?.id.toString() ?? null
+      ? (items.at(-1)?.id.toString() ?? null)
       : null;
 
   return { qrCodes, hasNextPage, nextCursor };
@@ -269,24 +274,18 @@ export const getQrCodeByShortCode = async (
 // ----------------------------------------------------------------
 // Soft delete
 // ----------------------------------------------------------------
-
 export const deleteQrCode = async (
   id: bigint,
   userId: number,
 ): Promise<void> => {
-  const deleted = await softDeleteQrCodeRepo(id, userId);
+  try {
+    const deletedQr = await disableQrCodeRepo(id, userId);
 
-  if (!deleted) {
-    throw new NotFoundError("QR code not found.");
-  }
-
-  // Clear has_qr flag on the companion url_mapping
-  if (deleted.url_mapping_id) {
-    try {
-      await setUrlMappingHasQrRepo(deleted.url_mapping_id, false);
-    } catch (err) {
-      logger.warn("QR: failed to clear has_qr on url_mapping", { error: err });
+    if (deletedQr.short_code) {
+      await invalidateCachedLink(deletedQr.short_code);
     }
+  } catch (error: any) {
+    throw error;
   }
 };
 
@@ -314,7 +313,8 @@ export const regenerateQrCode = async (
 
   const fgColor = newOptions.fgColor ?? existing.fg_color;
   const bgColor = newOptions.bgColor ?? existing.bg_color;
-  const errorCorrection = (newOptions.errorCorrection ?? existing.error_correction) as "L" | "M" | "Q" | "H";
+  const errorCorrection = (newOptions.errorCorrection ??
+    existing.error_correction) as "L" | "M" | "Q" | "H";
   const size = newOptions.size ?? existing.size;
 
   const updated = await updateQrCodeRepo(id, userId, {

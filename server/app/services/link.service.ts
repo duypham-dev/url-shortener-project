@@ -139,9 +139,17 @@ export const getLinkInfoByShortCode = async (
 // Resolve a short code to its long URL (used by redirect controller)
 // Only fetches the long_url column — no need for other fields.
 // ----------------------------------------------------------------
-export const getLongUrlByShortCode = async (shortCode: string): Promise<string | null> => {
+export const getLongUrlByShortCode = async (shortCode: string): Promise<{ longUrl: string; hasActiveQr: boolean } | null> => {
   const record = await getLongUrlByShortCodeRepo(shortCode);
-  return record?.long_url ?? null;
+
+  if (!record) {
+    return null;
+  }
+
+  return {
+    longUrl: record.long_url,
+    hasActiveQr: record.has_qr,
+  };
 };
 
 // ----------------------------------------------------------------

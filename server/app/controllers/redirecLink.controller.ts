@@ -30,7 +30,7 @@ const buildClickMessage = (
   shortCode: string,
   longUrl: string,
   ip: string,
-  interactionType: 'CLICK' | 'SCAN',
+  interactionType: "CLICK" | "SCAN",
 ): ClickTrackInput => ({
   shortCode,
   longUrl,
@@ -83,12 +83,9 @@ const redirectLink = async (
   next: NextFunction,
 ) => {
   const { shortCode } = req.params as { shortCode: string };
-
-  // Detect whether this hit came from a QR code scan:
-  //   - QR images encode {shortUrl}?r=qr
-  //   - When scanned, Express parses r=qr into req.query
-  const interactionType: 'CLICK' | 'SCAN' =
-    req.query.r === 'qr' ? 'SCAN' : 'CLICK';
+  const requestedScan = req.query.r === "qr";
+  const interactionType: "CLICK" | "SCAN" =
+    req.query.r === "qr" ? "SCAN" : "CLICK";
 
   logger.info("Redirect requested", { shortCode, interactionType });
 
@@ -97,34 +94,40 @@ const redirectLink = async (
     const isUnique = await trackUniqueClick(shortCode, ip);
 
     // Check Redis cache first — avoids DB query on hot paths
-    const cachedUrl = await getCachedLink(shortCode);
-    if (cachedUrl) {
+    let cachedData = await getCachedLink(shortCode);
+
+    if (!cachedData) {
+      logger.info("Cache miss — querying database", { shortCode });
+
+      const mapping = await getLongUrlByShortCode(shortCode);
+
+      if (!mapping) throw new NotFoundError("URL not found");
+
+      cachedData = {
+        longUrl: mapping.longUrl,
+        hasActiveQr: mapping.hasActiveQr, // Lấy trạng thái QR từ DB
+      };
+
+      void cacheLink(shortCode, cachedData.longUrl, cachedData.hasActiveQr);
+    } else {
       logger.info("Cache hit", { shortCode });
-      if (isUnique) {
-        void publishClickEvent(
-          buildClickMessage(req, shortCode, cachedUrl, ip, interactionType),
-        );
-      }
-      return res.redirect(cachedUrl);
     }
-
-    logger.info("Cache miss — querying database", { shortCode });
-
-    const longUrl = await getLongUrlByShortCode(shortCode);
-    if (!longUrl) {
-      throw new NotFoundError("URL not found");
-    }
-
-    // Populate cacthe for subsequent requess (fire-and-forget)
-    void cacheLink(shortCode, longUrl);
+    const interactionType: "CLICK" | "SCAN" =
+      requestedScan && cachedData.hasActiveQr ? "SCAN" : "CLICK";
 
     if (isUnique) {
       void publishClickEvent(
-        buildClickMessage(req, shortCode, longUrl, ip, interactionType),
+        buildClickMessage(
+          req,
+          shortCode,
+          cachedData.longUrl,
+          ip,
+          interactionType,
+        ),
       );
     }
-
-    return res.redirect(longUrl);
+   
+    return res.redirect(cachedData.longUrl);
   } catch (error) {
     next(error);
   }
