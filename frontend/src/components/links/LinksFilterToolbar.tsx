@@ -3,7 +3,7 @@ import { Search, X } from "lucide-react";
 import DisplaySettings from "./DisplaySettings";
 import DateFilterPopover from "../DateFilterPopover";
 import FilterPopover from "../FilterPopover";
-import type { DateFilter, LinkFilters } from "../../types/filter.type";
+import type { DateFilter, LinkFilters, SortFilter } from "../../types/filter.type";
 
 interface LinksFilterToolbarProps {
   searchTerm: string;
@@ -13,6 +13,8 @@ interface LinksFilterToolbarProps {
   onDateFilterChange: (filter: DateFilter) => void;
   linkFilters: LinkFilters;
   onLinkFiltersChange: (filter: LinkFilters) => void;
+  sortFilter: SortFilter;
+  onSortChange: (filter: SortFilter) => void;
   hasActiveFilters: boolean;
   onClearAllFilters: () => void;
 }
@@ -25,6 +27,8 @@ const LinksFilterToolbarComponent: React.FC<LinksFilterToolbarProps> = ({
   onDateFilterChange,
   linkFilters,
   onLinkFiltersChange,
+  sortFilter,
+  onSortChange,
   hasActiveFilters,
   onClearAllFilters,
 }) => {
@@ -49,7 +53,10 @@ const LinksFilterToolbarComponent: React.FC<LinksFilterToolbarProps> = ({
       </div>
       <DateFilterPopover filter={dateFilter} onFilterChange={onDateFilterChange} />
       <FilterPopover filter={linkFilters} onFilterChange={onLinkFiltersChange} />
-      <DisplaySettings />
+      <DisplaySettings 
+        sortFilter={sortFilter}
+        onSortChange={onSortChange}
+      />
       {hasActiveFilters && (
         <button
           onClick={onClearAllFilters}

@@ -3,16 +3,26 @@ export interface DateFilter {
   endDate: Date | null;
 }
 
+export interface SortFilter {
+  sortBy: string;
+  sortOrder: string;
+}
+
 export interface LinkFilters {
   tags: string[];
   attachedQR: string;
   expiration: string;
 }
 
+
 export interface LinksQueryParams {
   search: string;
   dateFilter: DateFilter;
   linkFilters: LinkFilters;
+  sortBy?: string;
+  sortOrder?: string;
+  page?: number;
+  limit?: number;
 }
 
 export const INITIAL_DATE_FILTER: DateFilter = { startDate: null, endDate: null };

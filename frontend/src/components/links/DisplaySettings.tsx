@@ -17,9 +17,21 @@ import {
 import TuneIcon from '@mui/icons-material/Tune';
 import GridViewIcon from '@mui/icons-material/GridView';
 import ViewListIcon from '@mui/icons-material/ViewList';
+import ArrowDownwardIcon from '@mui/icons-material/ArrowDownward';
+import type { SortFilter } from '../../types/filter.type';
+import ArrowUpwardIcon from '@mui/icons-material/ArrowUpward'; 
+import type { SelectChangeEvent } from '@mui/material';
 
-const DisplaySettingsButton: React.FC = () => {
-  // MUI dùng anchorEl (DOM node) thay vì boolean để xác định vị trí neo Popover
+
+interface DisplaySettingsProps {
+  sortFilter: SortFilter;
+  onSortChange: (sortFilter: SortFilter) => void;
+}
+
+const DisplaySettingsButton: React.FC<DisplaySettingsProps> = ({ 
+  sortFilter,
+  onSortChange 
+}) => {
   const [anchorEl, setAnchorEl] = useState<HTMLButtonElement | null>(null);
 
   const handleClick = (event: React.MouseEvent<HTMLButtonElement>) => {
@@ -30,8 +42,15 @@ const DisplaySettingsButton: React.FC = () => {
     setAnchorEl(null);
   };
 
+  const handleSelectSortChange = (event: SelectChangeEvent) => {
+    const [newSortBy, newSortOrder] = event.target.value.split('-');
+    onSortChange({ sortBy: newSortBy, sortOrder: newSortOrder });
+  };
+
+
   const open = Boolean(anchorEl);
   const id = open ? 'display-settings-popover' : undefined;
+  const currentSortValue = `${sortFilter.sortBy}-${sortFilter.sortOrder}`;
 
   return (
     <>
@@ -62,14 +81,14 @@ const DisplaySettingsButton: React.FC = () => {
         slotProps={{
           paper: {
             sx: {
-              mt: 1, 
+              mt: 1,
             }
           }
         }}
       >
-        {/* Nội dung bên trong Popover */}
+        {/* Content inside Popover */}
         <Box sx={{ width: 320, p: 2 }}>
-          {/* Phần 1: Chọn Layout (Cards / Rows) */}
+          {/* Layout (Cards / Rows) */}
           <Stack direction="row" spacing={1} sx={{ mb: 2 }}>
             <Button
               variant="outlined"
@@ -92,20 +111,37 @@ const DisplaySettingsButton: React.FC = () => {
 
           <Divider sx={{ my: 1.5 }} />
 
-          {/* Phần 2: Ordering */}
+          {/* Ordering */}
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
             <Typography variant="body2">Ordering</Typography>
             <FormControl size="small" sx={{ minWidth: 140 }}>
-              <Select defaultValue="date">
-                <MenuItem value="date">Date created</MenuItem>
-                <MenuItem value="name">Name</MenuItem>
+             <Select 
+                value={currentSortValue} 
+                onChange={handleSelectSortChange}
+              >
+                <MenuItem value="createdAt-desc" sx={{ display: 'flex', alignItems: 'center' }}>
+                  <ArrowDownwardIcon sx={{ fontSize: 'small', mr: 1 }} />
+                  Date created
+                </MenuItem>
+                <MenuItem value="createdAt-asc" sx={{ display: 'flex', alignItems: 'center' }}>
+                  <ArrowUpwardIcon sx={{ fontSize: 'small', mr: 1 }} />
+                  Date created
+                </MenuItem>
+                <MenuItem value="title-asc" sx={{ display: 'flex', alignItems: 'center' }}>
+                  <ArrowDownwardIcon sx={{ fontSize: 'small', mr: 1 }} />
+                  Title (A-Z)
+                </MenuItem>
+                <MenuItem value="title-desc" sx={{ display: 'flex', alignItems: 'center' }}>
+                  <ArrowUpwardIcon sx={{ fontSize: 'small', mr: 1 }} />
+                  Title (Z-A)
+                </MenuItem>
               </Select>
             </FormControl>
           </Box>
 
           <Divider sx={{ my: 1.5 }} />
 
-          {/* Phần 3: Switch */}
+          {/* Switch */}
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
             <Typography variant="body2">Show archived links</Typography>
             <Switch size="small" />
@@ -113,7 +149,7 @@ const DisplaySettingsButton: React.FC = () => {
 
           <Divider sx={{ my: 1.5 }} />
 
-          {/* Phần 4: Properties Tags */}
+          {/* Properties Tags */}
           <Box>
             <Typography
               variant="caption"

@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect, useCallback } from "react";
 import { useSearchParams } from "react-router-dom";
-import type { DateFilter, LinkFilters, LinksQueryParams } from "../types/filter.type";
+import type { DateFilter, LinkFilters, LinksQueryParams, SortFilter } from "../types/filter.type";
 import { INITIAL_LINK_FILTERS } from "../types/filter.type";
 import { format, parse, isValid } from 'date-fns';
 
@@ -17,11 +17,20 @@ export const useLinkFilters = () => {
   const searchParam = searchParams.get("search") || "";
   const startDateParam = searchParams.get("startDate");
   const endDateParam = searchParams.get("endDate");
+  const sortByParam = searchParams.get("sortBy") || "createdAt";
+  const sortOrderParam = searchParams.get("sortOrder") || "desc";
+  const pageParam = searchParams.get("page") || 1;
+  const limitParam = searchParams.get("limit") || 10;
 
   const dateFilter: DateFilter = useMemo(() => ({
     startDate: safeParseDate(startDateParam),
     endDate: safeParseDate(endDateParam),
   }), [startDateParam, endDateParam]);
+
+  const sortFilter: SortFilter = useMemo(() => ({
+    sortBy: sortByParam,
+    sortOrder: sortOrderParam,
+  }), [sortByParam, sortOrderParam]);
 
   const hasActiveFilters = !!searchParam || !!startDateParam || !!endDateParam;
 
@@ -40,7 +49,10 @@ export const useLinkFilters = () => {
     search: searchParam,
     dateFilter,
     linkFilters,
-  }), [searchParam, dateFilter, linkFilters]);
+    sortFilter,
+    page: Number(pageParam),
+    limit: Number(limitParam),
+  }), [searchParam, dateFilter, linkFilters, sortFilter, pageParam, limitParam]);
 
   const handleSearchTermChange = useCallback((value: string) => {
     setDraftSearchTerm(value);
@@ -80,6 +92,16 @@ export const useLinkFilters = () => {
     // Note: Link filters are not synced to URL yet as backend doesn't support them fully
   }, []);
 
+  const handleSortChange = useCallback((newSortFilter: SortFilter) => {
+    setSearchParams(prev => {
+      const next = new URLSearchParams(prev);
+      next.set("sortBy", newSortFilter.sortBy);
+      next.set("sortOrder", newSortFilter.sortOrder);
+      next.set("page", "1");
+      return next;
+    });
+  }, [setSearchParams]);
+
   const handleClearAllFilters = useCallback(() => {
     setSearchParams(new URLSearchParams());
     setDraftSearchTerm("");
@@ -90,12 +112,14 @@ export const useLinkFilters = () => {
     draftSearchTerm,
     dateFilter,
     linkFilters,
+    sortFilter,
     hasActiveFilters,
     queryParams,
     handleSearchTermChange,
     handleSearchSubmit,
     handleDateFilterChange,
     handleLinkFiltersChange,
+    handleSortChange,
     handleClearAllFilters
   };
 };

@@ -34,6 +34,8 @@ export const Links: React.FC = () => {
         onDateFilterChange={filters.handleDateFilterChange}
         linkFilters={filters.linkFilters}
         onLinkFiltersChange={filters.handleLinkFiltersChange}
+        sortFilter={filters.sortFilter}
+        onSortChange={filters.handleSortChange}
         hasActiveFilters={filters.hasActiveFilters}
         onClearAllFilters={filters.handleClearAllFilters}
       />

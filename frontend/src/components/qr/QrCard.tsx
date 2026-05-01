@@ -3,7 +3,6 @@ import React, { useCallback } from "react";
 import { QRCodeSVG } from "qrcode.react";
 import {
   Download,
-  Trash2,
   RefreshCw,
   Copy,
   ExternalLink,
