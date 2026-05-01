@@ -10,6 +10,8 @@ import {
   QrCode,
   Calendar,
   BarChart2,
+  Lock,
+  Unlock,
 } from "lucide-react";
 import type { QrCodeItem } from "../types/qr.type";
 import { useCopyToClipboard } from "../hooks/useCopyToClipboard";
@@ -17,7 +19,7 @@ import { formatDate } from "../utils/date";
 
 interface QrCardProps {
   qrCode: QrCodeItem;
-  onDelete?: (id: string) => void;
+  onDisable?: (id: string, currentStatus: boolean) => void;
   onRegenerate?: (id: string) => void;
 }
 
@@ -27,7 +29,7 @@ const getShortUrlDisplay = (shortCode: string | null): string => {
 };
 
 export const QrCard: React.FC<QrCardProps> = React.memo(
-  ({ qrCode, onDelete, onRegenerate }) => {
+  ({ qrCode, onDisable, onRegenerate }) => {
     const [copiedValue, copy] = useCopyToClipboard();
 
     const shortUrlDisplay = getShortUrlDisplay(qrCode.shortCode);
@@ -58,38 +60,47 @@ export const QrCard: React.FC<QrCardProps> = React.memo(
     }, [qrCode]);
 
     return (
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 mb-4 hover:shadow-md transition-shadow">
+      <div className={`bg-white rounded-lg shadow-sm border border-gray-200 p-4 mb-4 transition-shadow ${!qrCode.isActive ? "opacity-75 bg-gray-50" : "hover:shadow-md"}`}>
         <div className="flex flex-col sm:flex-row gap-4">
           {/* QR Code Preview */}
-          <div
-            id={`qr-svg-${qrCode.id}`}
-            className="w-20 h-20 shrink-0 border border-gray-200 rounded-lg overflow-hidden flex items-center justify-center bg-white p-1"
-          >
-            <QRCodeSVG
-              value={qrCode.destinationUrl}
-              size={72}
-              fgColor={qrCode.fgColor}
-              bgColor={qrCode.bgColor}
-              level={qrCode.errorCorrection as "L" | "M" | "Q" | "H"}
-            />
+          <div className="relative">
+            <div
+              id={`qr-svg-${qrCode.id}`}
+              className={`w-20 h-20 shrink-0 border border-gray-200 rounded-lg overflow-hidden flex items-center justify-center bg-white p-1 ${!qrCode.isActive ? "grayscale blur-[2px]" : ""}`}
+            >
+              <QRCodeSVG
+                value={qrCode.destinationUrl}
+                size={72}
+                fgColor={qrCode.fgColor}
+                bgColor={qrCode.bgColor}
+                level={qrCode.errorCorrection as "L" | "M" | "Q" | "H"}
+              />
+            </div>
+            {!qrCode.isActive && (
+              <div className="absolute inset-0 flex items-center justify-center bg-black/5 rounded-lg">
+                <Lock size={32} className="text-gray-700 drop-shadow-md" />
+              </div>
+            )}
           </div>
 
           {/* Main Content */}
           <div className="flex-1 min-w-0">
             {/* Title row + actions */}
             <div className="flex justify-between items-start gap-4">
-              <h3 className="font-bold text-gray-900 text-base truncate" title={displayTitle}>
+              <h3 className={`font-bold text-base truncate ${!qrCode.isActive ? "text-gray-500" : "text-gray-900"}`} title={displayTitle}>
                 {displayTitle}
               </h3>
               <div className="flex items-center text-gray-500 gap-2 shrink-0">
-                <button
-                  onClick={handleDownload}
-                  className="p-1 hover:bg-gray-100 rounded-md transition-colors"
-                  title="Download QR"
-                >
-                  <Download size={15} />
-                </button>
-                {onRegenerate && (
+                {qrCode.isActive && (
+                  <button
+                    onClick={handleDownload}
+                    className="p-1 hover:bg-gray-100 rounded-md transition-colors"
+                    title="Download QR"
+                  >
+                    <Download size={15} />
+                  </button>
+                )}
+                {onRegenerate && qrCode.isActive && (
                   <button
                     onClick={() => onRegenerate(qrCode.id)}
                     className="p-1 hover:bg-gray-100 rounded-md transition-colors"
@@ -98,13 +109,13 @@ export const QrCard: React.FC<QrCardProps> = React.memo(
                     <RefreshCw size={15} />
                   </button>
                 )}
-                {onDelete && (
+                {onDisable && (
                   <button
-                    onClick={() => onDelete(qrCode.id)}
-                    className="p-1 hover:bg-red-50 text-red-400 hover:text-red-600 rounded-md transition-colors"
-                    title="Delete QR"
+                    onClick={() => onDisable(qrCode.id, qrCode.isActive)}
+                    className={`p-1 rounded-md transition-colors ${qrCode.isActive ? "hover:bg-red-50 text-red-500 hover:text-red-700" : "hover:bg-green-50 text-green-500 hover:text-green-700"}`}
+                    title={qrCode.isActive ? "Lock QR" : "Unlock QR"}
                   >
-                    <Trash2 size={15} />
+                    {qrCode.isActive ? <Lock size={15} /> : <Unlock size={15} />}
                   </button>
                 )}
               </div>

@@ -57,11 +57,19 @@ export const getQrCodeById = async (id: string): Promise<QrCodeItem> => {
 };
 
 // ----------------------------------------------------------------
-// Delete a QR code (soft delete)
+// Disable / Lock a QR code
 // ----------------------------------------------------------------
 
-export const deleteQrCode = async (id: string): Promise<void> => {
-  await axiosClient.delete(`/qr-codes/${id}`);
+export const disableQrCode = async (id: string): Promise<void> => {
+  await axiosClient.patch(`/qr-codes/${id}/disable`);
+};
+
+// ----------------------------------------------------------------
+// Enable / Unlock a QR code
+// ----------------------------------------------------------------
+
+export const enableQrCode = async (id: string): Promise<void> => {
+  await axiosClient.patch(`/qr-codes/${id}/enable`);
 };
 
 // ----------------------------------------------------------------

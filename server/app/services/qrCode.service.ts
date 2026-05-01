@@ -8,6 +8,7 @@ import {
   setUrlMappingHasQrRepo,
   incrementQrCodeUsageRepo,
   disableQrCodeRepo,
+  enableQrCodeRepo,
   type GetUserQrCodesOptions,
 } from "../repositories/qrCode.repo.js";
 import { getLinkByIdAndUserIdRepo } from "../repositories/link.repo.js";
@@ -272,17 +273,35 @@ export const getQrCodeByShortCode = async (
 };
 
 // ----------------------------------------------------------------
-// Soft delete
+// Soft delete / Lock
 // ----------------------------------------------------------------
-export const deleteQrCode = async (
+export const disableQrCode = async (
   id: bigint,
   userId: number,
 ): Promise<void> => {
   try {
-    const deletedQr = await disableQrCodeRepo(id, userId);
+    const disabledQr = await disableQrCodeRepo(id, userId);
 
-    if (deletedQr.short_code) {
-      await invalidateCachedLink(deletedQr.short_code);
+    if (disabledQr.short_code) {
+      await invalidateCachedLink(disabledQr.short_code);
+    }
+  } catch (error: any) {
+    throw error;
+  }
+};
+
+// ----------------------------------------------------------------
+// Enable / Unlock
+// ----------------------------------------------------------------
+export const enableQrCode = async (
+  id: bigint,
+  userId: number,
+): Promise<void> => {
+  try {
+    const enabledQr = await enableQrCodeRepo(id, userId);
+
+    if (enabledQr.short_code) {
+      await invalidateCachedLink(enabledQr.short_code);
     }
   } catch (error: any) {
     throw error;

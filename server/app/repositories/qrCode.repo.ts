@@ -1,13 +1,3 @@
-/**
- * qrCode.repo.ts
- *
- * Repository layer for qr_codes table.
- * All DB access for QR codes goes through here — services must not import prisma directly.
- *
- * Key constraints:
- *   - url_mapping_id is NON-NULLABLE and UNIQUE (1-to-1 with url_mappings)
- *   - Every QR code must have a companion short link
- */
 import { prisma } from "../libs/prisma.js";
 import type { Prisma } from "../../generated/prisma/client.js";
 
@@ -77,7 +67,7 @@ export const getUserQrCodesRepo = async (
 
   const whereClause: Prisma.qr_codesWhereInput = {
     user_id: userId,
-    is_active: true,
+    // is_active: true,
   };
 
   if (search) {
@@ -137,7 +127,7 @@ export const getQrCodeByShortCodeRepo = async (
   userId: number,
 ) => {
   return prisma.qr_codes.findFirst({
-    where: { short_code: shortCode, user_id: userId, is_active: true },
+    where: { short_code: shortCode, user_id: userId },
     select: {
       id: true,
       user_id: true,
@@ -175,7 +165,7 @@ export const updateQrCodeRepo = async (
 };
 
 // ----------------------------------------------------------------
-// Soft delete
+// Soft delete / Lock
 // ----------------------------------------------------------------
 export const disableQrCodeRepo = async (id: bigint, userId: number) => {
   return prisma.$transaction(async (tx) => {
@@ -193,6 +183,25 @@ export const disableQrCodeRepo = async (id: bigint, userId: number) => {
       });
     }
     return disabledQr;
+  });
+};
+
+export const enableQrCodeRepo = async (id: bigint, userId: number) => {
+  return prisma.$transaction(async (tx) => {
+    const enabledQr = await tx.qr_codes.update({
+      where: { id, user_id: userId },
+      data: { is_active: true, updated_at: new Date() },
+      select: { url_mapping_id: true, short_code: true }, 
+    });
+
+    // Set has_qr flag on the companion url_mapping
+    if (enabledQr.url_mapping_id) {
+      await tx.url_mappings.update({
+        where: { id: enabledQr.url_mapping_id },
+        data: { has_qr: true },
+      });
+    }
+    return enabledQr;
   });
 };
 

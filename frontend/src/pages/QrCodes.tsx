@@ -4,7 +4,6 @@ import React, { useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 
-
 // Hooks
 import { useQrCodes } from "../hooks/useQrCodes";
 import { useQrFilters } from "../hooks/useQrFilters";
@@ -18,7 +17,7 @@ import {
 } from "../store/usePlanStore";
 
 // API
-import { deleteQrCode } from "../api/qrCode.api";
+import { disableQrCode, enableQrCode } from "../api/qrCode.api";
 
 // Components
 import { QrPageHeader } from "../components/qr/QrPageHeader";
@@ -47,14 +46,21 @@ export const QrCodes: React.FC = () => {
   // Data
   const { qrCodes, isLoading, error } = useQrCodes(filters.queryParams);
 
-  const handleDelete = useCallback(
-    async (id: string) => {
-      if (!confirm("Delete this QR code? This cannot be undone.")) return;
+  const handleToggleActive = useCallback(
+    async (id: string, currentStatus: boolean) => {
+      const action = currentStatus ? "disable" : "enable";
+      const pastTense = currentStatus ? "disabled" : "enabled";
+
+      if (!confirm(`Are you sure you want to ${action} this QR code?`)) return;
       try {
-        await deleteQrCode(id);
+        if (currentStatus) {
+          await disableQrCode(id);
+        } else {
+          await enableQrCode(id);
+        }
         queryClient.invalidateQueries({ queryKey: ["userQrCodes"] });
       } catch (err) {
-        console.error("Failed to delete QR code", err);
+        console.error(`Failed to ${action} QR code`, err);
       }
     },
     [queryClient],
@@ -105,7 +111,7 @@ export const QrCodes: React.FC = () => {
         qrCodes={qrCodes}
         isLoading={isLoading}
         error={error}
-        onDelete={handleDelete}
+        onDisable={handleToggleActive}
       />
     </div>
   );

@@ -17,7 +17,8 @@ import {
   createQrCodeHandler,
   getUserQrCodesHandler,
   getQrCodeByIdHandler,
-  deleteQrCodeHandler,
+  disableQrCodeHandler,
+  enableQrCodeHandler,
   regenerateQrCodeHandler,
   getQrCodeByShortCodeHandler,
 } from "../controllers/qrCode.controller.js";
@@ -57,12 +58,20 @@ router.get(
   getQrCodeByIdHandler,
 );
 
-// DELETE /api/v1/qr-codes/:id — soft delete (inactive)
-router.delete(
-  "/qr-codes/:id",
+// PATCH /api/v1/qr-codes/:id/disable — lock QR code
+router.patch(
+  "/qr-codes/:id/disable",
   verifyToken,
   validate(qrCodeIdSchema),
-  deleteQrCodeHandler,
+  disableQrCodeHandler,
+);
+
+// PATCH /api/v1/qr-codes/:id/enable — unlock QR code
+router.patch(
+  "/qr-codes/:id/enable",
+  verifyToken,
+  validate(qrCodeIdSchema),
+  enableQrCodeHandler,
 );
 
 // PATCH /api/v1/qr-codes/:id/regenerate — update style + re-upload

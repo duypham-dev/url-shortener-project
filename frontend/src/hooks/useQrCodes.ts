@@ -11,7 +11,7 @@ interface UseQrCodesReturn {
   fetchQrCodes: (force?: boolean) => Promise<void>;
 }
 
-const DEFAULT_STALE_TIME_MS = 5 * 60 * 1000; // 5 minutes
+const DEFAULT_STALE_TIME_MS = 1 * 60 * 1000; // 1 minute
 
 export function useQrCodes(params?: QrCodesQueryParams): UseQrCodesReturn {
   const queryClient = useQueryClient();

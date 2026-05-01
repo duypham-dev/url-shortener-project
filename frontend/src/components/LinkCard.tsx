@@ -5,6 +5,7 @@ import { Copy, Edit2, Share2, BarChart2, MoreHorizontal, Calendar, Tag, QrCode }
 import { formatDate } from "../utils/date";
 import { useCopyToClipboard } from "../hooks/useCopyToClipboard";
 import { getShortUrlDisplay } from "../utils/url";
+import { EditLinkModal } from "./links/EditLinkModal";
 
 interface LinkCardProps {
   link: LinkItem;
@@ -14,11 +15,12 @@ export const LinkCard: React.FC<LinkCardProps> = React.memo(({ link }) => {
   const [copiedValue, copy] = useCopyToClipboard();
   const navigate = useNavigate();
   const shortUrlDisplay = getShortUrlDisplay(link.short_code);
+  const [showEditModal, setShowEditModal] = React.useState(false);
 
   const defaultFavicon = "https://t3.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=" + link.long_url + "&size=64";
 
   const navigateToAnalytics = (link: LinkItem) => {
-    navigate(`/dashboard/links/${link.short_code}/analytics`, { state: { link } });
+    navigate(`/dashboard/links/${link.short_code}/analytics`);
   };
 
   /**
@@ -54,7 +56,12 @@ export const LinkCard: React.FC<LinkCardProps> = React.memo(({ link }) => {
               {link.title || link.long_url.substring(0, 50) + "..."}
             </h3>
             <div className="flex items-center text-gray-500 gap-3">
-              <button className="p-1 hover:bg-gray-100 rounded-md transition-colors"><Edit2 size={16} /></button>
+              <button 
+                className="p-1 hover:bg-gray-100 rounded-md transition-colors"
+                onClick={() => setShowEditModal(true)}
+              >
+                <Edit2 size={16} />
+              </button>
               <button className="p-1 hover:bg-gray-100 rounded-md transition-colors"><Share2 size={16} /></button>
               <button
                 onClick={() => navigateToAnalytics(link)}
@@ -121,6 +128,9 @@ export const LinkCard: React.FC<LinkCardProps> = React.memo(({ link }) => {
           </div>
         </div>
       </div>
+      {showEditModal && (
+        <EditLinkModal link={link} onClose={() => setShowEditModal(false)} />
+      )}
     </div>
   );
 });

@@ -3,7 +3,8 @@ import { UnauthorizedError, NotFoundError } from "../errors/app.error.js";
 import {
   getUserQrCodes,
   getQrCodeById,
-  deleteQrCode,
+  disableQrCode,
+  enableQrCode,
   regenerateQrCode,
   getQrCodeByShortCode,
   createQrCodeFromExistingLink,
@@ -102,10 +103,10 @@ export const getQrCodeByIdHandler = async (
 };
 
 // ----------------------------------------------------------------
-// DELETE /api/v1/qr-codes/:id
+// PATCH /api/v1/qr-codes/:id/disable
 // ----------------------------------------------------------------
 
-export const deleteQrCodeHandler = async (
+export const disableQrCodeHandler = async (
   req: Request<{ id: string }>,
   res: Response,
   next: NextFunction,
@@ -114,11 +115,35 @@ export const deleteQrCodeHandler = async (
     const userId = req.user?.userId;
     if (!userId) throw new UnauthorizedError();
 
-    await deleteQrCode(BigInt(req.params.id), userId);
+    await disableQrCode(BigInt(req.params.id), userId);
 
     res.status(200).json({
       success: true,
-      message: "QR code deleted successfully.",
+      message: "QR code disabled successfully.",
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// ----------------------------------------------------------------
+// PATCH /api/v1/qr-codes/:id/enable
+// ----------------------------------------------------------------
+
+export const enableQrCodeHandler = async (
+  req: Request<{ id: string }>,
+  res: Response,
+  next: NextFunction,
+): Promise<void> => {
+  try {
+    const userId = req.user?.userId;
+    if (!userId) throw new UnauthorizedError();
+
+    await enableQrCode(BigInt(req.params.id), userId);
+
+    res.status(200).json({
+      success: true,
+      message: "QR code enabled successfully.",
     });
   } catch (error) {
     next(error);

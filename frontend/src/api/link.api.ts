@@ -47,3 +47,10 @@ export const getLinkInfo = async (shortCode: string): Promise<LinkItem> => {
   const response = (await axiosClient.get(`/links/${shortCode}`)) as ApiEnvelope<LinkItem>;
   return response.data;
 };
+
+export const updateLink = async (
+  shortCode: string,
+  data: { title?: string },
+): Promise<void> => {
+  await axiosClient.patch(`/links/${shortCode}`, data);
+};

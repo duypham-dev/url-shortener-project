@@ -9,7 +9,7 @@ interface QrListCanvasProps {
   qrCodes: QrCodeItem[];
   isLoading: boolean;
   error: string | null;
-  onDelete?: (id: string) => void;
+  onDisable?: (id: string, currentStatus: boolean) => void;
   onRegenerate?: (id: string) => void;
 }
 
@@ -17,7 +17,7 @@ const QrListCanvasComponent: React.FC<QrListCanvasProps> = ({
   qrCodes,
   isLoading,
   error,
-  onDelete,
+  onDisable,
   onRegenerate,
 }) => {
   return (
@@ -46,7 +46,7 @@ const QrListCanvasComponent: React.FC<QrListCanvasProps> = ({
         <QrCard
           key={qr.id}
           qrCode={qr}
-          onDelete={onDelete}
+          onDisable={onDisable}
           onRegenerate={onRegenerate}
         />
       ))}

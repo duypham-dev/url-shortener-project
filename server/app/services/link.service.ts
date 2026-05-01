@@ -16,6 +16,7 @@ import {
   getLinkInfoByShortCodeRepo,
   getLongUrlByShortCodeRepo,
   getUrlOwnerContextRepo,
+  updateLinkRepo,
   type GetUserLinksOptions,
 } from "../repositories/link.repo";
 
@@ -187,4 +188,15 @@ export const publishClickEvent = async (message: ClickTrackInput): Promise<void>
   } catch (error) {
     logger.error('Kafka: failed to publish click event', { error });
   }
+};
+
+// ----------------------------------------------------------------
+// Update a specific link's data (e.g. title)
+// ----------------------------------------------------------------
+export const updateLink = async (
+  shortCode: string,
+  userId: number,
+  data: { title?: string },
+): Promise<void> => {
+  await updateLinkRepo(shortCode, userId, data);
 };

@@ -134,3 +134,13 @@ export const incrementLinkUsageRepo = async (
   });
 };
 
+export const updateLinkRepo = async (
+  shortCode: string,
+  userId: number,
+  data: { title?: string },
+) => {
+  return prisma.url_mappings.updateMany({
+    where: { short_code: shortCode, user_id: userId },
+    data,
+  });
+};

@@ -1,6 +1,6 @@
 import type { NextFunction, Request, Response } from "express";
 import generateShortLink from "../services/generateLink.service.js";
-import { getLinkInfoByShortCode } from "../services/link.service.js";
+import { getLinkInfoByShortCode, updateLink } from "../services/link.service.js";
 import { getUserLinks } from "../services/link.service.js";
 import { createQrCodeForLink } from "../services/qrCode.service.js";
 import { assertCanCreateLink } from "../services/subscriptionAccess.service.js";
@@ -143,8 +143,32 @@ export const getLinkInfor = async (
   }
 };
 
+// Controller function to update link info
+export const updateLinkHandler = async (
+  req: Request<{ shortCode: string }, {}, { title?: string }>,
+  res: Response,
+  next: NextFunction,
+): Promise<void> => {
+  try {
+    const userId = req.user?.userId;
+    const { shortCode } = req.params;
+    const { title } = req.body;
+
+    if (!userId) {
+      throw new UnauthorizedError("Unauthorized.");
+    }
+
+    await updateLink(shortCode, userId, { ...(title !== undefined && { title }) });
+
+    res.status(200).json({ success: true, message: "Link updated successfully." });
+  } catch (error) {
+    next(error);
+  }
+};
+
 export const linkController = {
     genShortLink,
     getLinksList,
     getLinkInfor,
+    updateLinkHandler,
 }

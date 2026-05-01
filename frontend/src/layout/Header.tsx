@@ -24,7 +24,7 @@ export const Header: React.FC = () => {
   }, []);
   
   return (
-    <header className="h-16 border-b border-gray-200 bg-white flex items-center justify-between px-6 sticky top-0  z-20">
+    <header className="h-16 border-b border-gray-200 bg-white flex items-center justify-between px-6 sticky top-0 z-10">
       {/* Left section empty for spacing or mobile menu */}
       <div className="flex-1 flex items-center">
         {/* Mobile menu button could go here */}

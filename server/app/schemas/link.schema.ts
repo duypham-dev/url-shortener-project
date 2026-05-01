@@ -24,4 +24,11 @@ export const getLinksQuerySchema = z.object({
   })
 });
 
-
+export const updateLinkSchema = z.object({
+  params: z.object({
+    shortCode: z.string().min(1),
+  }),
+  body: z.object({
+    title: z.string().max(255).optional(),
+  }),
+});

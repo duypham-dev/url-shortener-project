@@ -72,13 +72,12 @@ export const LinkAnalytics: React.FC = () => {
   // ---- Chart data ----
   const activeMode = timeseries?.mode ?? mode;
 
-const formatLabel = useCallback((bucket: string) => {
-  if (activeMode === "last24h") {
-    return format(new Date(bucket + ":00Z"), "HH:mm");
-  }
-  
-  return format(parseISO(bucket), "dd/MM");
-}, [activeMode]);
+  const formatLabel = useCallback((bucket: string) => {
+    if (activeMode === "last24h") {
+      return format(new Date(bucket + ":00Z"), "HH:mm");
+    }
+    return format(parseISO(bucket), "dd/MM");
+  }, [activeMode]);
 
   const chartData = useMemo(
     () =>
