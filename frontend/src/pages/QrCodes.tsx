@@ -93,7 +93,7 @@ export const QrCodes: React.FC = () => {
         isPlanLoading={isPlanLoading}
       />
 
-      <LinksFilterToolbar
+      {/* <LinksFilterToolbar
         searchTerm={filters.draftSearchTerm}
         onSearchTermChange={filters.handleSearchTermChange}
         onSearchSubmit={filters.handleSearchSubmit}
@@ -103,7 +103,7 @@ export const QrCodes: React.FC = () => {
         onLinkFiltersChange={() => {}}
         hasActiveFilters={filters.hasActiveFilters}
         onClearAllFilters={filters.handleClearAllFilters}
-      />
+      /> */}
 
       <LinksSecondaryToolbar />
 

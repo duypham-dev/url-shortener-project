@@ -19,8 +19,7 @@ export interface LinksQueryParams {
   search: string;
   dateFilter: DateFilter;
   linkFilters: LinkFilters;
-  sortBy?: string;
-  sortOrder?: string;
+  sortFilter: SortFilter;
   page?: number;
   limit?: number;
 }

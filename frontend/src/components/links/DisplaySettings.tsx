@@ -25,7 +25,7 @@ import type { SelectChangeEvent } from '@mui/material';
 
 interface DisplaySettingsProps {
   sortFilter: SortFilter;
-  onSortChange: (sortFilter: SortFilter) => void;
+  onSortChange: (filter: SortFilter) => void;
 }
 
 const DisplaySettingsButton: React.FC<DisplaySettingsProps> = ({ 

@@ -21,6 +21,8 @@ export const getLinksQuerySchema = z.object({
     search: z.string().optional(),
     startDate: z.iso.datetime().optional(),
     endDate: z.iso.datetime().optional(),
+    sortBy: z.enum(["title", "createdAt", "clickCount"]).optional(),
+    sortOrder: z.enum(["asc", "desc"]).optional().default("desc"),
   })
 });
 

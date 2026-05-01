@@ -11,12 +11,12 @@ interface UseLinksReturn {
   fetchLinks: (force?: boolean) => Promise<void>;
 }
 
-const DEFAULT_STALE_TIME_MS = 5 * 60 * 1000; // 5 minutes
+const DEFAULT_STALE_TIME_MS = 1 * 60 * 1000; // 5 minutes
 
 export function useLinks(params: LinksQueryParams): UseLinksReturn {
   const staleTimeMs = DEFAULT_STALE_TIME_MS;
   const queryClient = useQueryClient();
-
+  console.log("useLinks: ", params)
   const { data, isLoading, error, refetch } = useQuery<LinkItem[], Error>({
     queryKey: ['userLinks', params], // Include params in the query key for caching
     queryFn: async () => {

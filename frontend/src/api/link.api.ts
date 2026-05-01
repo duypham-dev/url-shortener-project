@@ -38,6 +38,12 @@ export const getUserLinks = async (params?: LinksQueryParams): Promise<LinkItem[
     end.setHours(23, 59, 59, 999);
     query.endDate = end.toISOString();
   }
+  if (params?.sortFilter?.sortBy) {
+    query.sortBy = params.sortFilter.sortBy;
+  }
+  if (params?.sortFilter?.sortOrder) {
+    query.sortOrder = params.sortFilter.sortOrder;
+  }
 
   const response = (await axiosClient.get("/links", { params: query })) as ApiEnvelope<LinkItem[]>;
   return response.data || [];

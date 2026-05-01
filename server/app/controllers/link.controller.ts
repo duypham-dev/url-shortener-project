@@ -94,6 +94,8 @@ export const getLinksList = async (req: Request, res: Response, next: NextFuncti
     const search = req.query.search as string | undefined;
     const startDate = req.query.startDate as string | undefined;
     const endDate = req.query.endDate as string | undefined;
+    const sortBy = req.query.sortBy as string | undefined;
+    const sortOrder = req.query.sortOrder as string | undefined;
 
     const { links, hasNextPage, nextCursor } = await getUserLinks(userId, {
       limit,
@@ -101,6 +103,8 @@ export const getLinksList = async (req: Request, res: Response, next: NextFuncti
       ...(search !== undefined ? { search } : {}),
       ...(startDate !== undefined ? { startDate } : {}),
       ...(endDate !== undefined ? { endDate } : {}),
+      ...(sortBy !== undefined ? { sortBy } : {}),
+      ...(sortOrder !== undefined ? { sortOrder } : {}),
     });
     
     res.status(200).json({

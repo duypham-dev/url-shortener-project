@@ -33,6 +33,8 @@ export interface GetUserLinksOptions {
   search?: string;
   startDate?: string;
   endDate?: string;
+  sortBy?: string;
+  sortOrder?: string;
 }
 
 /**
@@ -42,7 +44,7 @@ export const getUserLinksRepo = async (
   userId: number,
   options: GetUserLinksOptions = {},
 ) => {
-  const { limit, cursor, search, startDate, endDate } = options;
+  const { limit, cursor, search, startDate, endDate, sortBy, sortOrder } = options;
 
   const whereClause: Prisma.url_mappingsWhereInput = {
     user_id: userId,
@@ -63,9 +65,28 @@ export const getUserLinksRepo = async (
     if (endDate) whereClause.created_at.lte = new Date(endDate);
   }
 
+  const orderBy: Prisma.url_mappingsOrderByWithRelationInput[] = [];
+  const order: Prisma.SortOrder = (sortOrder === "asc" || sortOrder === "desc") ? sortOrder : "desc";
+  switch (sortBy) {
+    case "createdAt":
+      orderBy.push({ created_at: order });
+      break;
+    case "clickCount":
+      orderBy.push({ click_logs: { _count: order } });
+      break;
+    case "title":
+      orderBy.push({ title: order });
+      break;
+    default:
+      orderBy.push({ created_at: "desc" });
+      break;
+  }
+  
+  orderBy.push({ id: "desc" });
+  
   return await prisma.url_mappings.findMany({
     where: whereClause,
-    orderBy: [{ created_at: "desc" }, { id: "desc" }],
+    orderBy: orderBy,
     ...(limit !== undefined ? { take: limit + 1 } : {}),
     ...(cursor !== undefined ? { cursor: { id: cursor }, skip: 1 } : {}),
     select: {

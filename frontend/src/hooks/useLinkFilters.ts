@@ -27,11 +27,6 @@ export const useLinkFilters = () => {
     endDate: safeParseDate(endDateParam),
   }), [startDateParam, endDateParam]);
 
-  const sortFilter: SortFilter = useMemo(() => ({
-    sortBy: sortByParam,
-    sortOrder: sortOrderParam,
-  }), [sortByParam, sortOrderParam]);
-
   const hasActiveFilters = !!searchParam || !!startDateParam || !!endDateParam;
 
   // Link filters placeholder
@@ -44,6 +39,11 @@ export const useLinkFilters = () => {
   useEffect(() => {
     setDraftSearchTerm(searchParam);
   }, [searchParam]);
+
+  const sortFilter: SortFilter = useMemo(() => ({
+    sortBy: sortByParam,
+    sortOrder: sortOrderParam,
+  }), [sortByParam, sortOrderParam]);
 
   const queryParams: LinksQueryParams = useMemo(() => ({
     search: searchParam,
@@ -92,11 +92,11 @@ export const useLinkFilters = () => {
     // Note: Link filters are not synced to URL yet as backend doesn't support them fully
   }, []);
 
-  const handleSortChange = useCallback((newSortFilter: SortFilter) => {
+  const handleSortChange = useCallback((filter: SortFilter) => {
     setSearchParams(prev => {
       const next = new URLSearchParams(prev);
-      next.set("sortBy", newSortFilter.sortBy);
-      next.set("sortOrder", newSortFilter.sortOrder);
+      next.set("sortBy", filter.sortBy);
+      next.set("sortOrder", filter.sortOrder);
       next.set("page", "1");
       return next;
     });
