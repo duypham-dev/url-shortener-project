@@ -7,13 +7,13 @@ import {
   FiTag,
   FiChevronRight,
 } from "react-icons/fi";
-import type { LinkItem } from "../types/url.type";
-import { formatDate } from "../utils/date";
-import { getShortUrlDisplay } from "../utils/url";
-import { useCopyToClipboard } from "../hooks/useCopyToClipboard";
+import type { LinkItem } from "../../types/url.type";
+import { formatDate } from "../../utils/date";
+import { getShortUrlDisplay } from "../../utils/url";
+import { useCopyToClipboard } from "../../hooks/useCopyToClipboard";
 
 const LinkCardDetail: React.FC<{ link: LinkItem }> = ({ link }) => {
-  const [ , copy ] = useCopyToClipboard();
+  const [, copy] = useCopyToClipboard();
   const shortUrlDisplay = getShortUrlDisplay(link.short_code);
 
 

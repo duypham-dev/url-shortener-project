@@ -8,10 +8,10 @@ import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { QRCodeSVG } from 'qrcode.react';
 import { Download, QrCode } from 'lucide-react';
-import type { LinkItem } from '../types/url.type';
-import { getQrCodeByShortCode } from '../api/qrCode.api';
-import type { QrCodeItem } from '../types/qr.type';
-import CreateQrCode from './qr/CreateQrCode';
+import type { LinkItem } from '../../types/url.type';
+import { getQrCodeByShortCode } from '../../api/qrCode.api';
+import type { QrCodeItem } from '../../types/qr.type';
+import CreateQrCode from './CreateQrCode';
 import toast from 'react-hot-toast';
 
 interface LinkQRCodeProps {
@@ -50,9 +50,9 @@ const LinkQRCode: React.FC<LinkQRCodeProps> = ({ link }) => {
                 ) : (
                   <QRCodeSVG
                     id={`qr-canvas-${link.short_code}`}
-                    value={qrCode?.destinationUrl ?? `https://short.ly/${link.short_code}`}
+                    value={qrCode?.destinationUrl ?? `preview`}
                     size={114}
-                    fgColor={qrCode?.fgColor ?? '#111111'}
+                    fgColor={qrCode?.fgColor ?? '#bababaff'}
                     bgColor="#ffffff"
                     level={(qrCode?.errorCorrection ?? 'Q') as 'L' | 'M' | 'Q' | 'H'}
                   />

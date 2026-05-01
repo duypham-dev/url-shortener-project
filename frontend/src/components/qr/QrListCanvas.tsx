@@ -2,7 +2,7 @@
 // Mirrors LinksListCanvas.tsx — renders a list of QrCard items.
 import React from "react";
 import { QrCode } from "lucide-react";
-import { QrCard } from "../QrCard";
+import { QrCard } from "./QrCard";
 import type { QrCodeItem } from "../../types/qr.type";
 
 interface QrListCanvasProps {

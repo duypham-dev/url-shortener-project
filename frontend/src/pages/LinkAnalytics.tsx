@@ -1,8 +1,8 @@
 import React, { useMemo, useState, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { ArrowLeft, ChevronLeft } from "lucide-react";
-import LinkCardDetail from "../components/LinkCardDetail";
-import LinkQRCode from "../components/LinkQRCode";
+import LinkCardDetail from "../components/links/LinkCardDetail";
+import LinkQRCode from "../components/qr/LinkQRCode";
 import { usePlanStore, selectIsVip } from "../store/usePlanStore";
 
 //Component
