@@ -31,15 +31,15 @@ const PlanGatedOverlay = ({ onBack, onUpgrade }: { onBack: () => void, onUpgrade
           <div className="w-14 h-14 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-center mx-auto mb-5 shadow-sm">
             <Crown size={26} className="text-slate-800" strokeWidth={2} />
           </div>
-          <h3 className="text-lg font-semibold text-slate-900 mb-2">Nâng cấp để xem phân tích</h3>
+          <h3 className="text-lg font-semibold text-slate-900 mb-2">Upgrade to view analytics</h3>
           <p className="text-slate-500 text-sm mb-6 leading-relaxed px-4">
-            Mở khóa bảng điều khiển chi tiết, theo dõi lượt click theo thời gian thực và phân tích nguồn truy cập.
+            Unlock detailed dashboards, track clicks in real-time, and analyze traffic sources.
           </p>
           <button
             onClick={onUpgrade}
             className="inline-flex items-center gap-2 px-5 py-2.5 bg-slate-900 text-white text-sm font-medium rounded-lg hover:bg-slate-800 transition-all w-full justify-center"
           >
-            <Lock size={16} strokeWidth={2} /> Mở khóa tính năng
+            <Lock size={16} strokeWidth={2} /> Unlock feature
           </button>
         </div>
       </div>

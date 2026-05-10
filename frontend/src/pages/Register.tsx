@@ -23,29 +23,29 @@ const validate = (form: RegisterForm): FieldErrors => {
   const errors: FieldErrors = {};
 
   if (!form.fullName.trim()) {
-    errors.fullName = 'Họ và tên là bắt buộc.';
+    errors.fullName = 'Full name is required.';
   } else if (form.fullName.trim().length < 3) {
-    errors.fullName = 'Họ và tên phải có ít nhất 2 ký tự.';
+    errors.fullName = 'Full name must be at least 2 characters.';
   }
 
   if (!form.email.trim()) {
-    errors.email = 'Email là bắt buộc.';
+    errors.email = 'Email is required.';
   } else if (!isValidEmail(form.email)) {
-    errors.email = 'Email không đúng định dạng.';
+    errors.email = 'Invalid email format.';
   }
 
   if (!form.password) {
-    errors.password = 'Mật khẩu là bắt buộc.';
+    errors.password = 'Password is required.';
   } else if (form.password.length < 8) {
-    errors.password = 'Mật khẩu phải có ít nhất 8 ký tự.';
+    errors.password = 'Password must be at least 8 characters.';
   } else if (!/(?=.*[A-Z])(?=.*[0-9])/.test(form.password)) {
-    errors.password = 'Mật khẩu phải chứa ít nhất 1 chữ hoa và 1 chữ số.';
+    errors.password = 'Password must contain at least 1 uppercase letter and 1 number.';
   }
 
   if (!form.confirmPassword) {
-    errors.confirmPassword = 'Vui lòng xác nhận mật khẩu.';
+    errors.confirmPassword = 'Please confirm your password.';
   } else if (form.password !== form.confirmPassword) {
-    errors.confirmPassword = 'Mật khẩu xác nhận không khớp.';
+    errors.confirmPassword = 'Passwords do not match.';
   }
 
   return errors;
@@ -106,7 +106,7 @@ const Register: React.FC = () => {
         // Map server-side field errors vào fieldErrors
         setFieldErrors(apiError.errors as FieldErrors);
       } else {
-        setServerError(apiError?.message ?? 'Đăng ký thất bại. Vui lòng thử lại.');
+        setServerError(apiError?.message ?? 'Registration failed. Please try again.');
       }
     } finally {
       setIsLoading(false);

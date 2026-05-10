@@ -23,13 +23,13 @@ interface ClicksChartCardProps {
 }
 
 const ClicksChartCardComponent: React.FC<ClicksChartCardProps> = ({ data, mode }) => {
-  const title = mode === "last24h" ? "Click theo giờ" : "Click theo ngày";
+  const title = mode === "last24h" ? "Clicks by hour" : "Clicks by day";
   const emptyMessage =
     mode === "last24h"
-      ? "Chưa có dữ liệu click trong 24 giờ qua."
-      : "Chưa có dữ liệu click trong khoảng thời gian này.";
+      ? "No click data in the last 24 hours."
+      : "No click data in this time range.";
 
-  const tooltipLabelPrefix = mode === "last24h" ? "Giờ" : "Ngày";
+  const tooltipLabelPrefix = mode === "last24h" ? "Hour" : "Date";
 
   return (
     <div className="md:col-span-2 bg-white rounded-xl border border-gray-200 p-6">

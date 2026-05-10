@@ -57,8 +57,8 @@ export const RealtimeAnalytics: React.FC = () => {
   );
   const [statusMessage, setStatusMessage] = useState(
     accessToken
-      ? "Đang kết nối luồng realtime..."
-      : "Không tìm thấy access token. Vui lòng đăng nhập lại.",
+      ? "Connecting to realtime stream..."
+      : "Access token not found. Please log in again.",
   );
 
   useEffect(() => {
@@ -70,7 +70,7 @@ export const RealtimeAnalytics: React.FC = () => {
 
     const handleConnected = () => {
       setStatus("connected");
-      setStatusMessage("Kết nối thành công. Đang lắng nghe sự kiện click.");
+      setStatusMessage("Connected successfully. Listening to click events.");
     };
 
     const handleMessage = (event: MessageEvent<string>) => {
@@ -89,7 +89,7 @@ export const RealtimeAnalytics: React.FC = () => {
 
         setEvents((prev) => [nextEvent, ...prev].slice(0, MAX_BUFFERED_EVENTS));
         setStatus("connected");
-        setStatusMessage("Đang nhận sự kiện click realtime.");
+        setStatusMessage("Receiving realtime click events.");
       } catch {
         // Ignore malformed payloads to keep stream alive.
       }
@@ -97,7 +97,7 @@ export const RealtimeAnalytics: React.FC = () => {
 
     const handleError = () => {
       setStatus("error");
-      setStatusMessage("Kết nối gián đoạn. Trình duyệt đang tự động thử kết nối lại...");
+      setStatusMessage("Connection interrupted. Browser is automatically retrying...");
     };
 
     stream.addEventListener("connected", handleConnected);
@@ -154,7 +154,7 @@ export const RealtimeAnalytics: React.FC = () => {
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Realtime Click Log</h1>
           <p className="text-sm text-gray-500 mt-1">
-            Bảng sự kiện click trực tiếp cho toàn bộ link của bạn (tối đa {MAX_BUFFERED_EVENTS} bản ghi gần nhất).
+            Live click events board for all your links (up to {MAX_BUFFERED_EVENTS} recent records).
           </p>
         </div>
 
@@ -166,19 +166,19 @@ export const RealtimeAnalytics: React.FC = () => {
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-5">
         <div className="bg-white border border-gray-200 rounded-xl p-4">
-          <div className="text-xs uppercase tracking-wide text-gray-500 mb-1">Tổng sự kiện trong phiên</div>
+          <div className="text-xs uppercase tracking-wide text-gray-500 mb-1">Total events in session</div>
           <div className="text-3xl font-bold text-gray-900">{events.length}</div>
         </div>
 
         <div className="bg-white border border-gray-200 rounded-xl p-4">
-          <div className="text-xs uppercase tracking-wide text-gray-500 mb-1">Sự kiện hiển thị</div>
+          <div className="text-xs uppercase tracking-wide text-gray-500 mb-1">Events shown</div>
           <div className="text-3xl font-bold text-gray-900">{filteredEvents.length}</div>
         </div>
 
         <div className="bg-white border border-gray-200 rounded-xl p-4">
-          <div className="text-xs uppercase tracking-wide text-gray-500 mb-1">Sự kiện mới nhất</div>
+          <div className="text-xs uppercase tracking-wide text-gray-500 mb-1">Latest event</div>
           <div className="text-sm font-semibold text-gray-900 mt-1">
-            {events[0] ? formatDateTime(events[0].timestamp) : "Chưa có dữ liệu"}
+            {events[0] ? formatDateTime(events[0].timestamp) : "No data yet"}
           </div>
         </div>
       </div>
@@ -191,7 +191,7 @@ export const RealtimeAnalytics: React.FC = () => {
               type="text"
               value={search}
               onChange={(event) => setSearch(event.target.value)}
-              placeholder="Lọc theo short code, IP, browser, referrer..."
+              placeholder="Filter by short code, IP, browser, referrer..."
               className="w-full h-10 pl-9 pr-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-200 focus:border-blue-500 text-sm"
             />
           </div>
@@ -202,7 +202,7 @@ export const RealtimeAnalytics: React.FC = () => {
             className="inline-flex items-center justify-center gap-2 h-10 px-4 rounded-lg border border-gray-300 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
           >
             <Trash2 size={14} />
-            Xóa bảng
+            Clear table
           </button>
         </div>
 
@@ -210,12 +210,12 @@ export const RealtimeAnalytics: React.FC = () => {
           <table className="min-w-full text-sm">
             <thead className="bg-gray-50 border-b border-gray-200">
               <tr>
-                <th className="text-left px-4 py-3 font-semibold text-gray-700">Thời gian</th>
+                <th className="text-left px-4 py-3 font-semibold text-gray-700">Time</th>
                 <th className="text-left px-4 py-3 font-semibold text-gray-700">Short link</th>
-                <th className="text-left px-4 py-3 font-semibold text-gray-700">Nguồn truy cập</th>
-                <th className="text-left px-4 py-3 font-semibold text-gray-700">Thiết bị</th>
+                <th className="text-left px-4 py-3 font-semibold text-gray-700">Source</th>
+                <th className="text-left px-4 py-3 font-semibold text-gray-700">Device</th>
                 <th className="text-left px-4 py-3 font-semibold text-gray-700">IP</th>
-                <th className="text-left px-4 py-3 font-semibold text-gray-700">URL đích</th>
+                <th className="text-left px-4 py-3 font-semibold text-gray-700">Destination URL</th>
               </tr>
             </thead>
             <tbody>
@@ -224,7 +224,7 @@ export const RealtimeAnalytics: React.FC = () => {
                   <td colSpan={6} className="px-4 py-10 text-center text-gray-500">
                     <div className="flex flex-col items-center gap-2">
                       <Activity size={20} className="text-gray-400" />
-                      <div>Chưa có sự kiện click realtime.</div>
+                      <div>No realtime click events yet.</div>
                     </div>
                   </td>
                 </tr>

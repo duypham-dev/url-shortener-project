@@ -24,7 +24,7 @@ const ReferrerPieCardComponent: React.FC<ReferrerPieCardProps> = ({ data, colors
       <h2 className="text-lg font-semibold text-gray-900 mb-6">Clicks theo referrer</h2>
 
       {data.length === 0 ? (
-        <div className="flex items-center justify-center py-16 text-gray-400">Chưa có dữ liệu referrer.</div>
+        <div className="flex items-center justify-center py-16 text-gray-400">No referrer data yet.</div>
       ) : (
         <div className="flex flex-col items-center">
           <ResponsiveContainer width="100%" height={320}>

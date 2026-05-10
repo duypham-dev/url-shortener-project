@@ -169,7 +169,7 @@ export const LinkAnalytics: React.FC = () => {
 
       {/* ============ Time Filter ============ */}
       <div className="flex items-center justify-between mb-6">
-        <h2 className="text-lg font-semibold text-gray-900">Phân tích truy cập</h2>
+        <h2 className="text-lg font-semibold text-gray-900">Access Analytics</h2>
         <TimeFilterPopover value={mode} customRange={customRange} onChange={handleFilterChange} />
       </div>
 

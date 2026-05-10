@@ -62,7 +62,7 @@ export const TrafficBreakdownCard: React.FC<TrafficBreakdownCardProps> = ({
   return (
     <div className="bg-white rounded-xl border border-gray-200 p-6 h-full">
       <div className="flex items-center justify-between gap-3 mb-5">
-        <h2 className="text-lg font-semibold text-gray-900">Clicks theo thiết bị</h2>
+        <h2 className="text-lg font-semibold text-gray-900">Clicks by Device</h2>
         <span className="text-xs text-gray-500 uppercase tracking-wide">Top {activeItems.length}</span>
       </div>
 
@@ -91,7 +91,7 @@ export const TrafficBreakdownCard: React.FC<TrafficBreakdownCardProps> = ({
 
       {activeItems.length === 0 ? (
         <div className="py-14 text-center text-gray-400 text-sm">
-          Chưa có dữ liệu click cho mục này.
+          No click data for this section.
         </div>
       ) : (
         <div className="space-y-3">

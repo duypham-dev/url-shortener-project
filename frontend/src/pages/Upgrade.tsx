@@ -52,14 +52,14 @@ export const Upgrade: React.FC = () => {
       if (data.paymentUrl) {
         window.location.href = data.paymentUrl;
       } else {
-        setErrorMessage("Có lỗi xảy ra khi tạo link thanh toán");
+        setErrorMessage("Error creating payment link");
       }
     } catch (error) {
       console.error("Payment error:", error);
       const message =
         typeof error === "object" && error && "message" in error
           ? String(error.message)
-          : "Không thể kết nối đến máy chủ thanh toán";
+          : "Cannot connect to payment server";
 
       setErrorMessage(message);
     } finally {
@@ -81,7 +81,7 @@ export const Upgrade: React.FC = () => {
       const message =
         typeof error === "object" && error && "message" in error
           ? String(error.message)
-          : "Không thể hủy gói cước. Vui lòng thử lại.";
+          : "Cannot cancel plan. Please try again.";
       setErrorMessage(message);
     } finally {
       setIsCancelling(false);
@@ -97,11 +97,11 @@ export const Upgrade: React.FC = () => {
     !hasActiveSubscription && !hasPendingPayment && !isCurrentPlan(plan);
 
   const getButtonLabel = (plan: SubscriptionPlan) => {
-    if (processingPlanId === plan.id) return "Đang tạo giao dịch...";
-    if (isCurrentPlan(plan)) return "Đang sử dụng";
-    if (hasActiveSubscription) return "Hủy gói hiện tại để chuyển";
-    if (hasPendingPayment) return "Đang có giao dịch chờ";
-    return `Chọn ${plan.name}`;
+    if (processingPlanId === plan.id) return "Creating transaction...";
+    if (isCurrentPlan(plan)) return "Current plan";
+    if (hasActiveSubscription) return "Cancel current plan to switch";
+    if (hasPendingPayment) return "Pending transaction exists";
+    return `Select ${plan.name}`;
   };
 
   if (loading) {
@@ -116,10 +116,10 @@ export const Upgrade: React.FC = () => {
     <div className="min-h-full py-10 px-4 sm:px-6 lg:px-8 bg-gray-50">
       <div className="max-w-7xl mx-auto text-center">
         <h2 className="text-3xl font-extrabold text-gray-900 sm:text-4xl">
-          Nâng cấp tài khoản VIP
+          Upgrade to VIP Account
         </h2>
         <p className="mt-4 text-xl text-gray-500">
-          Chọn gói đăng ký phù hợp với nhu cầu của bạn để mở khóa các tính năng tuyệt vời.
+          Select a subscription plan that fits your needs to unlock great features.
         </p>
       </div>
 
@@ -132,11 +132,11 @@ export const Upgrade: React.FC = () => {
                 <Crown className="w-6 h-6 text-[#00a99d]" />
                 <div>
                   <p className="font-semibold text-gray-900">
-                    Gói hiện tại: {currentPlan.name}
+                    Current plan: {currentPlan.name}
                   </p>
                   {currentSubscription && (
                     <p className="text-sm text-gray-500">
-                      Hết hạn: {new Date(currentSubscription.expires_at).toLocaleDateString("vi-VN")}
+                      Expires: {new Date(currentSubscription.expires_at).toLocaleDateString("en-US")}
                     </p>
                   )}
                 </div>
@@ -145,7 +145,7 @@ export const Upgrade: React.FC = () => {
                 onClick={() => setShowCancelConfirm(true)}
                 className="px-4 py-2 text-sm font-medium text-red-600 bg-white border border-red-200 rounded-lg hover:bg-red-50 transition-colors"
               >
-                Hủy gói
+                Cancel plan
               </button>
             </div>
           </div>
@@ -158,7 +158,7 @@ export const Upgrade: React.FC = () => {
           <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 flex items-start gap-3">
             <AlertTriangle className="w-5 h-5 text-amber-500 mt-0.5 shrink-0" />
             <p className="text-sm text-amber-700">
-              Bạn đang có giao dịch thanh toán chưa hoàn tất. Vui lòng chờ giao dịch được xử lý hoặc thử lại sau ít phút.
+              You have an incomplete payment transaction. Please wait for it to be processed or try again in a few minutes.
             </p>
           </div>
         </div>
@@ -170,10 +170,10 @@ export const Upgrade: React.FC = () => {
           <div className="bg-white rounded-2xl shadow-2xl p-6 max-w-sm mx-4 space-y-4">
             <div className="flex items-center gap-3">
               <XCircle className="w-8 h-8 text-red-500" />
-              <h3 className="text-lg font-bold text-gray-900">Xác nhận hủy gói</h3>
+              <h3 className="text-lg font-bold text-gray-900">Confirm Cancellation</h3>
             </div>
             <p className="text-sm text-gray-600">
-              Bạn có chắc muốn hủy gói <strong>{currentPlan?.name}</strong>? Bạn sẽ bị hạ cấp về gói Miễn Phí ngay lập tức và mất quyền truy cập các tính năng cao cấp.
+              Are you sure you want to cancel the <strong>{currentPlan?.name}</strong> plan? You will be downgraded to the Free plan immediately and lose access to premium features.
             </p>
             <div className="flex gap-3 justify-end">
               <button
@@ -181,14 +181,14 @@ export const Upgrade: React.FC = () => {
                 disabled={isCancelling}
                 className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
               >
-                Giữ gói
+                Keep plan
               </button>
               <button
                 onClick={handleCancelSubscription}
                 disabled={isCancelling}
                 className="px-4 py-2 text-sm font-medium text-white bg-red-500 rounded-lg hover:bg-red-600 transition-colors disabled:opacity-60"
               >
-                {isCancelling ? "Đang hủy..." : "Hủy gói"}
+                {isCancelling ? "Canceling..." : "Hủy gói"}
               </button>
             </div>
           </div>
@@ -221,14 +221,14 @@ export const Upgrade: React.FC = () => {
                 <div className="absolute top-0 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
                   <span className="bg-[#00a99d] text-white text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wide flex items-center gap-1">
                     <Crown className="w-3 h-3" />
-                    Đang Sử Dụng
+                    Current Plan
                   </span>
                 </div>
               )}
               {!isCurrent && isPopular && (
                 <div className="absolute top-0 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
                   <span className="bg-[#00a99d] text-white text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wide">
-                    Phổ Biến Nhất
+                    Most Popular
                   </span>
                 </div>
               )}
@@ -240,33 +240,33 @@ export const Upgrade: React.FC = () => {
                     {Number(plan.price).toLocaleString()}
                   </span>
                   <span className="ml-1 text-xl font-semibold">{plan.currency}</span>
-                  <span className="ml-2 text-gray-500">/ Tháng </span>
+                  <span className="ml-2 text-gray-500">/ Month </span>
                 </p>
-                <p className="mt-4 text-sm text-gray-500">Nâng cấp tài khoản với tính năng phù hợp</p>
+                <p className="mt-4 text-sm text-gray-500">Upgrade account with suitable features</p>
                 
                 <ul className="mt-6 space-y-4">
                     <li className="flex">
                       <Check className="shrink-0 w-5 h-5 text-[#00a99d]" />
                       <span className="ml-3 text-gray-600 text-sm">
-                        Tạo tối đa {plan.max_links === -1 ? "Không giới hạn" : plan.max_links} link rút gọn
+                        Create up to {plan.max_links === -1 ? "Unlimited" : plan.max_links} short links
                       </span>
                     </li>
                     <li className="flex">
                       <Check className="shrink-0 w-5 h-5 text-[#00a99d]" />
                       <span className="ml-3 text-gray-600 text-sm">
-                        Được tạo {plan.max_custom_links === -1 ? "Không giới hạn" : plan.max_custom_links} link Tùy chỉnh (Custom URLs)
+                        Create {plan.max_custom_links === -1 ? "Không giới hạn" : plan.max_custom_links} Custom URLs
                       </span>
                     </li>
                     <li className="flex">
                       <Check className={`shrink-0 w-5 h-5 ${plan.allow_analytics ? "text-[#00a99d]" : "text-gray-300"}`} />
                       <span className={`ml-3 text-sm ${plan.allow_analytics ? "text-gray-600" : "text-gray-400"}`}>
-                        Thống kê {plan.allow_analytics ? "chi tiết & Phân tích truy cập" : "cơ bản"}
+                        Statistics: {plan.allow_analytics ? "detailed & Access analytics" : "basic"}
                       </span>
                     </li>
                     <li className="flex">
                       <Check className={`shrink-0 w-5 h-5 ${plan.allow_expiry ? "text-[#00a99d]" : "text-gray-300"}`} />
                       <span className={`ml-3 text-sm ${plan.allow_expiry ? "text-gray-600" : "text-gray-400"}`}>
-                        Cài đặt thời gian hết hạn (Expiry)
+                        Set Expiry Time
                       </span>
                     </li>
                 </ul>
@@ -295,7 +295,7 @@ export const Upgrade: React.FC = () => {
       
       {/* Footer info */}
       <div className="mt-16 text-center text-gray-500 text-sm">
-        <p>Thanh toán an toàn, bảo mật. Bạn có thể thay đổi hoặc hủy gói bất cứ lúc nào.</p>
+        <p>Safe and secure payment. You can change or cancel your plan at any time.</p>
       </div>
     </div>
   );

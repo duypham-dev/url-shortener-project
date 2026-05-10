@@ -66,7 +66,7 @@ export const LinkCard: React.FC<LinkCardProps> = React.memo(({ link }) => {
               <button
                 onClick={() => navigateToAnalytics(link)}
                 className="p-1 hover:bg-gray-100 rounded-md transition-colors"
-                title="Xem phân tích"
+                title="View analytics"
               >
                 <BarChart2 size={16} />
               </button>

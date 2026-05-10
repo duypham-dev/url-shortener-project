@@ -29,7 +29,7 @@ export const Dashboard: React.FC = () => {
     if (!url) return;
 
     if (isQuotaExceeded) {
-      setCreateError('Bạn đã hết quota tạo link trong tháng này. Vui lòng nâng cấp gói.');
+      setCreateError('You have reached your link creation quota for this month. Please upgrade your plan.');
       return;
     }
 
@@ -58,7 +58,7 @@ export const Dashboard: React.FC = () => {
       const message =
         typeof error === 'object' && error && 'message' in error
           ? String(error.message)
-          : `Không thể tạo short link. Vui lòng thử lại.`;
+          : `Unable to create short link. Please try again.`;
       setCreateError(message);
       refreshUsage();
     }
@@ -80,10 +80,10 @@ export const Dashboard: React.FC = () => {
               </h2>
               <div className="flex items-center gap-1 text-sm text-gray-600">
                 {isPlanLoading
-                  ? 'Đang tải quota...'
+                  ? 'Loading quota...'
                   : remainingLinks === null
-                    ? `Gói ${planName}: tạo link không giới hạn.`
-                    : `Gói ${planName}: còn ${remainingLinks} link trong tháng này.`}
+                    ? `${planName} Plan: unlimited links.`
+                    : `${planName} Plan: ${remainingLinks} links left this month.`}
                 <HelpCircle size={16} className="text-gray-400" />
               </div>
             </div>

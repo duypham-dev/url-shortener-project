@@ -23,7 +23,7 @@ export const CountryBreakdownCard: React.FC<CountryBreakdownCardProps> = ({ data
   return (
     <div className="bg-white rounded-xl border border-gray-200 p-6 h-full">
       <div className="flex items-center justify-between gap-3 mb-5">
-        <h2 className="text-lg font-semibold text-gray-900">Clicks theo quốc gia</h2>
+        <h2 className="text-lg font-semibold text-gray-900">Clicks by Country</h2>
         <div className="w-9 h-9 rounded-lg bg-sky-50 flex items-center justify-center">
           <MapPin size={18} className="text-sky-600" />
         </div>
@@ -31,7 +31,7 @@ export const CountryBreakdownCard: React.FC<CountryBreakdownCardProps> = ({ data
 
       {countries.length === 0 ? (
         <div className="py-14 text-center text-gray-400 text-sm">
-          Chưa có dữ liệu quốc gia.
+          No country data yet.
         </div>
       ) : (
         <div className="space-y-3">
@@ -61,7 +61,7 @@ export const CountryBreakdownCard: React.FC<CountryBreakdownCardProps> = ({ data
           })}
 
           <div className="border-t border-gray-100 pt-3 mt-4 flex items-center justify-between text-sm text-gray-500">
-            <span>Tổng</span>
+            <span>Total</span>
             <span className="font-semibold text-gray-700">{totalClicks.toLocaleString()} clicks</span>
           </div>
         </div>

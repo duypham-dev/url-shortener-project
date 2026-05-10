@@ -7,12 +7,12 @@ import { useAuthStore } from "../store/useAuthStore";
  * Maps backend error codes to user-friendly messages
  */
 const ERROR_MESSAGES = {
-  missing_token: "Token không hợp lệ. Vui lòng thử lại.",
-  csrf_invalid: "Phiên đăng nhập không hợp lệ. Vui lòng thử lại.",
-  account_banned: "Tài khoản đã bị khóa. Vui lòng liên hệ quản trị viên.",
-  token_expired: "Phiên đăng nhập đã hết hạn. Vui lòng thử lại.",
-  server_error: "Lỗi máy chủ. Vui lòng thử lại sau.",
-  default: "Đăng nhập thất bại. Vui lòng thử lại.",
+  missing_token: "Invalid token. Please try again.",
+  csrf_invalid: "Invalid login session. Please try again.",
+  account_banned: "Account is banned. Please contact administrator.",
+  token_expired: "Login session expired. Please try again.",
+  server_error: "Server error. Please try again later.",
+  default: "Login failed. Please try again.",
 };
 
 /**
@@ -50,7 +50,7 @@ const OAuthRedirect = () => {
           navigate("/dashboard", { replace: true });
       } catch {
         setStatus("error");
-        setErrorMessage("Lỗi xác thực. Vui lòng thử lại.");
+        setErrorMessage("Authentication error. Please try again.");
         // Redirect to login
         navigate("/login", { replace: true });
       }
@@ -86,7 +86,7 @@ const OAuthRedirect = () => {
         handleOAuthSuccess(token);
       }else{
         setStatus("error");
-        setErrorMessage("Không nhận được token. Vui lòng thử lại.");
+        setErrorMessage("No token received. Please try again.");
       }
     } else {
       const messageCode: string | null = searchParams.get("message");
@@ -101,7 +101,7 @@ const OAuthRedirect = () => {
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-red-500 mb-4 mx-auto" />
           <p className="text-gray-600 dark:text-gray-300">
-            Đang xử lý đăng nhập...
+            Processing login...
           </p>
         </div>
       )}
@@ -125,10 +125,10 @@ const OAuthRedirect = () => {
             </svg>
           </div>
           <p className="text-green-600 dark:text-green-400 font-medium text-lg">
-            Đăng nhập thành công!
+            Login successful!
           </p>
           <p className="text-gray-500 dark:text-gray-400 text-sm mt-2">
-            Đang chuyển hướng...
+            Redirecting...
           </p>
         </div>
       )}
@@ -152,7 +152,7 @@ const OAuthRedirect = () => {
             </svg>
           </div>
           <p className="text-red-600 dark:text-red-400 font-medium text-lg">
-            Đăng nhập thất bại
+            Login Failed
           </p>
           <p className="text-gray-500 dark:text-gray-400 text-sm mt-2">
             {errorMessage}

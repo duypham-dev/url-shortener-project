@@ -65,11 +65,11 @@ const Home: React.FC = () => {
       <main>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-16 pb-24 text-center">
           <h1 className="mx-auto max-w-4xl text-5xl md:text-[56px] font-extrabold tracking-tight text-white mb-6 leading-tight">
-            Xây dựng kết nối số bền vững
+            Build sustainable digital connections
           </h1>
           <p className="mx-auto max-w-3xl text-lg md:text-[19px] text-slate-300 mb-12 leading-relaxed">
-            Sử dụng công cụ rút gọn liên kết, tạo mã QR và trang đích của chúng tôi để tương tác với khán giả của bạn.
-            Quản lý, chỉnh sửa và theo dõi mọi thứ hiệu quả trên một nền tảng duy nhất.
+            Use our link shortening, QR code generation, and landing page tools to engage with your audience.
+            Manage, edit, and track everything efficiently on a single platform.
           </p>
 
           {/* URL Shortener Box */}
@@ -86,12 +86,12 @@ const Home: React.FC = () => {
 
               {/* Inner White Form Card */}
               <div className="bg-white rounded-xl md:rounded-2xl rounded-tl-none p-6 md:p-10 text-left relative z-0">
-                <h2 className="text-3xl font-extrabold text-slate-900 mb-2">Rút gọn liên kết</h2>
-                <p className="text-slate-800 text-[15px] font-medium mb-8">Không yêu cầu thẻ tín dụng.</p>
+                <h2 className="text-3xl font-extrabold text-slate-900 mb-2">Shorten a long link</h2>
+                <p className="text-slate-800 text-[15px] font-medium mb-8">No credit card required.</p>
 
                 <form onSubmit={handleSubmit} className="space-y-4">
                   <div>
-                    <label className="block text-[15px] font-bold text-slate-900 mb-2 font-display">Dán liên kết dài của bạn vào đây</label>
+                    <label className="block text-[15px] font-bold text-slate-900 mb-2 font-display">Paste your long link here</label>
                     <input
                       type="url"
                       value={url}
@@ -111,7 +111,7 @@ const Home: React.FC = () => {
                       {isLoading ? (
                         <span className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
                       ) : (
-                        <>Nhận liên kết miễn phí <ArrowRight className="w-5 h-5" /></>
+                        <>Get your link for free <ArrowRight className="w-5 h-5" /></>
                       )}
                     </button>
                   </div>
@@ -120,7 +120,7 @@ const Home: React.FC = () => {
                 {shortenedUrl && (
                   <div className="mt-8 p-5 bg-slate-50 border border-slate-200 rounded-lg flex flex-col sm:flex-row items-center justify-between gap-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
                     <div className="flex-1 truncate w-full text-left">
-                      <p className="text-xs text-slate-500 font-bold uppercase tracking-wider mb-1">Liên kết của bạn</p>
+                      <p className="text-xs text-slate-500 font-bold uppercase tracking-wider mb-1">Your link</p>
                       <a href={shortenedUrl} target="_blank" rel="noreferrer" className="text-lg font-bold text-[#2a5bd7] hover:text-[#1f48b1] truncate block">
                         {shortenedUrl}
                       </a>
@@ -129,7 +129,7 @@ const Home: React.FC = () => {
                       onClick={handleCopy}
                       className="w-full sm:w-auto flex items-center justify-center gap-2 bg-white border border-slate-300 text-slate-900 hover:bg-slate-50 px-6 py-2.5 rounded font-bold transition-all"
                     >
-                      {isCopied ? <><Check className="w-4 h-4 text-green-600" /> Đã copy</> : <><Copy className="w-4 h-4" /> Copy</>}
+                      {isCopied ? <><Check className="w-4 h-4 text-green-600" /> Copied</> : <><Copy className="w-4 h-4" /> Copy</>}
                     </button>
                   </div>
                 )}
@@ -138,11 +138,11 @@ const Home: React.FC = () => {
 
             {/* Sub Features */}
             <div className="mt-12 flex flex-col items-center justify-center gap-4 text-sm font-medium">
-              <span className="text-white text-lg font-bold tracking-tight">Đăng ký hoàn toàn miễn phí. Các tính năng bao gồm:</span>
+              <span className="text-white text-lg font-bold tracking-tight">Sign up for free. Features include:</span>
               <ul className="flex flex-wrap justify-center gap-4 md:gap-6 text-slate-300 mt-2">
-                <li className="flex items-center gap-2"><CheckCircle2 className="w-4 h-4 text-[#dd6b20]" /> Giới hạn 5 link / tháng</li>
-                <li className="flex items-center gap-2"><CheckCircle2 className="w-4 h-4 text-[#dd6b20]" /> Tùy chỉnh alias (nửa sau của link)</li>
-                <li className="flex items-center gap-2"><CheckCircle2 className="w-4 h-4 text-[#dd6b20]" /> Không giới hạn lượt click</li>
+                <li className="flex items-center gap-2"><CheckCircle2 className="w-4 h-4 text-[#dd6b20]" /> 5 links/month limit</li>
+                <li className="flex items-center gap-2"><CheckCircle2 className="w-4 h-4 text-[#dd6b20]" /> Custom alias (back-half of link)</li>
+                <li className="flex items-center gap-2"><CheckCircle2 className="w-4 h-4 text-[#dd6b20]" /> Unlimited clicks</li>
               </ul>
             </div>
           </div>
@@ -156,22 +156,22 @@ const Home: React.FC = () => {
                 <div className="w-12 h-12 rounded flex items-center justify-center text-white mb-6 border border-white/20 group-hover:border-white/50 transition-colors">
                   <Zap className="w-5 h-5" />
                 </div>
-                <h3 className="text-xl font-bold text-white mb-2">Tốc độ chớp nhoáng</h3>
-                <p className="text-slate-400 leading-relaxed text-[15px]">Hệ thống xử lý hàng nghìn request, đảm bảo chuyển hướng người dùng ngay tức thì không gặp độ trễ hay gián đoạn.</p>
+                <h3 className="text-xl font-bold text-white mb-2">Lightning fast</h3>
+                <p className="text-slate-400 leading-relaxed text-[15px]">Our system handles thousands of requests, ensuring instant redirects with zero latency.</p>
               </div>
               <div className="text-left group">
                 <div className="w-12 h-12 rounded flex items-center justify-center text-white mb-6 border border-white/20 group-hover:border-white/50 transition-colors">
                   <Shield className="w-5 h-5" />
                 </div>
-                <h3 className="text-xl font-bold text-white mb-2">Bảo mật tuyệt đối</h3>
-                <p className="text-slate-400 leading-relaxed text-[15px]">Bảo vệ khán giả của bạn với tính năng mã hóa HTTPS cùng các thuật toán chống thư rác tự động 24/7.</p>
+                <h3 className="text-xl font-bold text-white mb-2">Absolute Security</h3>
+                <p className="text-slate-400 leading-relaxed text-[15px]">Protect your audience with HTTPS encryption and automatic 24/7 spam filtering algorithms.</p>
               </div>
               <div className="text-left group">
                 <div className="w-12 h-12 rounded flex items-center justify-center text-white mb-6 border border-white/20 group-hover:border-white/50 transition-colors">
                   <BarChart3 className="w-5 h-5" />
                 </div>
-                <h3 className="text-xl font-bold text-white mb-2">Thông tin phân tích</h3>
-                <p className="text-slate-400 leading-relaxed text-[15px]">Theo dõi hiệu năng đo lường chiến dịch và sở thích của khách truy cập. Nhận báo cáo chi tiết chỉ với 1 cú click.</p>
+                <h3 className="text-xl font-bold text-white mb-2">Analytics & Insights</h3>
+                <p className="text-slate-400 leading-relaxed text-[15px]">Track campaign performance and visitor preferences. Get detailed reports with a single click.</p>
               </div>
             </div>
           </div>

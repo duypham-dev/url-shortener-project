@@ -1,14 +1,5 @@
-/**
- * jwt.util.ts
- * Các helper function để tạo và xác minh JWT.
- * - accessToken: sống ngắn (15 phút), trả về qua JSON body
- * - refreshToken: sống dài (7 ngày), lưu vào httpOnly Cookie và Redis
- */
 import jwt from "jsonwebtoken";
 
-// ----------------------------------------------------------------
-// Kiểu dữ liệu của payload bên trong token
-// ----------------------------------------------------------------
 export interface JwtPayload {
   userId: number;
   fullName: string;
@@ -17,7 +8,7 @@ export interface JwtPayload {
 }
 
 // ----------------------------------------------------------------
-// Đọc secret từ biến môi trường, throw nếu chưa cấu hình
+// R
 // ----------------------------------------------------------------
 const getSecret = (key: string): string => {
   const secret = process.env[key];

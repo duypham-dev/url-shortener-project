@@ -372,7 +372,7 @@ const TimeFilterPopover: React.FC<TimeFilterPopoverProps> = ({ value, customRang
             {/* Selection hint */}
             {selectionStart && (
               <p className="mt-3 text-xs text-blue-600 text-center">
-                Chọn ngày kết thúc (tối đa {MAX_CUSTOM_RANGE_DAYS} ngày)
+                Select end date (max {MAX_CUSTOM_RANGE_DAYS} days)
               </p>
             )}
           </div>

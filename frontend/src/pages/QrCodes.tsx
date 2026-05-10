@@ -93,7 +93,7 @@ export const QrCodes: React.FC = () => {
         isPlanLoading={isPlanLoading}
       />
 
-      {/* <LinksFilterToolbar
+      <LinksFilterToolbar
         searchTerm={filters.draftSearchTerm}
         onSearchTermChange={filters.handleSearchTermChange}
         onSearchSubmit={filters.handleSearchSubmit}
@@ -101,9 +101,11 @@ export const QrCodes: React.FC = () => {
         onDateFilterChange={filters.handleDateFilterChange}
         linkFilters={linkFilters}
         onLinkFiltersChange={() => {}}
+        sortFilter={{ sortBy: 'created_at', sortOrder: 'desc' }}
+        onSortChange={() => {}}
         hasActiveFilters={filters.hasActiveFilters}
         onClearAllFilters={filters.handleClearAllFilters}
-      /> */}
+      />
 
       <LinksSecondaryToolbar />
 

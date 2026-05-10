@@ -38,7 +38,7 @@ export const PaymentResult: React.FC = () => {
       if (!orderId) {
         if (!active) return;
         setStatus("error");
-        setErrorMessage("Không tìm thấy mã giao dịch.");
+        setErrorMessage("Transaction code not found.");
         setIsLoading(false);
         return;
       }
@@ -50,8 +50,8 @@ export const PaymentResult: React.FC = () => {
         setDetails({
           orderId: response.orderId,
           amount: response.amount,
-          orderInfo: response.orderInfo || "Không có thông tin",
-          planName: response.planName || "Không xác định",
+          orderInfo: response.orderInfo || "No information",
+          planName: response.planName || "Unknown",
           currency: response.currency || "VND",
           paidAt: response.paidAt || "",
         });
@@ -60,7 +60,7 @@ export const PaymentResult: React.FC = () => {
 
         if (response.status === "pending") {
           if (fallbackStatus === "success") {
-            setErrorMessage("Giao dịch đang được xác nhận. Vui lòng chờ thêm ít giây.");
+            setErrorMessage("Transaction is being confirmed. Please wait a few seconds.");
             return;
           }
 
@@ -68,14 +68,14 @@ export const PaymentResult: React.FC = () => {
           setErrorMessage(
             fallbackMessage ||
               (fallbackCode === "97"
-                ? "Chữ ký giao dịch không hợp lệ."
-                : "Giao dịch chưa được xác nhận."),
+                ? "Invalid transaction signature."
+                : "Transaction not yet confirmed."),
           );
           return;
         }
 
         if (response.status !== "success") {
-          setErrorMessage("Giao dịch chưa hoàn tất hoặc đã bị hủy.");
+          setErrorMessage("Transaction incomplete or cancelled.");
           return;
         }
 
@@ -94,7 +94,7 @@ export const PaymentResult: React.FC = () => {
 
         if (fallbackStatus === "success") {
           setErrorMessage(
-            "Hệ thống đang xác nhận thanh toán qua IPN. Kết quả sẽ được cập nhật sớm.",
+            "System is confirming payment via IPN. The result will be updated soon.",
           );
           return;
         }
@@ -102,8 +102,8 @@ export const PaymentResult: React.FC = () => {
         setErrorMessage(
           fallbackMessage ||
             (fallbackCode === "97"
-              ? "Chữ ký giao dịch không hợp lệ."
-              : "Không thể xác minh giao dịch từ máy chủ."),
+              ? "Invalid transaction signature."
+              : "Cannot verify transaction from server."),
         );
       } finally {
         if (active) setIsLoading(false);
@@ -120,7 +120,7 @@ export const PaymentResult: React.FC = () => {
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <p className="text-gray-500">Đang xác minh kết quả giao dịch...</p>
+        <p className="text-gray-500">Verifying transaction result...</p>
       </div>
     );
   }
@@ -144,17 +144,17 @@ export const PaymentResult: React.FC = () => {
         <div>
           <h2 className="text-3xl font-extrabold text-gray-900">
             {status === "success"
-              ? "Thanh toán thành công!"
+              ? "Payment successful!"
               : status === "pending"
-                ? "Đang xác nhận giao dịch"
-                : "Giao dịch thất bại!"}
+                ? "Confirming transaction"
+                : "Payment failed!"}
           </h2>
           <p className="mt-2 text-gray-500">
             {status === "success"
-              ? "Cảm ơn bạn đã nâng cấp tài khoản. Các tính năng VIP đã được kích hoạt."
+              ? "Thank you for upgrading your account. VIP features have been activated."
               : status === "pending"
-                ? "VNPay đã trả về kết quả. Hệ thống đang chờ IPN để cập nhật giao dịch."
-                : "Rất tiếc, giao dịch của bạn đã bị hủy hoặc có lỗi xảy ra. Vui lòng thử lại sau."}
+                ? "VNPay has returned the result. The system is waiting for IPN to update the transaction."
+                : "Sorry, your transaction was cancelled or an error occurred. Please try again later."}
           </p>
         </div>
 
@@ -162,21 +162,21 @@ export const PaymentResult: React.FC = () => {
         {status !== "error" && (
           <div className="bg-gray-50 rounded-lg p-4 text-left border border-gray-100">
             <div className="flex justify-between py-2 border-b border-gray-200">
-              <span className="text-sm text-gray-500">Mã giao dịch:</span>
+              <span className="text-sm text-gray-500">Transaction ID:</span>
               <span className="text-sm font-medium text-gray-900">{details.orderId}</span>
             </div>
             <div className="flex justify-between py-2 border-b border-gray-200">
-              <span className="text-sm text-gray-500">Số tiền:</span>
+              <span className="text-sm text-gray-500">Amount:</span>
               <span className="text-sm font-bold text-[#00a99d]">
                 {details.amount} {details.currency}
               </span>
             </div>
             <div className="flex justify-between py-2 border-b border-gray-200">
-              <span className="text-sm text-gray-500">Gói đăng ký:</span>
+              <span className="text-sm text-gray-500">Subscription plan:</span>
               <span className="text-sm font-medium text-gray-900">{details.planName}</span>
             </div>
             <div className="flex justify-between py-2">
-              <span className="text-sm text-gray-500">Nội dung:</span>
+              <span className="text-sm text-gray-500">Description:</span>
               <span className="text-sm text-gray-900 truncate max-w-36" title={details.orderInfo}>
                 {details.orderInfo}
               </span>
@@ -204,7 +204,7 @@ export const PaymentResult: React.FC = () => {
               className="w-full flex items-center justify-center py-3 px-4 rounded-md font-medium text-white bg-[#00a99d] hover:bg-[#009188] transition-colors"
             >
               <Home className="w-5 h-5 mr-2" />
-              Đến trang quản lý (Dashboard)
+              Go to Dashboard
             </button>
           ) : status === "pending" ? (
             <>
@@ -212,13 +212,13 @@ export const PaymentResult: React.FC = () => {
                 onClick={() => window.location.reload()}
                 className="w-full flex items-center justify-center py-3 px-4 rounded-md font-medium text-white bg-amber-500 hover:bg-amber-600 transition-colors"
               >
-                Kiểm tra lại
+                Check again
               </button>
               <button
                 onClick={() => navigate("/dashboard")}
                 className="w-full flex items-center justify-center py-3 px-4 rounded-md font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 transition-colors"
               >
-                Về Dashboard
+                Back to Dashboard
               </button>
             </>
           ) : (
@@ -228,13 +228,13 @@ export const PaymentResult: React.FC = () => {
                 className="w-full flex items-center justify-center py-3 px-4 rounded-md font-medium text-white bg-red-500 hover:bg-red-600 transition-colors"
               >
                 <ArrowLeft className="w-5 h-5 mr-2" />
-                Thử thanh toán lại
+                Try payment again
               </button>
               <button
                 onClick={() => navigate("/")}
                 className="w-full flex items-center justify-center py-3 px-4 rounded-md font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 transition-colors"
               >
-                Về trang chủ
+                Back to Home
               </button>
             </>
           )}
