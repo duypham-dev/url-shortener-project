@@ -5,16 +5,16 @@ import { loginApi } from '../api/auth.api';
 import { useAuthStore } from '../store/useAuthStore';
 import ButtonLoginGoogle from '../components/ButtonLoginGoogle';
 import type { LoginInput } from '../types/auth.type';
-
+import toast from 'react-hot-toast';
 // ============================================================
 // Helpers
 // ============================================================
 const isValidEmail = (value: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
 
 const validate = (form: LoginInput): string | null => {
-  if (!form.email.trim()) return 'Vui lòng nhập email.';
-  if (!isValidEmail(form.email)) return 'Email không đúng định dạng.';
-  if (!form.password) return 'Vui lòng nhập mật khẩu.';
+  if (!form.email.trim()) return 'Please enter your email.';
+  if (!isValidEmail(form.email)) return 'Email is not in the correct format.';
+  if (!form.password) return 'Please enter your password.';
   return null;
 };
 
@@ -30,28 +30,23 @@ const Login: React.FC = () => {
     ?.from?.pathname ?? '/dashboard';
 
   const [form, setForm] = useState<LoginInput>({ email: '', password: '' });
-  const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
-    if (error) setError(null);
   };
-
-
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
     const validationError = validate(form);
     if (validationError) {
-      setError(validationError);
+      toast.error(validationError);
       return;
     }
 
     try {
       setIsLoading(true);
-      setError(null);
 
       const response = await loginApi({
         email: form.email.trim().toLowerCase(),
@@ -60,9 +55,8 @@ const Login: React.FC = () => {
 
       loginStore(response.data.user, response.data.accessToken);
       navigate(redirectTo, { replace: true });
-    } catch (err) {
-      const apiError = err as { message?: string };
-      setError(apiError?.message ?? 'Đăng nhập thất bại. Vui lòng thử lại.');
+    } catch {
+      toast.error('Login failed. Please try again.');
     } finally {
       setIsLoading(false);
     }
@@ -90,17 +84,7 @@ const Login: React.FC = () => {
               Sign up
             </Link>
           </p>
-
-          {/* Error banner */}
-          {error && (
-            <div
-              role="alert"
-              className="bg-red-50 text-red-600 p-3 rounded mb-6 text-sm border border-red-200"
-            >
-              {error}
-            </div>
-          )}
-
+          
           <form onSubmit={handleSubmit} noValidate className="space-y-4">
             <div>
               <label htmlFor="email" className="block text-sm font-bold text-slate-800 mb-2">

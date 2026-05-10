@@ -11,8 +11,9 @@ export const registerApi = (data: RegisterInput): Promise<AuthApiResponse> =>
   axiosClient.post('/auth/register', data);
  
 // Login with email and password
-export const loginApi = (data: LoginInput): Promise<AuthApiResponse> =>
+export const loginApi = (data: LoginInput): Promise<AuthApiResponse> =>{
   axiosClient.post('/auth/login', data);
+}
  
 // Logout — remove refreshToken on server + blacklist accessToken
 export const logoutApi = (): Promise<{ success: boolean }> =>

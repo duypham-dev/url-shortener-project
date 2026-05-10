@@ -1,13 +1,3 @@
-/**
- * axiosClient.ts
- * Axios instance được cấu hình sẵn cho toàn bộ app.
- *
- * Interceptors:
- * - Request: tự động đính kèm accessToken từ localStorage
- * - Response (success): unwrap response.data → caller nhận API body trực tiếp
- * - Response (error 401): thử refresh token 1 lần, queue các request bị lỗi,
- *   sau đó retry tất cả với token mới. Nếu refresh thất bại thì clear session.
- */
 import axios from 'axios';
 import type { AxiosInstance, InternalAxiosRequestConfig } from 'axios';
 import type { RefreshApiResponse } from '../types/auth.type';
@@ -18,11 +8,11 @@ export const axiosClient: AxiosInstance = axios.create({
   baseURL: BASE_URL,
   timeout: 20_000,
   headers: { 'Content-Type': 'application/json' },
-  withCredentials: true, // Bắt buộc để gửi/nhận httpOnly cookie chứa refreshToken
+  withCredentials: true, // Mandatory for refresh token cookie
 });
 
 // ============================================================
-// Request Interceptor — đính kèm Bearer token
+// Request Interceptor — auto attach access token from localStorage
 // ============================================================
 axiosClient.interceptors.request.use((config: InternalAxiosRequestConfig) => {
   const token = localStorage.getItem('accessToken');
@@ -33,13 +23,13 @@ axiosClient.interceptors.request.use((config: InternalAxiosRequestConfig) => {
 });
 
 // ============================================================
-// Response Interceptor — unwrap data + xử lý token hết hạn
+// Response Interceptor — unwrap data + handle 401 with token rotation
 // ============================================================
 
-// Cờ kiểm tra đang refresh hay chưa, tránh gọi /refresh nhiều lần đồng thời
+// Flag to prevent multiple simultaneous refresh attempts
 let isRefreshing = false;
 
-// Queue chứa các request bị 401 trong lúc đang refresh
+// Queue contain pending requests while refresh in progress
 type QueueItem = {
   resolve: (token: string) => void;
   reject: (err: unknown) => void;
@@ -58,21 +48,21 @@ const processQueue = (error: unknown, token: string | null = null): void => {
 };
 
 axiosClient.interceptors.response.use(
-  // ---- Success: trả về API body trực tiếp thay vì AxiosResponse ----
+  // ---- Success: return API body directly ----
   (response) => response.data,
 
-  // ---- Error: xử lý 401 với token rotation ----
+  // ---- Error: handle 401 with token rotation ----
   async (error) => {
     const originalRequest = error.config as InternalAxiosRequestConfig & {
       _retry?: boolean;
     };
 
-    // Không phải 401, hoặc đã retry rồi → reject luôn
+    // If error is not 401 or retry already attempted → reject immediately
     if (error.response?.status !== 401 || originalRequest._retry) {
       return Promise.reject(error.response?.data ?? error);
     }
 
-    // Nếu đang trong quá trình refresh → thêm vào queue và chờ
+    // If refresh already in progress, queue the request and retry after refresh completes
     if (isRefreshing) {
       return new Promise<string>((resolve, reject) => {
         failedQueue.push({ resolve, reject });
@@ -86,7 +76,7 @@ axiosClient.interceptors.response.use(
     isRefreshing = true;
 
     try {
-      // Dùng axios thuần để tránh đệ quy qua interceptor
+      // Call refresh endpoint to get new access token
       const { data } = await axios.post<RefreshApiResponse>(
         `${BASE_URL}/auth/refresh`,
         {},
@@ -95,22 +85,22 @@ axiosClient.interceptors.response.use(
 
       const newToken = data.data.accessToken;
 
-      // Cập nhật token mới
+      // Update new token in localStorage and default headers
       localStorage.setItem('accessToken', newToken);
       axiosClient.defaults.headers.common.Authorization = `Bearer ${newToken}`;
 
-      // Retry tất cả request trong queue với token mới
+      // Retry all failed requests in the queue with the new token
       processQueue(null, newToken);
 
       originalRequest.headers.Authorization = `Bearer ${newToken}`;
       return axiosClient(originalRequest);
     } catch (refreshError) {
-      // Refresh thất bại → xóa session
+      // Refresh failed → remove session
       processQueue(refreshError, null);
       localStorage.removeItem('accessToken');
       localStorage.removeItem('user');
 
-      // Redirect về login nếu đang ở protected route
+      // Redirect to login if currently on a protected route
       const currentPath = window.location.pathname;
       const isPublicPath = ['/', '/login', '/register', '/payment-success'].includes(currentPath) ||
         currentPath.startsWith('/oauth/');

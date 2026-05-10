@@ -2,6 +2,8 @@ import bcrypt from "bcrypt";
 import crypto from "crypto";
 import { prisma } from "../libs/prisma";
 import redis from "../libs/redis";
+import * as userRepo from "../repositories/user.repo";
+import { sendPasswordResetEmail } from "../utils/email.util";
 import {
   signAccessToken,
   signRefreshToken,
@@ -12,6 +14,7 @@ import {
 import {
   ConflictError,
   UnauthorizedError,
+  InternalServerError,
 } from "../errors/app.error.js";
 
 // ----------------------------------------------------------------
@@ -57,10 +60,7 @@ export const findOrCreateOAuthUser = async (
 ): Promise<AuthResult> => {
   const { email, fullName } = input;
 
-  let user = await prisma.users.findUnique({
-    where: { email },
-    select: { id: true, full_name: true, email: true, role: true },
-  });
+  let user = await userRepo.findByEmail(email);
 
   if (user) {
     const safeUser = toSafeUser(user);
@@ -73,17 +73,14 @@ export const findOrCreateOAuthUser = async (
     return issueTokens(payload, safeUser);
   }
 
-  user = await prisma.users.create({
-    data: {
-      full_name: fullName,
-      email,
-      password_hash: generateSecureRandomPassword(),
-      role: "user",
-    },
-    select: { id: true, full_name: true, email: true, role: true },
+  const newUser = await userRepo.create({
+    full_name: fullName,
+    email,
+    password_hash: generateSecureRandomPassword(),
+    role: "user",
   });
 
-  const safeUser = toSafeUser(user);
+  const safeUser = toSafeUser(newUser as any);
   
   const payload: JwtPayload = {
     userId: safeUser.id,
@@ -117,10 +114,7 @@ export interface AuthResult {
 export const register = async (input: RegisterInput): Promise<AuthResult> => {
   const { full_name, email, password } = input;
 
-  const existingByEmail = await prisma.users.findUnique({
-    where: { email },
-    select: { id: true },
-  });
+  const existingByEmail = await userRepo.findByEmail(email);
 
   if (existingByEmail) {
     throw new ConflictError("Email has already registered.");
@@ -128,12 +122,13 @@ export const register = async (input: RegisterInput): Promise<AuthResult> => {
 
   const password_hash = await bcrypt.hash(password, BCRYPT_SALT_ROUNDS);
 
-  const newUser = await prisma.users.create({
-    data: { full_name, email, password_hash },
-    select: { id: true, full_name: true, email: true, role: true },
+  const newUser = await userRepo.create({
+    full_name,
+    email,
+    password_hash,
   });
 
-  const safeUser = toSafeUser(newUser);
+  const safeUser = toSafeUser(newUser as any);
   const payload: JwtPayload = {
     userId: safeUser.id,
     fullName: safeUser.full_name,
@@ -155,24 +150,15 @@ export interface LoginInput {
 export const login = async (input: LoginInput): Promise<AuthResult> => {
   const { email, password } = input;
 
-  const user = await prisma.users.findUnique({
-    where: { email },
-    select: {
-      id: true,
-      full_name: true,
-      email: true,
-      role: true,
-      password_hash: true,
-    },
-  });
+  const user = await userRepo.findByEmail(email);
 
   if (!user) {
-    throw new UnauthorizedError("Email hoặc mật khẩu không đúng.");
+    throw new UnauthorizedError("Email or password is incorrect.");
   }
 
   const isPasswordValid = await bcrypt.compare(password, user.password_hash);
   if (!isPasswordValid) {
-    throw new UnauthorizedError("Email hoặc mật khẩu không đúng.");
+    throw new UnauthorizedError("Email or password is incorrect.");
   }
 
   const { password_hash: _, ...safeFields } = user;
@@ -210,10 +196,7 @@ export const refreshTokens = async (
     );
   }
 
-  const user = await prisma.users.findUnique({
-    where: { id: payload.userId },
-    select: { id: true, full_name: true, email: true, role: true },
-  });
+  const user = await userRepo.findById(payload.userId);
   if (!user) {
     throw new UnauthorizedError("User not found.");
   }
@@ -292,10 +275,8 @@ async function issueTokens(
 // ================================================================
 // FORGOT PASSWORD
 // ================================================================
-import { sendPasswordResetEmail } from "../utils/email.util";
-
 export const forgotPassword = async (email: string, baseUrl: string): Promise<void> => {
-  const user = await prisma.users.findUnique({ where: { email } });
+  const user = await userRepo.findByEmail(email);
   
   // Generic success message behavior: don't error out if user not found
   if (!user) {
@@ -308,12 +289,9 @@ export const forgotPassword = async (email: string, baseUrl: string): Promise<vo
   // Token valid for 15 minutes
   const expiresAt = new Date(Date.now() + 15 * 60 * 1000);
 
-  await prisma.users.update({
-    where: { id: user.id },
-    data: {
-      reset_password_token: hashedToken,
-      reset_password_expires: expiresAt,
-    },
+  await userRepo.update(user.id, {
+    reset_password_token: hashedToken,
+    reset_password_expires: expiresAt,
   });
 
   const resetUrl = `${baseUrl}/reset-password?token=${resetTokenStr}`;
@@ -322,15 +300,13 @@ export const forgotPassword = async (email: string, baseUrl: string): Promise<vo
     await sendPasswordResetEmail(user.email, resetUrl);
   } catch (error) {
     // Clear token if email fails
-    await prisma.users.update({
-      where: { id: user.id },
-      data: {
-        reset_password_token: null,
-        reset_password_expires: null,
-      },
+    await userRepo.update(user.id, {
+      reset_password_token: null,
+      reset_password_expires: null,
     });
     
-    throw new Error('There was an error sending the password reset email. Please try again later.');
+    // Ném lỗi 500 thông qua AppError thay vì Object Error thường
+    throw new InternalServerError('There was an error sending the password reset email. Please try again later.');
   }
 };
 
@@ -340,14 +316,7 @@ export const forgotPassword = async (email: string, baseUrl: string): Promise<vo
 export const resetPassword = async (token: string, newPassword: string): Promise<void> => {
   const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
 
-  const user = await prisma.users.findFirst({
-    where: {
-      reset_password_token: hashedToken,
-      reset_password_expires: {
-        gt: new Date(),
-      },
-    },
-  });
+  const user = await userRepo.findByResetToken(hashedToken, new Date());
 
   if (!user) {
     throw new UnauthorizedError('Token is invalid or has expired.');
@@ -355,15 +324,11 @@ export const resetPassword = async (token: string, newPassword: string): Promise
 
   const newPasswordHash = await bcrypt.hash(newPassword, BCRYPT_SALT_ROUNDS);
 
-  await prisma.users.update({
-    where: { id: user.id },
-    data: {
-      password_hash: newPasswordHash,
-      reset_password_token: null,
-      reset_password_expires: null,
-    },
-  });
-
+  await userRepo.update(user.id, {
+    password_hash: newPasswordHash,
+    reset_password_token: null,
+    reset_password_expires: null,
+  })
   // Optional: Invalidate active sessions by deleting refresh token from Redis
   await redis.del(buildRefreshTokenKey(user.id));
 }
