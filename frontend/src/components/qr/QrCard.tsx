@@ -20,6 +20,7 @@ interface QrCardProps {
   qrCode: QrCodeItem;
   onDisable?: (id: string, currentStatus: boolean) => void;
   onRegenerate?: (id: string) => void;
+  viewMode?: 'card' | 'row';
 }
 
 const getShortUrlDisplay = (shortCode: string | null): string => {
@@ -28,7 +29,7 @@ const getShortUrlDisplay = (shortCode: string | null): string => {
 };
 
 export const QrCard: React.FC<QrCardProps> = React.memo(
-  ({ qrCode, onDisable, onRegenerate }) => {
+  ({ qrCode, onDisable, onRegenerate, viewMode = 'row' }) => {
     const [copiedValue, copy] = useCopyToClipboard();
 
     const shortUrlDisplay = getShortUrlDisplay(qrCode.shortCode);
@@ -59,17 +60,17 @@ export const QrCard: React.FC<QrCardProps> = React.memo(
     }, [qrCode]);
 
     return (
-      <div className={`bg-white rounded-lg shadow-sm border border-gray-200 p-4 mb-4 transition-shadow ${!qrCode.isActive ? "opacity-75 bg-gray-50" : "hover:shadow-md"}`}>
-        <div className="flex flex-col sm:flex-row gap-4">
+      <div className={`bg-white rounded-lg shadow-sm border border-gray-200 p-4 transition-shadow ${!qrCode.isActive ? "opacity-75 bg-gray-50" : "hover:shadow-md"} ${viewMode === 'row' ? 'mb-4' : 'flex flex-col'}`}>
+        <div className={`flex gap-4 ${viewMode === 'card' ? 'flex-col' : 'flex-col sm:flex-row'}`}>
           {/* QR Code Preview */}
-          <div className="relative">
+          <div className={`relative ${viewMode === 'card' ? 'self-center mb-2' : ''}`}>
             <div
               id={`qr-svg-${qrCode.id}`}
-              className={`w-20 h-20 shrink-0 border border-gray-200 rounded-lg overflow-hidden flex items-center justify-center bg-white p-1 ${!qrCode.isActive ? "grayscale blur-[2px]" : ""}`}
+              className={`shrink-0 border border-gray-200 rounded-lg overflow-hidden flex items-center justify-center bg-white p-1 ${!qrCode.isActive ? "grayscale blur-[2px]" : ""} ${viewMode === 'card' ? 'w-32 h-32' : 'w-20 h-20'}`}
             >
               <QRCodeSVG
                 value={qrCode.destinationUrl}
-                size={72}
+                size={viewMode === 'card' ? 120 : 72}
                 fgColor={qrCode.fgColor}
                 bgColor={qrCode.bgColor}
                 level={qrCode.errorCorrection as "L" | "M" | "Q" | "H"}

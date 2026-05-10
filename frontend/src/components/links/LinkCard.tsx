@@ -9,9 +9,10 @@ import { EditLinkModal } from "./EditLinkModal";
 
 interface LinkCardProps {
   link: LinkItem;
+  viewMode?: 'card' | 'row';
 }
 
-export const LinkCard: React.FC<LinkCardProps> = React.memo(({ link }) => {
+export const LinkCard: React.FC<LinkCardProps> = React.memo(({ link, viewMode = 'row' }) => {
   const [copiedValue, copy] = useCopyToClipboard();
   const navigate = useNavigate();
   const shortUrlDisplay = getShortUrlDisplay(link.short_code);
@@ -33,52 +34,68 @@ export const LinkCard: React.FC<LinkCardProps> = React.memo(({ link }) => {
   };
 
   return (
-    <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 mb-4 hover:shadow-md transition-shadow">
-      <div className="flex flex-col md:flex-row gap-4">
+    <div className={`bg-white rounded-lg shadow-sm border border-gray-200 p-4 hover:shadow-md transition-shadow ${viewMode === 'row' ? 'mb-4' : 'flex flex-col'}`}>
+      <div className={`flex gap-4 ${viewMode === 'card' ? 'flex-col' : 'flex-col md:flex-row'}`}>
         {/* Left side: Checkbox & Icons */}
-        <div className="flex items-start gap-4">
-          <input
-            type="checkbox"
-            className="w-4 h-4 mt-1 border-gray-300 rounded text-blue-600 focus:ring-blue-500 cursor-pointer"
-          />
-          <div className="sm:block mt-1 w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center overflow-hidden shrink-0 border border-gray-200">
-            <img src={defaultFavicon} alt="" className="w-full h-full object-contain" />
+        <div className={`flex items-start gap-4 ${viewMode === 'card' ? 'justify-between w-full' : ''}`}>
+          <div className="flex gap-4">
+            <input
+              type="checkbox"
+              className="w-4 h-4 mt-1 border-gray-300 rounded text-blue-600 focus:ring-blue-500 cursor-pointer"
+            />
+            <div className="sm:block mt-1 w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center overflow-hidden shrink-0 border border-gray-200">
+              <img src={defaultFavicon} alt="" className="w-full h-full object-contain" />
+            </div>
           </div>
+          
+          {/* If card view, we move the icons to the top right beside the favicon */}
+          {viewMode === 'card' && (
+            <div className="flex items-center text-gray-500 gap-1">
+              <button className="p-1 hover:bg-gray-100 rounded-md transition-colors" onClick={() => setShowEditModal(true)}><Edit2 size={16} /></button>
+              <button className="p-1 hover:bg-gray-100 rounded-md transition-colors"><Share2 size={16} /></button>
+              <button onClick={() => navigateToAnalytics(link)} className="p-1 hover:bg-gray-100 rounded-md transition-colors"><BarChart2 size={16} /></button>
+              <button onClick={handleQrClick} className={`p-1 rounded-md transition-colors ${link.has_qr ? 'text-blue-600 hover:bg-blue-50' : 'hover:bg-gray-100'}`}><QrCode size={16} /></button>
+              <button className="p-1 hover:bg-gray-100 rounded-md transition-colors"><MoreHorizontal size={16} /></button>
+            </div>
+          )}
         </div>
 
         {/* Main Content */}
-        <div className="flex-1 w-full overflow-hidden">
+        <div className="flex-1 w-full overflow-hidden flex flex-col">
           {/* Top Title & Right Actions */}
           <div className="flex justify-between items-start gap-4">
-            <h3 className="font-bold text-gray-900 text-lg truncate hover:underline cursor-pointer"
+            <h3 className={`font-bold text-gray-900 truncate hover:underline cursor-pointer ${viewMode === 'card' ? 'text-base' : 'text-lg'}`}
               onClick={() => navigateToAnalytics(link)}
             >
               {link.title || link.long_url.substring(0, 50) + "..."}
             </h3>
-            <div className="flex items-center text-gray-500 gap-3">
-              <button
-                className="p-1 hover:bg-gray-100 rounded-md transition-colors"
-                onClick={() => setShowEditModal(true)}
-              >
-                <Edit2 size={16} />
-              </button>
-              <button className="p-1 hover:bg-gray-100 rounded-md transition-colors"><Share2 size={16} /></button>
-              <button
-                onClick={() => navigateToAnalytics(link)}
-                className="p-1 hover:bg-gray-100 rounded-md transition-colors"
-                title="View analytics"
-              >
-                <BarChart2 size={16} />
-              </button>
-              <button
-                onClick={handleQrClick}
-                className={`p-1 rounded-md transition-colors ${link.has_qr ? 'text-blue-600 hover:bg-blue-50' : 'hover:bg-gray-100'}`}
-                title={link.has_qr ? "View QR Code" : "Create QR Code"}
-              >
-                <QrCode size={16} />
-              </button>
-              <button className="p-1 hover:bg-gray-100 rounded-md transition-colors"><MoreHorizontal size={16} /></button>
-            </div>
+            
+            {viewMode === 'row' && (
+              <div className="flex items-center text-gray-500 gap-3">
+                <button
+                  className="p-1 hover:bg-gray-100 rounded-md transition-colors"
+                  onClick={() => setShowEditModal(true)}
+                >
+                  <Edit2 size={16} />
+                </button>
+                <button className="p-1 hover:bg-gray-100 rounded-md transition-colors"><Share2 size={16} /></button>
+                <button
+                  onClick={() => navigateToAnalytics(link)}
+                  className="p-1 hover:bg-gray-100 rounded-md transition-colors"
+                  title="View analytics"
+                >
+                  <BarChart2 size={16} />
+                </button>
+                <button
+                  onClick={handleQrClick}
+                  className={`p-1 rounded-md transition-colors ${link.has_qr ? 'text-blue-600 hover:bg-blue-50' : 'hover:bg-gray-100'}`}
+                  title={link.has_qr ? "View QR Code" : "Create QR Code"}
+                >
+                  <QrCode size={16} />
+                </button>
+                <button className="p-1 hover:bg-gray-100 rounded-md transition-colors"><MoreHorizontal size={16} /></button>
+              </div>
+            )}
           </div>
 
           <div className="flex items-center gap-2 mt-1.5 flex-wrap">

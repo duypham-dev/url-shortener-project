@@ -42,6 +42,15 @@ export const useQrFilters = () => {
     setDraftSearchTerm(searchParam);
   }, [searchParam]);
 
+  const [viewMode, setViewMode] = useState<'card' | 'row'>(() => {
+    return (localStorage.getItem('viewMode') as 'card' | 'row') || 'card';
+  });
+
+  const handleViewModeChange = useCallback((mode: 'card' | 'row') => {
+    setViewMode(mode);
+    localStorage.setItem('viewMode', mode);
+  }, []);
+
   const queryParams: QrCodesQueryParams = useMemo(
     () => ({
       search: searchParam || undefined,
@@ -94,9 +103,11 @@ export const useQrFilters = () => {
     dateFilter,
     hasActiveFilters,
     queryParams,
+    viewMode,
     handleSearchTermChange,
     handleSearchSubmit,
     handleDateFilterChange,
     handleClearAllFilters,
+    handleViewModeChange,
   };
 };

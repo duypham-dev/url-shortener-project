@@ -50,7 +50,6 @@ export const QrCodes: React.FC = () => {
   const handleToggleActive = useCallback(
     async (id: string, currentStatus: boolean) => {
       const action = currentStatus ? "disable" : "enable";
-      const pastTense = currentStatus ? "disabled" : "enabled";
 
       const confirmed = await showConfirmDialog({
         title: `${currentStatus ? 'Disable' : 'Enable'} QR Code`,
@@ -110,6 +109,8 @@ export const QrCodes: React.FC = () => {
         onLinkFiltersChange={() => {}}
         sortFilter={{ sortBy: 'created_at', sortOrder: 'desc' }}
         onSortChange={() => {}}
+        viewMode={filters.viewMode}
+        onViewModeChange={filters.handleViewModeChange}
         hasActiveFilters={filters.hasActiveFilters}
         onClearAllFilters={filters.handleClearAllFilters}
       />
@@ -121,6 +122,7 @@ export const QrCodes: React.FC = () => {
         isLoading={isLoading}
         error={error}
         onDisable={handleToggleActive}
+        viewMode={filters.viewMode}
       />
     </div>
   );

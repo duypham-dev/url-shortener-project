@@ -13,7 +13,7 @@ import {
   FormControl,
 } from '@mui/material';
 
-// Import Icons từ MUI
+// Import Icons from MUI
 import TuneIcon from '@mui/icons-material/Tune';
 import GridViewIcon from '@mui/icons-material/GridView';
 import ViewListIcon from '@mui/icons-material/ViewList';
@@ -26,11 +26,15 @@ import type { SelectChangeEvent } from '@mui/material';
 interface DisplaySettingsProps {
   sortFilter: SortFilter;
   onSortChange: (filter: SortFilter) => void;
+  viewMode: 'card' | 'row';
+  onViewModeChange: (mode: 'card' | 'row') => void;
 }
 
 const DisplaySettingsButton: React.FC<DisplaySettingsProps> = ({ 
   sortFilter,
-  onSortChange 
+  onSortChange,
+  viewMode,
+  onViewModeChange
 }) => {
   const [anchorEl, setAnchorEl] = useState<HTMLButtonElement | null>(null);
 
@@ -91,19 +95,22 @@ const DisplaySettingsButton: React.FC<DisplaySettingsProps> = ({
           {/* Layout (Cards / Rows) */}
           <Stack direction="row" spacing={1} sx={{ mb: 2 }}>
             <Button
-              variant="outlined"
+              variant={viewMode === 'card' ? "outlined" : "text"}
               startIcon={<GridViewIcon />}
               fullWidth
-              sx={{ height: 48, textTransform: 'none' }}
+              onClick={() => onViewModeChange('card')}
+              color={viewMode === 'card' ? "primary" : "inherit"}
+              sx={{ height: 48, textTransform: 'none', color: viewMode === 'card' ? 'primary.main' : 'text.secondary' }}
             >
               Cards
             </Button>
             <Button
-              variant="text"
+              variant={viewMode === 'row' ? "outlined" : "text"}
               startIcon={<ViewListIcon />}
-              color="inherit"
               fullWidth
-              sx={{ height: 48, textTransform: 'none', color: 'text.secondary' }}
+              onClick={() => onViewModeChange('row')}
+              color={viewMode === 'row' ? "primary" : "inherit"}
+              sx={{ height: 48, textTransform: 'none', color: viewMode === 'row' ? 'primary.main' : 'text.secondary' }}
             >
               Rows
             </Button>

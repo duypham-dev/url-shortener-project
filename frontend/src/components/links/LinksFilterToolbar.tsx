@@ -15,6 +15,8 @@ interface LinksFilterToolbarProps {
   onLinkFiltersChange: (filter: LinkFilters) => void;
   sortFilter: SortFilter;
   onSortChange: (filter: SortFilter) => void;
+  viewMode: 'card' | 'row';
+  onViewModeChange: (mode: 'card' | 'row') => void;
   hasActiveFilters: boolean;
   onClearAllFilters: () => void;
 }
@@ -29,6 +31,8 @@ const LinksFilterToolbarComponent: React.FC<LinksFilterToolbarProps> = ({
   onLinkFiltersChange,
   sortFilter,
   onSortChange,
+  viewMode,
+  onViewModeChange,
   hasActiveFilters,
   onClearAllFilters,
 }) => {
@@ -56,6 +60,8 @@ const LinksFilterToolbarComponent: React.FC<LinksFilterToolbarProps> = ({
       <DisplaySettings 
         sortFilter={sortFilter}
         onSortChange={onSortChange}
+        viewMode={viewMode}
+        onViewModeChange={onViewModeChange}
       />
       {hasActiveFilters && (
         <button

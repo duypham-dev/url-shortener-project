@@ -35,6 +35,15 @@ export const useLinkFilters = () => {
   // Local state for search input
   const [draftSearchTerm, setDraftSearchTerm] = useState(searchParam);
 
+  const [viewMode, setViewMode] = useState<'card' | 'row'>(() => {
+    return (localStorage.getItem('viewMode') as 'card' | 'row') || 'card';
+  });
+
+  const handleViewModeChange = useCallback((mode: 'card' | 'row') => {
+    setViewMode(mode);
+    localStorage.setItem('viewMode', mode);
+  }, []);
+
   // Sync draft if URL changes externally
   useEffect(() => {
     setDraftSearchTerm(searchParam);
@@ -115,11 +124,13 @@ export const useLinkFilters = () => {
     sortFilter,
     hasActiveFilters,
     queryParams,
+    viewMode,
     handleSearchTermChange,
     handleSearchSubmit,
     handleDateFilterChange,
     handleLinkFiltersChange,
     handleSortChange,
-    handleClearAllFilters
+    handleClearAllFilters,
+    handleViewModeChange
   };
 };

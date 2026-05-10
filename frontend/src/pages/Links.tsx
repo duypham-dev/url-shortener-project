@@ -36,6 +36,8 @@ export const Links: React.FC = () => {
         onLinkFiltersChange={filters.handleLinkFiltersChange}
         sortFilter={filters.sortFilter}
         onSortChange={filters.handleSortChange}
+        viewMode={filters.viewMode}
+        onViewModeChange={filters.handleViewModeChange}
         hasActiveFilters={filters.hasActiveFilters}
         onClearAllFilters={filters.handleClearAllFilters}
       />
@@ -46,6 +48,7 @@ export const Links: React.FC = () => {
         links={links}
         isLoading={isLoading}
         error={error}
+        viewMode={filters.viewMode}
       />
     </div>
   );
