@@ -33,6 +33,7 @@ import CreateLink from "./pages/CreateLink/CreateLink";
 import { RealtimeAnalytics } from "./pages/RealtimeAnalytics.tsx";
 import { QrCodes } from "./pages/QrCodes";
 import { Toaster } from "react-hot-toast";
+import { GlobalConfirmModal } from "./components/GlobalConfirmModal";
 
 const App: React.FC = () => {
   // Kiểm tra trạng thái đăng nhập ngay khi ứng dụng mount (F5)
@@ -123,6 +124,7 @@ const App: React.FC = () => {
           {/* Kết quả thanh toán */}
           <Route path="/payment-success" element={<PaymentResult />} />
         </Routes>
+        <GlobalConfirmModal />
       </BrowserRouter>
     </QueryClientProvider>
   );

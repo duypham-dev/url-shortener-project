@@ -15,6 +15,7 @@ import {
   selectCanUseQr,
   selectPlanName,
 } from "../store/usePlanStore";
+import { showConfirmDialog } from "../store/useConfirmStore";
 
 // API
 import { disableQrCode, enableQrCode } from "../api/qrCode.api";
@@ -51,7 +52,13 @@ export const QrCodes: React.FC = () => {
       const action = currentStatus ? "disable" : "enable";
       const pastTense = currentStatus ? "disabled" : "enabled";
 
-      if (!confirm(`Are you sure you want to ${action} this QR code?`)) return;
+      const confirmed = await showConfirmDialog({
+        title: `${currentStatus ? 'Disable' : 'Enable'} QR Code`,
+        message: `Are you sure you want to ${action} this QR code?`,
+        confirmText: `Yes, ${action} it`,
+        variant: currentStatus ? 'warning' : 'info',
+      });
+      if (!confirmed) return;
       try {
         if (currentStatus) {
           await disableQrCode(id);
