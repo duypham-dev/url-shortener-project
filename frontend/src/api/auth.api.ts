@@ -21,3 +21,11 @@ export const logoutApi = (): Promise<{ success: boolean }> =>
 // Get current user info (used for auto-login on app start)
 export const getMeApi = (): Promise<MeApiResponse> =>
   axiosClient.get('/auth/me');
+
+// Forgot password
+export const forgotPasswordApi = (data: { email: string }): Promise<{ success: boolean; message: string }> =>
+  axiosClient.post('/auth/forgot-password', data);
+
+// Reset password
+export const resetPasswordApi = (data: { token: string; newPassword: string }): Promise<{ success: boolean; message: string }> =>
+  axiosClient.post('/auth/reset-password', data);

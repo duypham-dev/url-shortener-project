@@ -1,11 +1,3 @@
-/**
- * Routes:
- *   POST   /api/v1/auth/register  
- *   POST   /api/v1/auth/login     
- *   POST   /api/v1/auth/refresh  
- *   POST   /api/v1/auth/logout    
- *   GET    /api/v1/auth/me       
- */
 import { Router } from "express";
 import {
   registerHandler,
@@ -13,6 +5,8 @@ import {
   refreshHandler,
   logoutHandler,
   getMeHandler,
+  forgotPasswordHandler,
+  resetPasswordHandler,
 } from "../controllers/auth.controller";
 import { googleLogin } from "../controllers/googleLogin.controller";
 import { verifyToken } from "../middlewares/verifyToken.middleware";
@@ -46,6 +40,11 @@ authRouter.post(
   validate(googleLoginSchema),
   googleLogin,
 );
+
+authRouter.post("/forgot-password", globalAuthRateLimit, forgotPasswordHandler);
+
+
+authRouter.post("/reset-password", globalAuthRateLimit, resetPasswordHandler);
 
 // ---- Protected routes ----
 authRouter.post("/logout", verifyToken, logoutHandler);

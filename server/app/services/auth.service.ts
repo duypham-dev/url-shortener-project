@@ -288,3 +288,83 @@ async function issueTokens(
     },
   };
 }
+
+// ================================================================
+// FORGOT PASSWORD
+// ================================================================
+import { sendPasswordResetEmail } from "../utils/email.util";
+
+export const forgotPassword = async (email: string, baseUrl: string): Promise<void> => {
+  const user = await prisma.users.findUnique({ where: { email } });
+  
+  // Generic success message behavior: don't error out if user not found
+  if (!user) {
+    return;
+  }
+
+  const resetTokenStr = crypto.randomBytes(32).toString('hex');
+  const hashedToken = crypto.createHash('sha256').update(resetTokenStr).digest('hex');
+
+  // Token valid for 15 minutes
+  const expiresAt = new Date(Date.now() + 15 * 60 * 1000);
+
+  await prisma.users.update({
+    where: { id: user.id },
+    data: {
+      reset_password_token: hashedToken,
+      reset_password_expires: expiresAt,
+    },
+  });
+
+  const resetUrl = `${baseUrl}/reset-password?token=${resetTokenStr}`;
+
+  try {
+    await sendPasswordResetEmail(user.email, resetUrl);
+  } catch (error) {
+    // Clear token if email fails
+    await prisma.users.update({
+      where: { id: user.id },
+      data: {
+        reset_password_token: null,
+        reset_password_expires: null,
+      },
+    });
+    
+    throw new Error('There was an error sending the password reset email. Please try again later.');
+  }
+};
+
+// ================================================================
+// RESET PASSWORD
+// ================================================================
+export const resetPassword = async (token: string, newPassword: string): Promise<void> => {
+  const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
+
+  const user = await prisma.users.findFirst({
+    where: {
+      reset_password_token: hashedToken,
+      reset_password_expires: {
+        gt: new Date(),
+      },
+    },
+  });
+
+  if (!user) {
+    throw new UnauthorizedError('Token is invalid or has expired.');
+  }
+
+  const newPasswordHash = await bcrypt.hash(newPassword, BCRYPT_SALT_ROUNDS);
+
+  await prisma.users.update({
+    where: { id: user.id },
+    data: {
+      password_hash: newPasswordHash,
+      reset_password_token: null,
+      reset_password_expires: null,
+    },
+  });
+
+  // Optional: Invalidate active sessions by deleting refresh token from Redis
+  await redis.del(buildRefreshTokenKey(user.id));
+}
+

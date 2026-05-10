@@ -32,25 +32,32 @@ declare global {
   }
 }
 
+// 2a. Dùng biến global để theo dõi việc initialize Google SDK tránh lỗi GSI_LOGGER
+let isGoogleSdkInitialized = false;
+
 const ButtonLoginGoogle: React.FC = () => {
-  // 2. Ép kiểu (Type assertion) cho biến môi trường Vite
+  // 2b. Ép kiểu (Type assertion) cho biến môi trường Vite
   const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID as string;
   const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL as string) || "http://localhost:8080/api/v1";
   
   // 3. Khai báo kiểu cho useRef
-  const initializedRef = useRef<boolean>(false);
+  const buttonRenderedRef = useRef<boolean>(false);
 
   const initializeGoogleSignIn = useCallback(() => {
-    if (!window.google?.accounts?.id || initializedRef.current) return;
+    if (!window.google?.accounts?.id) return;
 
-    window.google.accounts.id.initialize({
-      client_id: GOOGLE_CLIENT_ID,
-      ux_mode: "redirect",
-      login_uri: `${API_BASE_URL}/auth/google`,
-    });
+    // Chỉ initialize 1 lần duy nhất trên toàn cục (tránh lỗi gọi nhiều lần)
+    if (!isGoogleSdkInitialized) {
+      window.google.accounts.id.initialize({
+        client_id: GOOGLE_CLIENT_ID,
+        ux_mode: "redirect",
+        login_uri: `${API_BASE_URL}/auth/google`,
+      });
+      isGoogleSdkInitialized = true;
+    }
 
     const buttonContainer = document.getElementById("google-signin-button");
-    if (buttonContainer) {
+    if (buttonContainer && !buttonRenderedRef.current) {
       window.google.accounts.id.renderButton(buttonContainer, {
         theme: "outline",
         size: "large",
@@ -60,7 +67,7 @@ const ButtonLoginGoogle: React.FC = () => {
         logo_alignment: "center",
         width: 400, // Thiết lập chiều rộng cố định giúp ổn định layout
       });
-      initializedRef.current = true;
+      buttonRenderedRef.current = true;
     }
   }, [GOOGLE_CLIENT_ID, API_BASE_URL]);
 

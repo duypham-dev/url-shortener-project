@@ -159,3 +159,61 @@ export const getMeHandler = (req: Request, res: Response): void => {
     data: { user: req.user },
   });
 };
+
+// ================================================================
+// POST /api/v1/auth/forgot-password
+// ================================================================
+export const forgotPasswordHandler = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const { email } = req.body;
+
+    if (!email) {
+      res.status(400).json({ success: false, message: "Email is required" });
+      return;
+    }
+
+    // Default or config-based frontend URL
+    const baseUrl = req.headers.origin || "http://localhost:5173";
+
+    await authService.forgotPassword(email, baseUrl);
+
+    // Generic success response to prevent email enumeration
+    res.status(200).json({
+      success: true,
+      message: "If an account with that email exists, we have sent a password reset link.",
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// ================================================================
+// POST /api/v1/auth/reset-password
+// ================================================================
+export const resetPasswordHandler = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const { token, newPassword } = req.body;
+
+    if (!token || !newPassword) {
+      res.status(400).json({ success: false, message: "Token and new password are required" });
+      return;
+    }
+
+    await authService.resetPassword(token, newPassword);
+
+    res.status(200).json({
+      success: true,
+      message: "Password has been successfully reset. You can now log in.",
+    });
+  } catch (error) {
+    next(error);
+  }
+};

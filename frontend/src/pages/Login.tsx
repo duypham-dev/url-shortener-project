@@ -38,6 +38,8 @@ const Login: React.FC = () => {
     if (error) setError(null);
   };
 
+
+
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
@@ -131,7 +133,7 @@ const Login: React.FC = () => {
                 required
               />
               <div className="mt-3">
-                <a href="#" className="text-sm text-[#3452cf] hover:underline font-medium">
+                <a onClick={() => navigate('/forgot-password')} className="text-sm text-[#3452cf] hover:underline font-medium">
                   Forgot your password?
                 </a>
               </div>

@@ -12,13 +12,16 @@ const queryClient = new QueryClient({
     },
   },
 });
+// Route guards
+import ProtectedRoute from "./components/ProtectedRoute";
+import PublicRoute from "./components/PublicRoute";
+
 // Pages
 import Home from "./pages/Home";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
-// Route guards
-import ProtectedRoute from "./components/ProtectedRoute";
-import PublicRoute from "./components/PublicRoute";
+import ForgotPassword from "./pages/ForgotPassword.tsx";
+import ResetPassword from "./pages/ResetPassword.tsx";
 import OAuthRedirect from "./pages/OauthRedirect";
 import Dashboard from "./pages/Dashboard";
 import { DashboardLayout } from "./layout/DashboardLayout";
@@ -75,6 +78,22 @@ const App: React.FC = () => {
           element={
             <PublicRoute>
               <OAuthRedirect />
+            </PublicRoute>
+          }
+        />
+        <Route
+          path="/forgot-password"
+          element={
+            <PublicRoute>
+              <ForgotPassword />
+            </PublicRoute>
+          }
+        />
+        <Route
+          path="/reset-password"
+          element={
+            <PublicRoute>
+              <ResetPassword />
             </PublicRoute>
           }
         />
