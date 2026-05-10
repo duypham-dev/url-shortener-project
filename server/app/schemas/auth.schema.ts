@@ -32,7 +32,24 @@ export const loginSchema = z.object({
     })
 })
 
+// Forgot password schema
+export const forgotPasswordSchema = z.object({
+    body: z.object({
+        email: z.email(),
+    })
+})
+
+// Reset password schema
+export const resetPasswordSchema = z.object({
+    body: z.object({
+        token: z.string(),
+        newPassword: passwordSchema,
+    })
+})
+
 
 // Export TypeScript Types
 export type RegisterInput = z.infer<typeof registerSchema>['body'];
 export type LoginInput = z.infer<typeof loginSchema>['body'];
+export type ForgotPasswordInput = z.infer<typeof forgotPasswordSchema>['body'];
+export type ResetPasswordInput = z.infer<typeof resetPasswordSchema>['body'];

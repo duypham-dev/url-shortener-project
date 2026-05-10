@@ -177,7 +177,7 @@ export const forgotPasswordHandler = async (
     }
 
     // Default or config-based frontend URL
-    const baseUrl = req.headers.origin || "http://localhost:5173";
+    const baseUrl = req.headers.origin || process.env.FRONTEND_URL || "http://localhost:5173";
 
     await authService.forgotPassword(email, baseUrl);
 

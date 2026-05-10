@@ -11,7 +11,7 @@ import {
 import { googleLogin } from "../controllers/googleLogin.controller";
 import { verifyToken } from "../middlewares/verifyToken.middleware";
 import { globalAuthRateLimit, loginRateLimit, registerRateLimit } from "../middlewares/ratelimit.middleware";
-import { registerSchema, loginSchema } from "../schemas/auth.schema";
+import { registerSchema, loginSchema, forgotPasswordSchema, resetPasswordSchema } from "../schemas/auth.schema";
 import { validate } from "../middlewares/validate.middleware";
 import { googleLoginSchema } from "../schemas/googleLogin.schema";
 
@@ -41,10 +41,8 @@ authRouter.post(
   googleLogin,
 );
 
-authRouter.post("/forgot-password", globalAuthRateLimit, forgotPasswordHandler);
-
-
-authRouter.post("/reset-password", globalAuthRateLimit, resetPasswordHandler);
+authRouter.post("/forgot-password", globalAuthRateLimit, validate(forgotPasswordSchema), forgotPasswordHandler);
+authRouter.post("/reset-password", globalAuthRateLimit, validate(resetPasswordSchema), resetPasswordHandler);
 
 // ---- Protected routes ----
 authRouter.post("/logout", verifyToken, logoutHandler);
