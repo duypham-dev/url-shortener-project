@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { Globe, Monitor, Smartphone, type LucideIcon } from "lucide-react";
-import type { AnalyticsBreakdownItem } from "../../types/analytics.type";
+import type { AnalyticsBreakdownItem } from "../../../types/analytics.type";
 
 type BreakdownTabKey = "device" | "browser" | "os";
 
@@ -76,11 +76,10 @@ export const TrafficBreakdownCard: React.FC<TrafficBreakdownCardProps> = ({
               key={item.key}
               type="button"
               onClick={() => setActiveTab(item.key)}
-              className={`inline-flex items-center gap-2 px-3 py-2 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${
-                isActive
+              className={`inline-flex items-center gap-2 px-3 py-2 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${isActive
                   ? "border-blue-600 text-blue-700"
                   : "border-transparent text-gray-500 hover:text-gray-700"
-              }`}
+                }`}
             >
               <Icon size={16} />
               {item.label}

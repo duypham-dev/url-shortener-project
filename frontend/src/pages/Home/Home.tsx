@@ -1,17 +1,25 @@
 import React, { useState } from 'react';
-import { Lock, HelpCircle } from 'lucide-react';
-import { createShortenUrl } from '../api/link.api';
-import { SuccessModal } from '../components/SuccessModal';
 import { useQueryClient } from '@tanstack/react-query';
-import { usePlanStore, selectPlanName, selectRemainingLinks } from '../store/usePlanStore';
-import type { QrCodeItem } from '../types/qr.type';
+import { Lock, HelpCircle } from 'lucide-react';
+
+//API
+import { createShortenUrl } from '../../api/link.api';
+
+//Component
+import { SuccessModal } from '../../components/SuccessModal';
+
+//Store
+import { usePlanStore, selectPlanName, selectRemainingLinks } from '../../store/usePlanStore';
+
+//Type
+import type { QrCodeItem } from '../../types/qr.type';
 
 export const Dashboard: React.FC = () => {
   const queryClient = useQueryClient();
   const [url, setUrl] = useState('');
   const [createQrCode, setCreateQrCode] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
-  
+
   // Modal state
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [generatedShortUrl, setGeneratedShortUrl] = useState('');
@@ -38,9 +46,9 @@ export const Dashboard: React.FC = () => {
       const response = await createShortenUrl(url, {
         generateQr: createQrCode,
       });
-      
+
       const actualShortUrl = response?.shortUrl || "";
-      
+
       if (actualShortUrl) {
         setGeneratedShortUrl(actualShortUrl);
         setGeneratedQr(response?.qrCode);
@@ -54,7 +62,7 @@ export const Dashboard: React.FC = () => {
         refreshUsage();
       }
     } catch (error) {
-      console.error('Error creating:', error); 
+      console.error('Error creating:', error);
       const message =
         typeof error === 'object' && error && 'message' in error
           ? String(error.message)
@@ -68,9 +76,6 @@ export const Dashboard: React.FC = () => {
     <>
       <div className="flex items-center justify-center mt-0 mx-auto border border-gray-300 rounded-lg p-6 bg-white">
         <div className="w-full max-w-200">
-          
-
-
           {/* Main Card */}
           <div className="bg-white rounded-xl overflow-hidden">
             {/* Card Header */}
@@ -90,7 +95,7 @@ export const Dashboard: React.FC = () => {
 
             {/* Card Body */}
             <div className="px-8 py-6 space-y-6">
-              
+
               {/* Domain Input Area */}
               <div className="space-y-1">
                 <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
@@ -115,7 +120,7 @@ export const Dashboard: React.FC = () => {
                       className="block w-full px-4 py-3 text-gray-900 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 placeholder:text-gray-400"
                     />
                   </div>
-                  <button 
+                  <button
                     onClick={handleCreate}
                     disabled={!url || isQuotaExceeded}
                     className="whitespace-nowrap px-6 py-3 bg-blue-600 text-white font-medium rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
@@ -144,7 +149,7 @@ export const Dashboard: React.FC = () => {
                   Also create a QR Code for this link
                 </label>
               </div>
-              
+
               {/* Promo Banner */}
               <div className="mt-8 bg-blue-50/50 border border-blue-100 rounded-lg p-4 flex items-center justify-center gap-2 text-sm text-blue-800">
                 <svg className="w-5 h-5 text-blue-500" fill="currentColor" viewBox="0 0 20 20">
@@ -163,7 +168,7 @@ export const Dashboard: React.FC = () => {
         </div>
       </div>
 
-      <SuccessModal 
+      <SuccessModal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         shortUrl={generatedShortUrl}

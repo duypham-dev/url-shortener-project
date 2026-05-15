@@ -9,15 +9,15 @@ import { QRCodeSVG } from "qrcode.react";
 import { X, HelpCircle } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
-import { createQrCode } from "../../api/qrCode.api";
+import { createQrCode } from "../api/qrCode.api";
 import {
   usePlanStore,
   selectRemainingQrCodes,
   selectPlanName,
   selectCanUseQr,
-} from "../../store/usePlanStore";
-import { QR_COLORS } from "../../config/qr.constants";
-import type { QrCodeItem } from "../../types/qr.type";
+} from "../store/usePlanStore";
+import { QR_COLORS } from "../config/qr.constants";
+import type { QrCodeItem } from "../types/qr.type";
 
 // ----------------------------------------------------------------
 // Types
@@ -194,11 +194,10 @@ const CreateQrCode: React.FC<CreateQrCodePanelProps> = ({
                     key={color}
                     type="button"
                     onClick={() => setFgColor(color)}
-                    className={`w-8 h-8 rounded-full transition-all duration-200 ${
-                      fgColor === color
+                    className={`w-8 h-8 rounded-full transition-all duration-200 ${fgColor === color
                         ? "ring-2 ring-offset-2 ring-blue-500"
                         : "border border-gray-200 hover:scale-110"
-                    }`}
+                      }`}
                     style={{ backgroundColor: color }}
                     title={color}
                   />
@@ -215,11 +214,10 @@ const CreateQrCode: React.FC<CreateQrCodePanelProps> = ({
                     key={color}
                     type="button"
                     onClick={() => setBgColor(color)}
-                    className={`w-8 h-8 rounded-full transition-all duration-200 border ${
-                      bgColor === color
+                    className={`w-8 h-8 rounded-full transition-all duration-200 border ${bgColor === color
                         ? "ring-2 ring-offset-2 ring-blue-500 border-transparent"
                         : "border-gray-200 hover:scale-110"
-                    }`}
+                      }`}
                     style={{ backgroundColor: color }}
                     title={color}
                   />
@@ -241,11 +239,10 @@ const CreateQrCode: React.FC<CreateQrCodePanelProps> = ({
                     key={opt.value}
                     type="button"
                     onClick={() => setErrorCorrection(opt.value)}
-                    className={`flex-1 py-1.5 rounded-md text-sm font-medium border transition-colors ${
-                      errorCorrection === opt.value
+                    className={`flex-1 py-1.5 rounded-md text-sm font-medium border transition-colors ${errorCorrection === opt.value
                         ? "bg-blue-600 text-white border-blue-600"
                         : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50"
-                    }`}
+                      }`}
                     title={opt.desc}
                   >
                     {opt.label}

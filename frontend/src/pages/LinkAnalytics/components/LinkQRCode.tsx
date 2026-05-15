@@ -8,10 +8,16 @@ import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { QRCodeSVG } from 'qrcode.react';
 import { Download, QrCode } from 'lucide-react';
-import type { LinkItem } from '../../types/url.type';
-import { getQrCodeByShortCode } from '../../api/qrCode.api';
-import type { QrCodeItem } from '../../types/qr.type';
-import CreateQrCode from './CreateQrCode';
+
+// Types
+import type { LinkItem } from '../../../types/url.type';
+import type { QrCodeItem } from '../../../types/qr.type';
+
+// API
+import { getQrCodeByShortCode } from '../../../api/qrCode.api';
+
+// Components
+import CreateQrCode from '../../../components/CreateQrCode';
 import toast from 'react-hot-toast';
 
 interface LinkQRCodeProps {

@@ -1,6 +1,8 @@
 import React from "react";
+//Components
 import { LinkCard } from "./LinkCard";
-import type { LinkItem } from "../../types/url.type";
+//Types
+import type { LinkItem } from "../../../types/url.type";
 
 interface LinksListCanvasProps {
   links: LinkItem[];

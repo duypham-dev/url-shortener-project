@@ -1,9 +1,9 @@
 import React from "react";
 import { Search, X } from "lucide-react";
-import DisplaySettings from "./DisplaySettings";
-import DateFilterPopover from "../DateFilterPopover";
-import FilterPopover from "../FilterPopover";
-import type { DateFilter, LinkFilters, SortFilter } from "../../types/filter.type";
+import DisplaySettings from "../../../components/DisplaySettings";
+import DateFilterPopover from "../../../components/DateFilterPopover";
+import FilterPopover from "../../../components/FilterPopover";
+import type { DateFilter, LinkFilters, SortFilter } from "../../../types/filter.type";
 
 interface LinksFilterToolbarProps {
   searchTerm: string;
@@ -57,7 +57,7 @@ const LinksFilterToolbarComponent: React.FC<LinksFilterToolbarProps> = ({
       </div>
       <DateFilterPopover filter={dateFilter} onFilterChange={onDateFilterChange} />
       <FilterPopover filter={linkFilters} onFilterChange={onLinkFiltersChange} />
-      <DisplaySettings 
+      <DisplaySettings
         sortFilter={sortFilter}
         onSortChange={onSortChange}
         viewMode={viewMode}

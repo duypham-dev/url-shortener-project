@@ -1,6 +1,6 @@
 import React, { useMemo } from "react";
 import { MapPin } from "lucide-react";
-import type { AnalyticsBreakdownItem } from "../../types/analytics.type";
+import type { AnalyticsBreakdownItem } from "../../../types/analytics.type";
 
 interface CountryBreakdownCardProps {
   data: AnalyticsBreakdownItem[];

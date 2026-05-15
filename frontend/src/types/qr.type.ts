@@ -39,4 +39,5 @@ export interface QrCodesQueryParams {
   startDate?: Date | null;
   endDate?: Date | null;
   urlMappingId?: string;
+  status?: 'active' | 'inactive' | 'all';
 }

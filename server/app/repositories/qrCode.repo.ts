@@ -24,6 +24,7 @@ export interface GetUserQrCodesOptions {
   startDate?: string;
   endDate?: string;
   urlMappingId?: bigint;
+  status?: 'active' | 'inactive' | 'all';
 }
 
 export interface UpdateQrCodeData {
@@ -63,12 +64,17 @@ export const getUserQrCodesRepo = async (
   userId: number,
   options: GetUserQrCodesOptions = {},
 ) => {
-  const { limit, cursor, search, startDate, endDate, urlMappingId } = options;
+  const { limit, cursor, search, startDate, endDate, urlMappingId, status } = options;
 
   const whereClause: Prisma.qr_codesWhereInput = {
     user_id: userId,
-    // is_active: true,
   };
+
+  if (status === 'active') {
+    whereClause.is_active = true;
+  } else if (status === 'inactive') {
+    whereClause.is_active = false;
+  }
 
   if (search) {
     whereClause.OR = [

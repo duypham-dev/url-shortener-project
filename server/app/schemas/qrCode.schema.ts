@@ -84,6 +84,7 @@ export const getQrCodesQuerySchema = z.object({
       .string()
       .regex(/^\d+$/, "urlMappingId must be a numeric string")
       .optional(),
+    status: z.enum(["active", "inactive", "all"]).optional()
   }),
 });
 

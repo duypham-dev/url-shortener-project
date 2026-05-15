@@ -3,7 +3,7 @@
 import { useState, useMemo, useEffect, useCallback } from "react";
 import { useSearchParams } from "react-router-dom";
 import { format, parse, isValid } from "date-fns";
-import type { QrCodesQueryParams } from "../types/qr.type";
+import type { QrCodesQueryParams } from "../../../types/qr.type";
 
 export interface DateFilter {
   startDate: Date | null;
@@ -23,6 +23,7 @@ export const useQrFilters = () => {
   const searchParam = searchParams.get("search") || "";
   const startDateParam = searchParams.get("startDate");
   const endDateParam = searchParams.get("endDate");
+  const statusParam = (searchParams.get("status") as 'active' | 'inactive' | 'all') || 'all';
 
   const dateFilter: DateFilter = useMemo(
     () => ({
@@ -32,7 +33,7 @@ export const useQrFilters = () => {
     [startDateParam, endDateParam],
   );
 
-  const hasActiveFilters = !!searchParam || !!startDateParam || !!endDateParam;
+  const hasActiveFilters = !!searchParam || !!startDateParam || !!endDateParam || statusParam !== 'all';
 
   // Local draft for search input (not committed to URL until submit)
   const [draftSearchTerm, setDraftSearchTerm] = useState(searchParam);
@@ -56,8 +57,9 @@ export const useQrFilters = () => {
       search: searchParam || undefined,
       startDate: dateFilter.startDate,
       endDate: dateFilter.endDate,
+      status: statusParam !== 'all' ? statusParam : undefined,
     }),
-    [searchParam, dateFilter],
+    [searchParam, dateFilter, statusParam],
   );
 
   const handleSearchTermChange = useCallback((value: string) => {
@@ -93,6 +95,21 @@ export const useQrFilters = () => {
     [setSearchParams],
   );
 
+  const handleStatusChange = useCallback(
+    (status: 'active' | 'inactive' | 'all') => {
+      setSearchParams((prev) => {
+        const next = new URLSearchParams(prev);
+        if (status && status !== 'all') {
+          next.set("status", status);
+        } else {
+          next.delete("status");
+        }
+        return next;
+      });
+    },
+    [setSearchParams],
+  );
+
   const handleClearAllFilters = useCallback(() => {
     setSearchParams(new URLSearchParams());
     setDraftSearchTerm("");
@@ -101,12 +118,14 @@ export const useQrFilters = () => {
   return {
     draftSearchTerm,
     dateFilter,
+    statusFilter: statusParam,
     hasActiveFilters,
     queryParams,
     viewMode,
     handleSearchTermChange,
     handleSearchSubmit,
     handleDateFilterChange,
+    handleStatusChange,
     handleClearAllFilters,
     handleViewModeChange,
   };

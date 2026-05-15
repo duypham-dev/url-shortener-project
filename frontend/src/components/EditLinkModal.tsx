@@ -4,12 +4,12 @@ import { QRCodeSVG } from "qrcode.react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import toast from "react-hot-toast";
 
-import type { LinkItem } from "../../types/url.type";
-import type { QrCodeItem } from "../../types/qr.type";
-import { updateLink } from "../../api/link.api";
-import { getQrCodeByShortCode, createQrCode, regenerateQrCode } from "../../api/qrCode.api";
-import { getShortUrlDisplay } from "../../utils/url";
-import { QR_COLORS } from "../../config/qr.constants";
+import type { LinkItem } from "../types/url.type";
+import type { QrCodeItem } from "../types/qr.type";
+import { updateLink } from "../api/link.api";
+import { getQrCodeByShortCode, createQrCode, regenerateQrCode } from "../api/qrCode.api";
+import { getShortUrlDisplay } from "../utils/url";
+import { QR_COLORS } from "../config/qr.constants";
 
 interface EditLinkModalProps {
   link: LinkItem;
@@ -205,15 +205,15 @@ export const EditLinkModal: React.FC<EditLinkModalProps> = ({ link, onClose }) =
                     {/* QR Form */}
                     <div className="flex-1 space-y-4">
                       <div>
-                         <label className="block text-sm font-medium text-gray-700 mb-1">QR Title (Optional)</label>
-                         <input
-                           type="text"
-                           value={qrTitle}
-                           onChange={(e) => setQrTitle(e.target.value)}
-                           className="w-full border border-gray-300 px-3 py-1.5 rounded text-sm focus:ring-2 focus:ring-blue-500 outline-none"
-                         />
+                        <label className="block text-sm font-medium text-gray-700 mb-1">QR Title (Optional)</label>
+                        <input
+                          type="text"
+                          value={qrTitle}
+                          onChange={(e) => setQrTitle(e.target.value)}
+                          className="w-full border border-gray-300 px-3 py-1.5 rounded text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                        />
                       </div>
-                      
+
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1.5">Foreground Color</label>
                         <div className="flex flex-wrap gap-2">
@@ -221,9 +221,8 @@ export const EditLinkModal: React.FC<EditLinkModalProps> = ({ link, onClose }) =
                             <button
                               key={color}
                               onClick={() => setFgColor(color)}
-                              className={`w-7 h-7 rounded-full transition-transform ${
-                                fgColor === color ? "ring-2 ring-offset-2 ring-blue-500" : "hover:scale-110 border border-gray-200"
-                              }`}
+                              className={`w-7 h-7 rounded-full transition-transform ${fgColor === color ? "ring-2 ring-offset-2 ring-blue-500" : "hover:scale-110 border border-gray-200"
+                                }`}
                               style={{ backgroundColor: color }}
                             />
                           ))}
@@ -237,9 +236,8 @@ export const EditLinkModal: React.FC<EditLinkModalProps> = ({ link, onClose }) =
                             <button
                               key={color}
                               onClick={() => setBgColor(color)}
-                              className={`w-7 h-7 rounded-full transition-transform border ${
-                                bgColor === color ? "ring-2 ring-offset-2 ring-blue-500 border-transparent" : "border-gray-200 hover:scale-110"
-                              }`}
+                              className={`w-7 h-7 rounded-full transition-transform border ${bgColor === color ? "ring-2 ring-offset-2 ring-blue-500 border-transparent" : "border-gray-200 hover:scale-110"
+                                }`}
                               style={{ backgroundColor: color }}
                             />
                           ))}
@@ -247,37 +245,36 @@ export const EditLinkModal: React.FC<EditLinkModalProps> = ({ link, onClose }) =
                       </div>
 
                       <div>
-                         <label className="block text-sm font-medium text-gray-700 mb-1.5">Error Correction</label>
-                         <div className="flex gap-2">
-                            {ERROR_CORRECTION_OPTIONS.map((opt) => (
-                               <button
-                                  key={opt.value}
-                                  onClick={() => setErrorCorrection(opt.value)}
-                                  className={`flex-1 py-1 rounded text-xs font-medium border ${
-                                     errorCorrection === opt.value
-                                        ? "bg-blue-600 text-white border-blue-600"
-                                        : "bg-white text-gray-600 border-gray-300 hover:bg-gray-50"
-                                  }`}
-                               >
-                                  {opt.label}
-                               </button>
-                            ))}
-                         </div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1.5">Error Correction</label>
+                        <div className="flex gap-2">
+                          {ERROR_CORRECTION_OPTIONS.map((opt) => (
+                            <button
+                              key={opt.value}
+                              onClick={() => setErrorCorrection(opt.value)}
+                              className={`flex-1 py-1 rounded text-xs font-medium border ${errorCorrection === opt.value
+                                  ? "bg-blue-600 text-white border-blue-600"
+                                  : "bg-white text-gray-600 border-gray-300 hover:bg-gray-50"
+                                }`}
+                            >
+                              {opt.label}
+                            </button>
+                          ))}
+                        </div>
                       </div>
                     </div>
 
                     {/* QR Preview */}
                     <div className="w-40 shrink-0 flex flex-col items-center">
-                       <span className="text-sm font-medium text-gray-700 mb-2">Preview</span>
-                       <div className="p-2 border border-gray-200 rounded-lg bg-white shadow-sm">
-                         <QRCodeSVG
-                           value={existingQr?.destinationUrl || shortUrlDisplay}
-                           size={130}
-                           fgColor={fgColor}
-                           bgColor={bgColor}
-                           level={errorCorrection}
-                         />
-                       </div>
+                      <span className="text-sm font-medium text-gray-700 mb-2">Preview</span>
+                      <div className="p-2 border border-gray-200 rounded-lg bg-white shadow-sm">
+                        <QRCodeSVG
+                          value={existingQr?.destinationUrl || shortUrlDisplay}
+                          size={130}
+                          fgColor={fgColor}
+                          bgColor={bgColor}
+                          level={errorCorrection}
+                        />
+                      </div>
                     </div>
                   </div>
                 )}

@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect, useMemo, useCallback } from "react";
 import { CalendarDays, ChevronDown, ChevronLeft, ChevronRight } from "lucide-react";
-import type { TimeseriesMode } from "../../types/analytics.type";
+import type { TimeseriesMode } from "../../../types/analytics.type";
 
 // ----------------------------------------------------------------
 // Preset definitions
@@ -14,8 +14,8 @@ interface TimePreset {
 
 const TIME_PRESETS: TimePreset[] = [
   { value: "last24h", label: "Last 24 hours", shortcut: "D" },
-  { value: "last7d",  label: "Last 7 days",   shortcut: "W" },
-  { value: "last30d", label: "Last 30 days",   shortcut: "T" },
+  { value: "last7d", label: "Last 7 days", shortcut: "W" },
+  { value: "last30d", label: "Last 30 days", shortcut: "T" },
 ];
 
 const MAX_CUSTOM_RANGE_DAYS = 30;
@@ -158,14 +158,12 @@ const MiniCalendar: React.FC<MiniCalendarProps> = ({
         type="button"
         disabled={disabled || !interactive}
         onClick={() => !disabled && interactive && onDayClick(date)}
-        className={`w-8 h-8 flex items-center justify-center text-xs rounded-md transition-colors ${
-          disabled
+        className={`w-8 h-8 flex items-center justify-center text-xs rounded-md transition-colors ${disabled
             ? "text-gray-300 cursor-not-allowed"
             : interactive
               ? "cursor-pointer hover:bg-blue-100"
               : ""
-        } ${
-          isSelStart
+          } ${isSelStart
             ? "bg-blue-500 text-white font-semibold ring-2 ring-blue-300"
             : isStart || isEnd
               ? "bg-blue-500 text-white font-semibold"
@@ -174,7 +172,7 @@ const MiniCalendar: React.FC<MiniCalendarProps> = ({
                 : isToday
                   ? "font-bold text-blue-600 ring-1 ring-blue-300"
                   : ""
-        }`}
+          }`}
       >
         {day}
       </button>,
@@ -308,11 +306,10 @@ const TimeFilterPopover: React.FC<TimeFilterPopoverProps> = ({ value, customRang
       <button
         type="button"
         onClick={() => setIsOpen((prev) => !prev)}
-        className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-lg border text-sm font-medium transition-all ${
-          isOpen
+        className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-lg border text-sm font-medium transition-all ${isOpen
             ? "border-blue-300 bg-blue-50 text-blue-700 shadow-sm ring-2 ring-blue-100"
             : "border-gray-200 bg-white text-gray-700 hover:border-gray-300 hover:bg-gray-50 shadow-sm"
-        }`}
+          }`}
       >
         <CalendarDays size={16} className={isOpen ? "text-blue-500" : "text-gray-400"} />
         <span>{buttonLabel}</span>
@@ -390,19 +387,17 @@ const TimeFilterPopover: React.FC<TimeFilterPopoverProps> = ({ value, customRang
                     onChange(preset.value);
                     setIsOpen(false);
                   }}
-                  className={`w-full flex items-center justify-between px-4 py-3 text-sm transition-colors ${
-                    isActive
+                  className={`w-full flex items-center justify-between px-4 py-3 text-sm transition-colors ${isActive
                       ? "bg-blue-50 text-blue-700 font-medium"
                       : "text-gray-700 hover:bg-gray-50"
-                  }`}
+                    }`}
                 >
                   <span>{preset.label}</span>
                   <kbd
-                    className={`inline-flex items-center justify-center w-6 h-6 rounded text-xs font-semibold ${
-                      isActive
+                    className={`inline-flex items-center justify-center w-6 h-6 rounded text-xs font-semibold ${isActive
                         ? "bg-blue-100 text-blue-700"
                         : "bg-gray-100 text-gray-400"
-                    }`}
+                      }`}
                   >
                     {preset.shortcut}
                   </kbd>

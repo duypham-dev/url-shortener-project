@@ -3,7 +3,7 @@
 import React from "react";
 import { QrCode } from "lucide-react";
 import { QrCard } from "./QrCard";
-import type { QrCodeItem } from "../../types/qr.type";
+import type { QrCodeItem } from "../../../types/qr.type";
 
 interface QrListCanvasProps {
   qrCodes: QrCodeItem[];

@@ -1,8 +1,8 @@
 // frontend/src/hooks/useQrCodes.ts
 // Mirrors useLinks.ts exactly but for QR codes.
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import type { QrCodeItem, QrCodesQueryParams } from "../types/qr.type";
-import { getUserQrCodes } from "../api/qrCode.api";
+import type { QrCodeItem, QrCodesQueryParams } from "../../../types/qr.type";
+import { getUserQrCodes } from "../../../api/qrCode.api";
 
 interface UseQrCodesReturn {
   qrCodes: QrCodeItem[];

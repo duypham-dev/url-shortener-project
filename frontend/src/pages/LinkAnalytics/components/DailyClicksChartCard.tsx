@@ -8,8 +8,8 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import { formatTooltipClicks } from "../../utils/chart.utils";
-import type { TimeseriesMode } from "../../types/analytics.type";
+import { formatTooltipClicks } from "../../../utils/chart.utils";
+import type { TimeseriesMode } from "../../../types/analytics.type";
 
 interface ClicksChartPoint {
   bucket: string;

@@ -226,6 +226,7 @@ export const getUserQrCodes = async (
   options: GetUserQrCodesOptions & { limit?: number } = {},
 ): Promise<GetUserQrCodesResult> => {
   const { limit } = options;
+  
   const rows = await getUserQrCodesRepo(userId, options);
 
   const hasNextPage = limit !== undefined && rows.length > limit;

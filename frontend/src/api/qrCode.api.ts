@@ -40,6 +40,8 @@ export const getUserQrCodes = async (
 
   if (params?.urlMappingId) query.urlMappingId = params.urlMappingId;
 
+  if (params?.status) query.status = params.status;
+  console.log("PARAMS API: ", params?.status)
   const response = (await axiosClient.get("/qr-codes", {
     params: query,
   })) as ApiEnvelope<QrCodeItem[]>;

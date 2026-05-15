@@ -17,21 +17,21 @@ import ProtectedRoute from "./components/ProtectedRoute";
 import PublicRoute from "./components/PublicRoute";
 
 // Pages
-import Home from "./pages/Home";
+import Home from "./pages/HomePage.tsx";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import ForgotPassword from "./pages/ForgotPassword.tsx";
 import ResetPassword from "./pages/ResetPassword.tsx";
 import OAuthRedirect from "./pages/OauthRedirect";
-import Dashboard from "./pages/Dashboard";
+import Dashboard from "./pages/Home/Home.tsx";
 import { DashboardLayout } from "./layout/DashboardLayout";
-import { Links } from "./pages/Links";
+import { Links } from "./pages/Links/Links.tsx";
 import { Upgrade } from "./pages/Upgrade";
 import { PaymentResult } from "./pages/PaymentSuccess";
-import { LinkAnalytics } from "./pages/LinkAnalytics";
+import { LinkAnalytics } from "./pages/LinkAnalytics/LinkAnalytics.tsx";
 import CreateLink from "./pages/CreateLink/CreateLink";
 import { RealtimeAnalytics } from "./pages/RealtimeAnalytics.tsx";
-import { QrCodes } from "./pages/QrCodes";
+import { QrCodes } from "./pages/QrList/QrCodes.tsx";
 import { Toaster } from "react-hot-toast";
 import { GlobalConfirmModal } from "./components/GlobalConfirmModal";
 
@@ -50,77 +50,77 @@ const App: React.FC = () => {
           {/* Public routes - Ai cũng vào được */}
           <Route
             path="/"
-          element={
-            <PublicRoute>
-              <Home />
-            </PublicRoute>
-          }
-        />
+            element={
+              <PublicRoute>
+                <Home />
+              </PublicRoute>
+            }
+          />
 
-        {/* Guest routes - Chỉ cho người chưa login */}
-        <Route
-          path="/login"
-          element={
-            <PublicRoute>
-              <Login />
-            </PublicRoute>
-          }
-        />
-        <Route
-          path="/register"
-          element={
-            <PublicRoute>
-              <Register />
-            </PublicRoute>
-          }
-        />
-        <Route
-          path="/oauth/callback"
-          element={
-            <PublicRoute>
-              <OAuthRedirect />
-            </PublicRoute>
-          }
-        />
-        <Route
-          path="/forgot-password"
-          element={
-            <PublicRoute>
-              <ForgotPassword />
-            </PublicRoute>
-          }
-        />
-        <Route
-          path="/reset-password"
-          element={
-            <PublicRoute>
-              <ResetPassword />
-            </PublicRoute>
-          }
-        />
-        {/* Private routes - Yêu cầu login */}
-        <Route
-          path="/dashboard"
-          element={
-            <ProtectedRoute>
-              <DashboardLayout />
-            </ProtectedRoute>
-          }
-        >
-          <Route index element={<Dashboard />} />
-          <Route path="links" element={<Links />} />
-           <Route path="links/create" element={<CreateLink />} />
-          <Route path="links/:shortCode/analytics" element={<LinkAnalytics />} />
-          <Route path="qr" element={<QrCodes />} />
-          <Route path="pages" element={<p>pages page</p>} />
-          <Route path="analytics" element={<RealtimeAnalytics />} />
-          <Route path="campaigns" element={<p>campaigns page</p>} />
-          <Route path="domains" element={<p>domains page</p>} />
-          <Route path="integrations" element={<p>integrations page</p>} />
-          <Route path="settings" element={<p>settings page</p>} />
-          <Route path="upgrade" element={<Upgrade />} />
-        </Route>
-        
+          {/* Guest routes - Chỉ cho người chưa login */}
+          <Route
+            path="/login"
+            element={
+              <PublicRoute>
+                <Login />
+              </PublicRoute>
+            }
+          />
+          <Route
+            path="/register"
+            element={
+              <PublicRoute>
+                <Register />
+              </PublicRoute>
+            }
+          />
+          <Route
+            path="/oauth/callback"
+            element={
+              <PublicRoute>
+                <OAuthRedirect />
+              </PublicRoute>
+            }
+          />
+          <Route
+            path="/forgot-password"
+            element={
+              <PublicRoute>
+                <ForgotPassword />
+              </PublicRoute>
+            }
+          />
+          <Route
+            path="/reset-password"
+            element={
+              <PublicRoute>
+                <ResetPassword />
+              </PublicRoute>
+            }
+          />
+          {/* Private routes - Yêu cầu login */}
+          <Route
+            path="/dashboard"
+            element={
+              <ProtectedRoute>
+                <DashboardLayout />
+              </ProtectedRoute>
+            }
+          >
+            <Route index element={<Dashboard />} />
+            <Route path="links" element={<Links />} />
+            <Route path="links/create" element={<CreateLink />} />
+            <Route path="links/:shortCode/analytics" element={<LinkAnalytics />} />
+            <Route path="qr" element={<QrCodes />} />
+            <Route path="pages" element={<p>pages page</p>} />
+            <Route path="analytics" element={<RealtimeAnalytics />} />
+            <Route path="campaigns" element={<p>campaigns page</p>} />
+            <Route path="domains" element={<p>domains page</p>} />
+            <Route path="integrations" element={<p>integrations page</p>} />
+            <Route path="settings" element={<p>settings page</p>} />
+            <Route path="upgrade" element={<Upgrade />} />
+          </Route>
+
           {/* Kết quả thanh toán */}
           <Route path="/payment-success" element={<PaymentResult />} />
         </Routes>

@@ -18,10 +18,9 @@ import TuneIcon from '@mui/icons-material/Tune';
 import GridViewIcon from '@mui/icons-material/GridView';
 import ViewListIcon from '@mui/icons-material/ViewList';
 import ArrowDownwardIcon from '@mui/icons-material/ArrowDownward';
-import type { SortFilter } from '../../types/filter.type';
-import ArrowUpwardIcon from '@mui/icons-material/ArrowUpward'; 
+import ArrowUpwardIcon from '@mui/icons-material/ArrowUpward';
 import type { SelectChangeEvent } from '@mui/material';
-
+import type { SortFilter } from '../types/filter.type';
 
 interface DisplaySettingsProps {
   sortFilter: SortFilter;
@@ -30,7 +29,7 @@ interface DisplaySettingsProps {
   onViewModeChange: (mode: 'card' | 'row') => void;
 }
 
-const DisplaySettingsButton: React.FC<DisplaySettingsProps> = ({ 
+const DisplaySettingsButton: React.FC<DisplaySettingsProps> = ({
   sortFilter,
   onSortChange,
   viewMode,
@@ -122,8 +121,8 @@ const DisplaySettingsButton: React.FC<DisplaySettingsProps> = ({
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
             <Typography variant="body2">Ordering</Typography>
             <FormControl size="small" sx={{ minWidth: 140 }}>
-             <Select 
-                value={currentSortValue} 
+              <Select
+                value={currentSortValue}
                 onChange={handleSelectSortChange}
               >
                 <MenuItem value="createdAt-desc" sx={{ display: 'flex', alignItems: 'center' }}>

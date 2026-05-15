@@ -5,8 +5,8 @@ import { useNavigate } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 
 // Hooks
-import { useQrCodes } from "../hooks/useQrCodes";
-import { useQrFilters } from "../hooks/useQrFilters";
+import { useQrCodes } from "./hooks/useQrCodes";
+import { useQrFilters } from "./hooks/useQrFilters";
 
 // Store
 import {
@@ -14,22 +14,21 @@ import {
   selectRemainingQrCodes,
   selectCanUseQr,
   selectPlanName,
-} from "../store/usePlanStore";
-import { showConfirmDialog } from "../store/useConfirmStore";
+} from "../../store/usePlanStore";
+import { showConfirmDialog } from "../../store/useConfirmStore";
 
 // API
-import { disableQrCode, enableQrCode } from "../api/qrCode.api";
+import { disableQrCode, enableQrCode } from "../../api/qrCode.api";
 
 // Components
-import { QrPageHeader } from "../components/qr/QrPageHeader";
-import { QrListCanvas } from "../components/qr/QrListCanvas";
-import LinksFilterToolbar from "../components/links/LinksFilterToolbar";
-import LinksSecondaryToolbar from "../components/links/LinksSecondaryToolbar";
-import PlanGatedOverlay from "../components/PlanGate";
+import QrPageHeader from "./components/QrPageHeader";
+import QrListCanvas from "./components/QrListCanvas";
+import QrFilterToolbar from "./components/QrFilterToolbar";
+import LinksSecondaryToolbar from "../Links/components/LinksSecondaryToolbar";
+import PlanGatedOverlay from "../../components/PlanGate";
 
 // Types
-import type { DateFilter, LinkFilters } from "../types/filter.type";
-import { INITIAL_LINK_FILTERS } from "../types/filter.type";
+import type { DateFilter } from "../../types/filter.type";
 
 export const QrCodes: React.FC = () => {
   const navigate = useNavigate();
@@ -72,8 +71,6 @@ export const QrCodes: React.FC = () => {
     [queryClient],
   );
 
-
-
   // Plan gate for free-tier users
   if (!isPlanLoading && !canUseQr) {
     return (
@@ -84,12 +81,11 @@ export const QrCodes: React.FC = () => {
     );
   }
 
-  // Adapter: QrFilters → LinksFilterToolbar props (toolbar is generic)
+  // Adapter: QrFilters → QrFilterToolbar props
   const dateFilter: DateFilter = {
     startDate: filters.dateFilter.startDate,
     endDate: filters.dateFilter.endDate,
   };
-  const linkFilters: LinkFilters = INITIAL_LINK_FILTERS;
 
   return (
     <div className="w-full max-w-6xl mx-auto py-2 font-sans text-gray-900 pb-20">
@@ -99,16 +95,16 @@ export const QrCodes: React.FC = () => {
         isPlanLoading={isPlanLoading}
       />
 
-      <LinksFilterToolbar
+      <QrFilterToolbar
         searchTerm={filters.draftSearchTerm}
         onSearchTermChange={filters.handleSearchTermChange}
         onSearchSubmit={filters.handleSearchSubmit}
         dateFilter={dateFilter}
         onDateFilterChange={filters.handleDateFilterChange}
-        linkFilters={linkFilters}
-        onLinkFiltersChange={() => {}}
+        statusFilter={filters.statusFilter}
+        onStatusChange={filters.handleStatusChange}
         sortFilter={{ sortBy: 'created_at', sortOrder: 'desc' }}
-        onSortChange={() => {}}
+        onSortChange={() => { }}
         viewMode={filters.viewMode}
         onViewModeChange={filters.handleViewModeChange}
         hasActiveFilters={filters.hasActiveFilters}

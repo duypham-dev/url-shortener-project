@@ -1,6 +1,6 @@
 import React, { useMemo } from "react";
 import { Cell, Legend, Pie, PieChart, ResponsiveContainer, Tooltip } from "recharts";
-import { formatTooltipClicks } from "../../utils/chart.utils";
+import { formatTooltipClicks } from "../../../utils/chart.utils";
 
 interface ReferrerChartItem {
   name: string;

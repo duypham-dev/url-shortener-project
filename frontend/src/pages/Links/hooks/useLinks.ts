@@ -1,7 +1,7 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import type { LinkItem } from "../types/url.type";
-import { getUserLinks } from "../api/link.api";
-import type { LinksQueryParams } from "../types/filter.type";
+import type { LinkItem } from "../../../types/url.type";
+import { getUserLinks } from "../../../api/link.api";
+import type { LinksQueryParams } from "../../../types/filter.type";
 
 
 interface UseLinksReturn {

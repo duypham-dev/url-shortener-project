@@ -64,7 +64,8 @@ export const getUserQrCodesHandler = async (
       ...(query.startDate ? { startDate: query.startDate } : {}),
       ...(query.endDate ? { endDate: query.endDate } : {}),
       ...(query.urlMappingId ? { urlMappingId: BigInt(query.urlMappingId) } : {}),
-    });
+      ...(query.status ? { status: query.status as 'active' | 'inactive' | 'all' } : {}),
+    }); 
 
     res.status(200).json({
       success: true,

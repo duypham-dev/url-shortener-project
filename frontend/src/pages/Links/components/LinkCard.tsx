@@ -1,11 +1,11 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
-import type { LinkItem } from "../../types/url.type";
+import type { LinkItem } from "../../../types/url.type";
 import { Copy, Edit2, Share2, BarChart2, MoreHorizontal, Calendar, Tag, QrCode } from "lucide-react";
-import { formatDate } from "../../utils/date";
-import { useCopyToClipboard } from "../../hooks/useCopyToClipboard";
-import { getShortUrlDisplay } from "../../utils/url";
-import { EditLinkModal } from "./EditLinkModal";
+import { formatDate } from "../../../utils/date";
+import { useCopyToClipboard } from "../../../hooks/useCopyToClipboard";
+import { getShortUrlDisplay } from "../../../utils/url";
+import { EditLinkModal } from "../../../components/EditLinkModal";
 
 interface LinkCardProps {
   link: LinkItem;
@@ -47,7 +47,7 @@ export const LinkCard: React.FC<LinkCardProps> = React.memo(({ link, viewMode = 
               <img src={defaultFavicon} alt="" className="w-full h-full object-contain" />
             </div>
           </div>
-          
+
           {/* If card view, we move the icons to the top right beside the favicon */}
           {viewMode === 'card' && (
             <div className="flex items-center text-gray-500 gap-1">
@@ -69,7 +69,7 @@ export const LinkCard: React.FC<LinkCardProps> = React.memo(({ link, viewMode = 
             >
               {link.title || link.long_url.substring(0, 50) + "..."}
             </h3>
-            
+
             {viewMode === 'row' && (
               <div className="flex items-center text-gray-500 gap-3">
                 <button

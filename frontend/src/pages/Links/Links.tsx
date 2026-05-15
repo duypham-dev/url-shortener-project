@@ -2,21 +2,21 @@ import React, { useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 
 // Hooks
-import { useLinks } from "../hooks/useLinks";
-import { useLinkFilters } from "../hooks/useLinkFilters";
+import { useLinks } from "./hooks/useLinks";
+import { useLinkFilters } from "../../hooks/useLinkFilters";
 
 // Components
-import LinksPageHeader from "../components/links/LinksPageHeader";
-import LinksFilterToolbar from "../components/links/LinksFilterToolbar";
-import LinksSecondaryToolbar from "../components/links/LinksSecondaryToolbar";
-import LinksListCanvas from "../components/links/LinksListCanvas";
+import LinksPageHeader from "./components/LinksPageHeader";
+import LinksFilterToolbar from "./components/LinksFilterToolbar";
+import LinksSecondaryToolbar from "./components/LinksSecondaryToolbar";
+import LinksListCanvas from "./components/LinksListCanvas";
 
 export const Links: React.FC = () => {
   const navigate = useNavigate();
 
   const filters = useLinkFilters();
 
-  const { links, isLoading, error } = useLinks(filters.queryParams); 
+  const { links, isLoading, error } = useLinks(filters.queryParams);
 
   const handleCreateLink = useCallback(() => {
     navigate("/dashboard/links/create");

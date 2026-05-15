@@ -1,6 +1,6 @@
 import React from "react";
 import { BarChart2, MousePointerClick, TrendingUp } from "lucide-react";
-import type { TimeseriesMode } from "../../types/analytics.type";
+import type { TimeseriesMode } from "../../../types/analytics.type";
 
 interface AnalyticsSummaryCardsProps {
   totalClicks: number;

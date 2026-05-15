@@ -4,16 +4,16 @@ import {
   getLinkAnalyticsReferrers,
   getLinkAnalyticsCountries,
   getLinkAnalyticsDevices,
-} from "../api/analytics.api";
-import { getLinkInfo } from "../api/link.api";
+} from "../../../api/analytics.api";
+import { getLinkInfo } from "../../../api/link.api";
 import type {
   TimeseriesResult,
   ReferrerItem,
   AnalyticsBreakdownItem,
   DeviceBreakdown,
   AnalyticsQueryParams,
-} from "../types/analytics.type";
-import type { LinkItem } from "../types/url.type";
+} from "../../../types/analytics.type";
+import type { LinkItem } from "../../../types/url.type";
 
 interface UseLinkAnalyticsDataOptions {
   shortCode?: string;

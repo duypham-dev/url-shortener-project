@@ -7,26 +7,23 @@ import {
   FiTag,
   FiChevronRight,
 } from "react-icons/fi";
-import type { LinkItem } from "../../types/url.type";
-import { formatDate } from "../../utils/date";
-import { getShortUrlDisplay } from "../../utils/url";
-import { useCopyToClipboard } from "../../hooks/useCopyToClipboard";
+import type { LinkItem } from "../../../types/url.type";
+import { formatDate } from "../../../utils/date";
+import { getShortUrlDisplay } from "../../../utils/url";
+import { useCopyToClipboard } from "../../../hooks/useCopyToClipboard";
 
-const LinkCardDetail: React.FC<{ link: LinkItem }> = ({ link }) => {
+const LinkSummaryCard: React.FC<{ link: LinkItem }> = ({ link }) => {
   const [, copy] = useCopyToClipboard();
   const shortUrlDisplay = getShortUrlDisplay(link.short_code);
-
 
   return (
     <div className="w-full bg-white rounded-xl p-6 font-sans border border-gray-100">
       <div className="flex items-start gap-4">
-        {/* Left Icon */}
         <div className="mt-1 w-8 h-8 rounded-full bg-[#f4f6fa] flex items-center justify-center text-gray-500 shrink-0 border border-gray-200">
           <FiChevronRight size={18} strokeWidth={2.5} />
         </div>
 
         <div className="flex-1 min-w-0">
-          {/* Header & Actions */}
           <div className="flex justify-between items-start mb-2 gap-4">
             <h2 className="text-[22px] font-bold text-[#273144] truncate leading-tight">
               {link.title || link.long_url}
@@ -107,4 +104,4 @@ const LinkCardDetail: React.FC<{ link: LinkItem }> = ({ link }) => {
   );
 };
 
-export default LinkCardDetail;
+export default LinkSummaryCard;

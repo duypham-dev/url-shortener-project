@@ -12,9 +12,9 @@ import {
   Lock,
   Unlock,
 } from "lucide-react";
-import type { QrCodeItem } from "../../types/qr.type";
-import { useCopyToClipboard } from "../../hooks/useCopyToClipboard";
-import { formatDate } from "../../utils/date";
+import type { QrCodeItem } from "../../../types/qr.type";
+import { useCopyToClipboard } from "../../../hooks/useCopyToClipboard";
+import { formatDate } from "../../../utils/date";
 
 interface QrCardProps {
   qrCode: QrCodeItem;
