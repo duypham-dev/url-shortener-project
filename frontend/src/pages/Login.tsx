@@ -70,8 +70,8 @@ const Login: React.FC = () => {
           to="/"
           className="flex items-center gap-2 mb-12 w-fit hover:opacity-80 transition-opacity"
         >
-          <Scissors className="w-8 h-8 text-[#e25822]" />
-          <span className="text-2xl font-bold text-[#e25822] tracking-tight">ShortLink</span>
+          <Scissors className="w-8 h-8 text-[#000000]" />
+          <span className="text-2xl font-bold text-[#000000] tracking-tight">ShortLK</span>
         </Link>
 
         <div className="w-full max-w-[420px] mx-auto flex-1 flex flex-col justify-center pb-20">

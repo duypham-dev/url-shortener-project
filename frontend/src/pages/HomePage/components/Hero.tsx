@@ -5,9 +5,9 @@ export function Hero() {
     <section className="relative pt-24 pb-20 flex flex-col items-center text-center px-6 overflow-hidden">
       {/* Grid Background */}
       <div className="absolute inset-0 z-0 flex justify-center -translate-y-1/2 opacity-30 pointer-events-none">
-        <div className="w-[200vw] h-[150vh] flex flex-wrap" style={{
-            backgroundImage: 'linear-gradient(to right, #000000 1px, transparent 1px), linear-gradient(to bottom, #000000 1px, transparent 1px)',
-            backgroundSize: '40px 40px',
+        <div className="w-[200vw] h-[70vh] flex flex-wrap" style={{
+            backgroundImage: 'linear-gradient(to right, #a0a0a0 1px, transparent 1px), linear-gradient(to bottom, #a0a0a0 1px, transparent 1px)',
+            backgroundSize: '50px 50px',
             maskImage: 'radial-gradient(ellipse 60% 50% at 50% 50%, #000 20%, transparent 100%)',
             WebkitMaskImage: 'radial-gradient(ellipse 60% 50% at 50% 50%, #000 20%, transparent 100%)'
           }} 
@@ -17,9 +17,8 @@ export function Hero() {
         <h1 className="text-5xl md:text-7xl font-semibold tracking-tight text-gray-900 mb-6 max-w-3xl leading-[1.1]">
           Turn clicks into revenue
         </h1>
-        
         <p className="text-xl text-gray-500 mb-10 max-w-2xl leading-relaxed">
-          Dub is the modern link attribution platform for short links, conversion tracking, and affiliate programs.
+          ShortLK is the modern link attribution platform for short links, conversion tracking, and affiliate programs.
         </p>
 
         <div className="flex items-center gap-4">

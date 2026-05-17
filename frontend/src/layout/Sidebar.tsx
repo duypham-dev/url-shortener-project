@@ -9,6 +9,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Plus,
+  Scissors 
 } from "lucide-react";
 
 interface NavItemProps {
@@ -65,11 +66,17 @@ export const Sidebar: React.FC = () => {
         isCollapsed ? "w-18" : "w-64"
       }`}
     >
-      {/* Logo */}
-      <div className="mb-6 flex items-center px-2">
-        <div className="w-8 h-8 rounded-full bg-[#ff6116] flex items-center justify-center text-white shrink-0 ml-0.5">
-          <span className="text-lg font-bold">b</span>
-        </div>
+      {/* Logo - Đã sửa: Tự động đổi gap và căn giữa dựa trên state isCollapsed */}
+      <div className="mb-6 flex items-center px-2 select-none h-8">
+        {/* Icon cố định kích thước, không bị co giãn hay dịch chuyển */}
+        <Scissors className="w-8 h-8 text-black shrink-0" />
+        
+        {/* Chữ thương hiệu xuất hiện khi mở và biến mất khi đóng */}
+        {!isCollapsed && (
+          <span className="text-xl font-bold tracking-tight text-gray-900 whitespace-nowrap overflow-hidden ml-2.5 animate-in fade-in duration-200">
+            ShortLK
+          </span>
+        )}
       </div>
 
       <button
@@ -104,7 +111,7 @@ export const Sidebar: React.FC = () => {
           icon={<Home size={18} />}
           label="Home"
           end
-        />
+          />
         <NavItem
           isCollapsed={isCollapsed}
           to="/dashboard/links"
@@ -123,7 +130,7 @@ export const Sidebar: React.FC = () => {
           icon={<BarChart2 size={18} />}
           label="Click Stream"
         />
-      
+
         <div className="pt-4 mt-2 border-t border-gray-100">
           <NavItem
             isCollapsed={isCollapsed}

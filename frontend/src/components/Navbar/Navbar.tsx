@@ -8,7 +8,7 @@ export function Navbar() {
           <div className="w-8 h-8 bg-black rounded-full grid place-items-center">
             <div className="w-4 h-4 bg-white rounded-full"></div>
           </div>
-          dub
+          ShortLK
         </Link>
       </div>
       <div className="hidden md:flex items-center justify-center gap-6 text-sm font-medium text-gray-600">

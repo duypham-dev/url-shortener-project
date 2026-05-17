@@ -126,8 +126,8 @@ export const EditLinkModal: React.FC<EditLinkModalProps> = ({ link, onClose }) =
   const isSaving = updateLinkMutation.isPending || saveQrMutation.isPending;
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4">
-      <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl overflow-hidden max-h-[90vh] flex flex-col">
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-gray-900/20 backdrop-blur-md p-4 animate-backdrop-in">
+      <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl overflow-hidden max-h-[90vh] flex flex-col animate-modal-in">
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 bg-gray-50/50">
           <h2 className="text-lg font-bold text-gray-900">Edit Link</h2>
