@@ -1,6 +1,10 @@
 import type { NextFunction, Request, Response } from "express";
 import generateShortLink from "../services/generateLink.service.js";
-import { getLinkInfoByShortCode, updateLink } from "../services/link.service.js";
+import {
+  getLinkInfoByShortCode,
+  updateLink,
+  createCustomAliasLink,
+} from "../services/link.service.js";
 import { getUserLinks } from "../services/link.service.js";
 import { createQrCodeForLink } from "../services/qrCode.service.js";
 import { assertCanCreateLink } from "../services/subscriptionAccess.service.js";
@@ -18,6 +22,11 @@ interface ShortenRequestBody {
     fgColor?: string;
     bgColor?: string;
   };
+  /** Phase 5 — optional custom back-half for the short URL */
+  customAlias?: string;
+  /** Phase 4 — optional expiry date (ISO string); null = no expiry */
+  expiresAt?: string | null;
+  title?: string;
 }
 
 interface ShortenResponseBody {
@@ -33,7 +42,7 @@ export const genShortLink = async (
   next: NextFunction,
 ): Promise<void> => {
   try {
-    const { originalUrl, generateQr = false, qrOptions } = req.body;
+    const { originalUrl, generateQr = false, qrOptions, customAlias, expiresAt, title } = req.body;
     // Get userId from auth middleware
     const userId = req.user?.userId ?? null;
 
@@ -41,15 +50,36 @@ export const genShortLink = async (
       throw new UnauthorizedError("Unauthorized.");
     }
 
-    // Check link quota
-    await assertCanCreateLink({
-      userId,
-      isCustom: false,
-      generateQr,
-    });
+    const parsedExpiresAt = expiresAt ? new Date(expiresAt) : null;
 
-    // Call generate short URL service
-    const { shortUrl, shortCode, urlMappingId } = await generateShortLink(originalUrl, userId);
+    let shortUrl: string;
+    let shortCode: string;
+    let urlMappingId: bigint;
+
+    if (customAlias) {
+      // ── Phase 5: custom alias path ───────────────────────────────────────
+      // Enforce the user's custom-link quota (isCustom: true)
+      await assertCanCreateLink({ userId, isCustom: true, generateQr });
+
+      const result = await createCustomAliasLink(
+        originalUrl,
+        userId,
+        customAlias,
+        parsedExpiresAt,
+        title,
+      );
+      shortUrl = result.shortUrl;
+      shortCode = result.shortCode;
+      urlMappingId = result.urlMappingId;
+    } else {
+      // ── Standard base62 path ─────────────────────────────────────────────
+      await assertCanCreateLink({ userId, isCustom: false, generateQr });
+
+      const result = await generateShortLink(originalUrl, userId, parsedExpiresAt, title);
+      shortUrl = result.shortUrl;
+      shortCode = result.shortCode;
+      urlMappingId = result.urlMappingId;
+    }
 
     // Optionally create a linked QR code (fire-and-forget on failure)
     let qrCode = null;
@@ -71,6 +101,7 @@ export const genShortLink = async (
         shortUrl,
         originalUrl,
         createdAt: new Date().toISOString(),
+        ...(parsedExpiresAt ? { expiresAt: parsedExpiresAt.toISOString() } : {}),
         ...(qrCode ? { qrCode } : {}),
       }
     });

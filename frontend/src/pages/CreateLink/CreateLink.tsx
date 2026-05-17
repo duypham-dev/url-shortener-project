@@ -1,5 +1,6 @@
 import React, { useCallback, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useQueryClient } from "@tanstack/react-query";
 import { FormControl, Select, MenuItem, type SelectChangeEvent } from "@mui/material";
 import QRPanel from "./components/QRPanel";
 import { QR_COLORS } from "../../config/qr.constants";
@@ -24,32 +25,83 @@ const Switch = ({
   </button>
 );
 
-const baseURL = import.meta.env.VITE_SHORT_LINK_BASE_URL || import.meta.env.VITE_API_BASE_URL || "http://localhost:3000";
+const baseURL =
+  import.meta.env.VITE_SHORT_LINK_BASE_URL ||
+  import.meta.env.VITE_API_BASE_URL ||
+  "http://localhost:3000";
+
+// Validate custom alias on the client before sending to the server
+const ALIAS_REGEX = /^[a-zA-Z0-9_-]+$/;
 
 const CreateLink: React.FC = () => {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [destination, setDestination] = useState("");
   const [domain, setDomain] = useState(baseURL);
   const [title, setTitle] = useState("");
 
+  const [customAliasEnabled, setCustomAliasEnabled] = useState(false);
+  const [customAlias, setCustomAlias] = useState("");
+  const [aliasError, setAliasError] = useState<string | null>(null);
+
   const [generateQr, setGenerateQr] = useState(false);
   const [expirationEnabled, setExpirationEnabled] = useState(false);
+  const [expiresAt, setExpiresAt] = useState("");
 
   const [qrColor, setQrColor] = useState<string>(QR_COLORS[0]);
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
 
+  const validateAlias = (value: string): string | null => {
+    if (!value.trim()) return "Custom alias cannot be empty.";
+    if (value.length < 3) return "Must be at least 3 characters.";
+    if (value.length > 30) return "Must be at most 30 characters.";
+    if (!ALIAS_REGEX.test(value))
+      return "Only letters, numbers, hyphens (-) and underscores (_) allowed.";
+    return null;
+  };
+
+  const handleAliasChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setCustomAlias(value);
+    if (customAliasEnabled) {
+      setAliasError(validateAlias(value));
+    }
+  };
+
   const onSubmit = useCallback(
     async (e: React.FormEvent) => {
       e.preventDefault();
       if (!destination.trim()) return;
 
+      // Validate alias before submitting
+      if (customAliasEnabled) {
+        const err = validateAlias(customAlias);
+        if (err) {
+          setAliasError(err);
+          return;
+        }
+      }
+
       setIsSubmitting(true);
       setSubmitError(null);
 
       try {
-        await createShortenUrl(destination.trim());
+        await createShortenUrl(destination.trim(), {
+          ...(title.trim() ? { title: title.trim() } : {}),
+          ...(customAliasEnabled && customAlias.trim()
+            ? { customAlias: customAlias.trim() }
+            : {}),
+          ...(expirationEnabled && expiresAt
+            ? { expiresAt: new Date(expiresAt).toISOString() }
+            : {}),
+          ...(generateQr ? { generateQr: true, qrOptions: { fgColor: qrColor, bgColor: "#ffffff" } } : {}),
+        });
+        
+        // Invalidate the cache so the list updates when we go back
+        await queryClient.invalidateQueries({ queryKey: ['userLinks'] });
+        
         navigate("/dashboard/links");
       } catch (err: unknown) {
         const msg =
@@ -61,7 +113,7 @@ const CreateLink: React.FC = () => {
         setIsSubmitting(false);
       }
     },
-    [destination, navigate],
+    [destination, title, customAliasEnabled, customAlias, expirationEnabled, expiresAt, generateQr, qrColor, navigate, queryClient],
   );
 
   const handleDomainChange = (event: SelectChangeEvent<string>) => {
@@ -78,7 +130,6 @@ const CreateLink: React.FC = () => {
           </h1>
           <button className="text-sm font-semibold text-blue-700 hover:text-blue-800 flex items-center gap-1.5">
             Bulk upload
-            {/* SVG icon... */}
           </button>
         </div>
 
@@ -98,8 +149,8 @@ const CreateLink: React.FC = () => {
               />
             </div>
 
-            {/* MUI Select applied here */}
-            <div className="mt-5 grid grid-cols-12 gap-4 items-end">
+            {/* Domain selector + custom alias row */}
+            <div className="mt-5 grid grid-cols-12 gap-4 items-start">
               <div className="col-span-4">
                 <label className="block text-sm font-bold text-[#141C3A] mb-2">
                   Short link domain
@@ -108,37 +159,92 @@ const CreateLink: React.FC = () => {
                   <Select
                     value={domain}
                     onChange={handleDomainChange}
-                    // Thêm phần này để điều chỉnh bóng và style của Menu
                     MenuProps={{
                       slotProps: {
                         paper: {
                           sx: {
-                            boxShadow: "0px 2px 8px rgba(0,0,0,0.15)", // Chỉnh shadow nhỏ lại theo ý bạn
-                            marginTop: "4px", // Khoảng cách giữa Select box và Menu
-                            border: "1px solid #e5e7eb", // (Tùy chọn) Thêm border nhẹ nếu muốn
+                            boxShadow: "0px 2px 8px rgba(0,0,0,0.15)",
+                            marginTop: "4px",
+                            border: "1px solid #e5e7eb",
                           },
                         },
                       },
                     }}
                     sx={{
-                      backgroundColor: 'white',
-                      height: '46px',
-                      borderRadius: '0.375rem',
-                      '& .MuiOutlinedInput-notchedOutline': {
-                        borderColor: '#d1d5db',
+                      backgroundColor: "white",
+                      height: "46px",
+                      borderRadius: "0.375rem",
+                      "& .MuiOutlinedInput-notchedOutline": {
+                        borderColor: "#d1d5db",
                       },
-                      '&:hover .MuiOutlinedInput-notchedOutline': {
-                        borderColor: '#9ca3af',
+                      "&:hover .MuiOutlinedInput-notchedOutline": {
+                        borderColor: "#9ca3af",
                       },
-                      '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-                        borderColor: '#2563eb',
-                        borderWidth: '1px',
+                      "&.Mui-focused .MuiOutlinedInput-notchedOutline": {
+                        borderColor: "#2563eb",
+                        borderWidth: "1px",
                       },
                     }}
                   >
                     <MenuItem value={baseURL}>{baseURL}</MenuItem>
                   </Select>
                 </FormControl>
+              </div>
+
+              {/* ── Phase 5: Custom back-half ──────────────────────────── */}
+              <div className="col-span-8">
+                <div className="flex items-center gap-2 mb-2">
+                  <label className="text-sm font-bold text-[#141C3A]">
+                    Custom back-half
+                  </label>
+                  <span className="text-xs text-gray-400 font-normal">
+                    (optional)
+                  </span>
+                  <Switch
+                    checked={customAliasEnabled}
+                    onChange={(val) => {
+                      setCustomAliasEnabled(val);
+                      if (!val) {
+                        setCustomAlias("");
+                        setAliasError(null);
+                      }
+                    }}
+                  />
+                </div>
+                {customAliasEnabled ? (
+                  <div>
+                    <div className="flex items-center border border-gray-300 rounded-md overflow-hidden focus-within:ring-1 focus-within:ring-blue-600 focus-within:border-blue-600">
+                      <span className="px-3 py-2.5 bg-gray-50 text-gray-500 text-sm border-r border-gray-300 whitespace-nowrap select-none">
+                        /
+                      </span>
+                      <input
+                        id="custom-alias-input"
+                        value={customAlias}
+                        onChange={handleAliasChange}
+                        placeholder="my-brand"
+                        className="flex-1 px-3 py-2.5 text-gray-900 bg-white focus:outline-none text-sm"
+                        maxLength={30}
+                        autoComplete="off"
+                        spellCheck={false}
+                      />
+                    </div>
+                    {aliasError && (
+                      <p className="mt-1 text-xs text-red-600">{aliasError}</p>
+                    )}
+                    {!aliasError && customAlias && (
+                      <p className="mt-1 text-xs text-gray-400">
+                        Short link will be{" "}
+                        <span className="font-medium text-gray-600">
+                          {baseURL}/{customAlias}
+                        </span>
+                      </p>
+                    )}
+                  </div>
+                ) : (
+                  <p className="text-sm text-gray-400 py-2.5">
+                    A random code will be generated automatically.
+                  </p>
+                )}
               </div>
             </div>
 
@@ -227,9 +333,30 @@ const CreateLink: React.FC = () => {
 
                 <Switch
                   checked={expirationEnabled}
-                  onChange={setExpirationEnabled}
+                  onChange={(val) => {
+                    setExpirationEnabled(val);
+                    if (!val) setExpiresAt("");
+                  }}
                 />
               </div>
+              {expirationEnabled && (
+                <div className="mt-4">
+                  <label className="block text-sm font-bold text-[#141C3A] mb-2">
+                    Expiration Date & Time
+                  </label>
+                  <input
+                    type="datetime-local"
+                    value={expiresAt}
+                    onChange={(e) => setExpiresAt(e.target.value)}
+                    min={new Date().toISOString().slice(0, 16)} // Prevent selecting past dates
+                    className="w-full rounded-md border border-gray-300 px-3 py-2.5 text-gray-900 focus:outline-none focus:ring-1 focus:ring-blue-600 focus:border-blue-600"
+                    required={expirationEnabled}
+                  />
+                  <p className="mt-2 text-xs text-gray-500">
+                    After this date, the link will redirect to an expiration page or show a 410 Gone error.
+                  </p>
+                </div>
+              )}
             </div>
           </section>
 
@@ -253,7 +380,7 @@ const CreateLink: React.FC = () => {
 
             <button
               type="submit"
-              disabled={isSubmitting}
+              disabled={isSubmitting || (customAliasEnabled && !!aliasError)}
               className="px-6 py-2.5 rounded-md bg-[#2A5BD7] hover:bg-blue-700 text-white font-semibold shadow-sm disabled:opacity-60 disabled:cursor-not-allowed"
             >
               {isSubmitting ? "Creating..." : "Create your link"}

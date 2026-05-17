@@ -9,6 +9,8 @@
  * - Phase 8: Added CLICK vs SCAN detection via ?r=qr query parameter.
  *   When a QR code is scanned, the embedded URL includes ?r=qr. The redirect
  *   controller inspects this parameter to log the correct InteractionType.
+ * - Project Phase 4: Added link-expiration enforcement — returns 410 Gone for
+ *   expired links and skips caching already-expired entries.
  */
 import { logger } from "../utils/logger.js";
 import type { Request, Response, NextFunction } from "express";
@@ -20,7 +22,7 @@ import {
 import type { ClickTrackInput } from "../services/link.service.js";
 import redis from "../libs/redis.js";
 import getClientIp from "../utils/getClientIP.js";
-import { NotFoundError } from "../errors/app.error.js";
+import { AppError, NotFoundError } from "../errors/app.error.js";
 
 // TTL for unique-click set: reset after 24 hours
 const UNIQUE_CLICK_TTL = 86400;
@@ -84,10 +86,8 @@ const redirectLink = async (
 ) => {
   const { shortCode } = req.params as { shortCode: string };
   const requestedScan = req.query.r === "qr";
-  const interactionType: "CLICK" | "SCAN" =
-    req.query.r === "qr" ? "SCAN" : "CLICK";
 
-  logger.info("Redirect requested", { shortCode, interactionType });
+  logger.info("Redirect requested", { shortCode, requestedScan });
 
   try {
     const ip = getClientIp(req);
@@ -103,15 +103,28 @@ const redirectLink = async (
 
       if (!mapping) throw new NotFoundError("URL not found");
 
+      // ── Phase 4: expiry check (DB path) ──────────────────────────────────
+      if (mapping.expiresAt && mapping.expiresAt < new Date()) {
+        throw new AppError(410, "LINK_EXPIRED", "This link has expired.");
+      }
+
       cachedData = {
         longUrl: mapping.longUrl,
-        hasActiveQr: mapping.hasActiveQr, // Lấy trạng thái QR từ DB
+        hasActiveQr: mapping.hasActiveQr,
+        expiresAt: mapping.expiresAt,
       };
 
-      void cacheLink(shortCode, cachedData.longUrl, cachedData.hasActiveQr);
+      // Pass expiresAt so cacheLink can compute the correct TTL
+      void cacheLink(shortCode, cachedData.longUrl, cachedData.hasActiveQr, cachedData.expiresAt);
     } else {
       logger.info("Cache hit", { shortCode });
+
+      // ── Phase 4: expiry check (cache path) ───────────────────────────────
+      if (cachedData.expiresAt && cachedData.expiresAt < new Date()) {
+        throw new AppError(410, "LINK_EXPIRED", "This link has expired.");
+      }
     }
+
     const interactionType: "CLICK" | "SCAN" =
       requestedScan && cachedData.hasActiveQr ? "SCAN" : "CLICK";
 
@@ -126,7 +139,7 @@ const redirectLink = async (
         ),
       );
     }
-   
+
     return res.redirect(cachedData.longUrl);
   } catch (error) {
     next(error);

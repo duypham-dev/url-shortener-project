@@ -2,6 +2,9 @@
  * generateLink.service.ts
  *
  * Generates a short code using a BigInt-to-base62 encoding strategy.
+ *
+ * Phase 4 update: accepts an optional `expiresAt` date that is persisted
+ * to url_mappings.expires_at when provided.
  */
 import { prisma } from "../libs/prisma";
 import encodeIdToBase62 from '../utils/generateShortLink';
@@ -15,6 +18,8 @@ export interface GenerateLinkResult {
 export default async function generateShortLink(
   longUrl: string,
   userId: number,
+  expiresAt?: Date | null,
+  title?: string,
 ): Promise<GenerateLinkResult> {
   const BASE_URL = process.env.SHORT_LINK_BASE_URL ?? 'https://short.ly';
 
@@ -23,6 +28,8 @@ export default async function generateShortLink(
       data: {
         long_url: longUrl,
         user_id: userId,
+        ...(expiresAt ? { expires_at: expiresAt } : {}),
+        ...(title ? { title } : {}),
       },
     });
 

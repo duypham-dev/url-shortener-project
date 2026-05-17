@@ -10,6 +10,11 @@ export interface CreateShortenOptions {
     fgColor?: string;
     bgColor?: string;
   };
+  /** Phase 5 — optional custom back-half (e.g. "my-brand") */
+  customAlias?: string;
+  /** Phase 4 — optional ISO expiry date string (e.g. "2026-12-31T00:00:00Z") */
+  expiresAt?: string | null;
+  title?: string;
 }
 
 export const createShortenUrl = async (
@@ -20,10 +25,14 @@ export const createShortenUrl = async (
     originalUrl,
     generateQr: options?.generateQr,
     qrOptions: options?.qrOptions,
+    ...(options?.customAlias ? { customAlias: options.customAlias } : {}),
+    ...(options?.expiresAt !== undefined ? { expiresAt: options.expiresAt } : {}),
+    ...(options?.title ? { title: options.title } : {}),
   })) as ApiEnvelope<ShortenResponse & { qrCode?: QrCodeItem }>;
 
   return response.data;
 };
+
 
 export const getUserLinks = async (params?: LinksQueryParams): Promise<LinkItem[]> => {
   const query: Record<string, string> = {};

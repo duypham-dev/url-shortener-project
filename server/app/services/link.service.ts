@@ -2,14 +2,14 @@
  * link.service.ts
  *
  * Refactor Notes:
- * - NEW FILE: Extracts DB and Kafka operations from getLinks.controller.ts
+ * - NEW FILE: Extracts DB operations from getLinks.controller.ts
  *   and redirecLink.controller.ts into the service layer, restoring proper
- *   separation of concerns (controllers should not call Prisma/Kafka directly).
+ *   separation of concerns (controllers should not call Prisma/BullMQ directly).
  * - getLongUrlByShortCode: uses select { long_url } only (was fetching all columns).
  * - publishClickEvent: moved pushMessage() from redirecLink.controller.ts.
  */
 import { UAParser } from 'ua-parser-js';
-import { producer, CLICK_EVENTS_TOPIC } from "./kafka.service.js";
+import { clickQueue } from './queue.service.js';
 import { logger } from "../utils/logger";
 import {
   getUserLinksRepo,
@@ -17,8 +17,12 @@ import {
   getLongUrlByShortCodeRepo,
   getUrlOwnerContextRepo,
   updateLinkRepo,
+  shortCodeExistsRepo,
+  incrementCustomLinkUsageRepo,
   type GetUserLinksOptions,
 } from "../repositories/link.repo";
+import { ConflictError } from "../errors/app.error.js";
+import { prisma } from "../libs/prisma.js";
 
 // ----------------------------------------------------------------
 // Types
@@ -140,7 +144,9 @@ export const getLinkInfoByShortCode = async (
 // Resolve a short code to its long URL (used by redirect controller)
 // Only fetches the long_url column — no need for other fields.
 // ----------------------------------------------------------------
-export const getLongUrlByShortCode = async (shortCode: string): Promise<{ longUrl: string; hasActiveQr: boolean } | null> => {
+export const getLongUrlByShortCode = async (
+  shortCode: string,
+): Promise<{ longUrl: string; hasActiveQr: boolean; expiresAt: Date | null } | null> => {
   const record = await getLongUrlByShortCodeRepo(shortCode);
 
   if (!record) {
@@ -150,21 +156,20 @@ export const getLongUrlByShortCode = async (shortCode: string): Promise<{ longUr
   return {
     longUrl: record.long_url,
     hasActiveQr: record.has_qr,
+    expiresAt: record.expires_at ?? null,
   };
 };
 
 // ----------------------------------------------------------------
-// Publish click event to Kafka for analytics processing.
+// Publish click event to BullMQ for analytics processing.
 // Fire-and-forget: errors are logged but never propagated to the
-// caller — a Kafka failure must NOT break the redirect response.
+// caller — a queue failure must NOT break the redirect response.
 // ----------------------------------------------------------------
 export const publishClickEvent = async (message: ClickTrackInput): Promise<void> => {
   try {
-    logger.info('Kafka: publishing click event', { shortCode: message.shortCode });
-
     const ownerContext = await getUrlOwnerContextRepo(message.shortCode);
     if (!ownerContext) {
-      logger.warn('Kafka: skipped click event because shortCode was not found.', {
+      logger.warn('BullMQ: skipped click event because shortCode was not found.', {
         shortCode: message.shortCode,
       });
       return;
@@ -181,12 +186,10 @@ export const publishClickEvent = async (message: ClickTrackInput): Promise<void>
       deviceType: userAgentDetails.deviceType,
     };
 
-    await producer.send({
-      topic: CLICK_EVENTS_TOPIC,
-      messages: [{ value: JSON.stringify(payload) }],
-    });
+    await clickQueue.add('click', payload, { priority: 1 });
+    logger.info('BullMQ: click event queued', { shortCode: message.shortCode });
   } catch (error) {
-    logger.error('Kafka: failed to publish click event', { error });
+    logger.error('BullMQ: failed to queue click event', { error });
   }
 };
 
@@ -199,4 +202,54 @@ export const updateLink = async (
   data: { title?: string },
 ): Promise<void> => {
   await updateLinkRepo(shortCode, userId, data);
+};
+
+// ----------------------------------------------------------------
+// Create a short link with a custom alias (Phase 5)
+// Skips base62 encoding — uses the alias directly.
+// Throws ConflictError (409) if the alias is already taken.
+// ----------------------------------------------------------------
+export interface CreateCustomAliasResult {
+  shortUrl: string;
+  shortCode: string;
+  urlMappingId: bigint;
+}
+
+export const createCustomAliasLink = async (
+  longUrl: string,
+  userId: number,
+  customAlias: string,
+  expiresAt?: Date | null,
+  title?: string,
+): Promise<CreateCustomAliasResult> => {
+  const BASE_URL = process.env.SHORT_LINK_BASE_URL ?? 'https://short.ly';
+
+  // Uniqueness check (includes inactive / deleted records to avoid recycling)
+  const taken = await shortCodeExistsRepo(customAlias);
+  if (taken) {
+    throw new ConflictError(
+      `The alias "${customAlias}" is already taken. Please choose a different back-half.`,
+    );
+  }
+
+  const newMapping = await prisma.url_mappings.create({
+    data: {
+      long_url: longUrl,
+      user_id: userId,
+      short_code: customAlias,
+      is_custom: true,
+      ...(expiresAt ? { expires_at: expiresAt } : {}),
+      ...(title ? { title } : {}),
+    },
+  });
+
+  // Track monthly custom-link usage
+  const yearMonth = new Date().toISOString().slice(0, 7); // "YYYY-MM"
+  await incrementCustomLinkUsageRepo(userId, yearMonth);
+
+  return {
+    shortUrl: `${BASE_URL}/${customAlias}`,
+    shortCode: customAlias,
+    urlMappingId: newMapping.id,
+  };
 };

@@ -130,7 +130,40 @@ export const getLinkInfoByShortCodeRepo = async (
 export const getLongUrlByShortCodeRepo = async (shortCode: string) => {
   return await prisma.url_mappings.findUnique({
     where: { short_code: shortCode },
-    select: { long_url: true, has_qr: true } // also select has_qr to determine caching strategy,
+    select: { long_url: true, has_qr: true, expires_at: true },
+  });
+};
+
+/**
+ * Returns true if a short code already exists in the DB (used for custom alias
+ * uniqueness check — includes inactive links to prevent collision).
+ */
+export const shortCodeExistsRepo = async (shortCode: string): Promise<boolean> => {
+  const record = await prisma.url_mappings.findUnique({
+    where: { short_code: shortCode },
+    select: { id: true },
+  });
+  return record !== null;
+};
+
+/**
+ * Increments the custom_link_count usage counter for a user in the given month.
+ * Used after creating a custom alias short link.
+ */
+export const incrementCustomLinkUsageRepo = async (
+  userId: number,
+  yearMonth: string,
+): Promise<void> => {
+  await prisma.user_link_monthly_usage.upsert({
+    where: { user_id_year_month: { user_id: userId, year_month: yearMonth } },
+    update: { custom_link_count: { increment: 1 } },
+    create: {
+      user_id: userId,
+      year_month: yearMonth,
+      link_count: 0,
+      custom_link_count: 1,
+      qr_code_count: 0,
+    },
   });
 };
 

@@ -1,7 +1,7 @@
 import type { PlanTier } from "../../generated/prisma/enums";
 import {
+  AppError,
   ConflictError,
-  ForbiddenError,
   NotFoundError,
   QuotaExceededError,
 } from "../errors/app.error.js";
@@ -175,9 +175,9 @@ export const assertAnalyticsAccess = async (
   const result = await getAnalyticsAccess(userId);
 
   if (!result?.subscription_plans?.allow_analytics) {
-    throw new ForbiddenError("Analytics feature is only available for paid accounts.");
+    throw new AppError(403, "PLAN_REQUIRED", "Analytics feature is only available for paid accounts.");
   }
-};  
+};
 
 // ----------------------------------------------------------------
 // Full context fetcher — used only by GET /subscriptions/me/plan

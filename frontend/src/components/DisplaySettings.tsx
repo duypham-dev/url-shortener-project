@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import {
   Popover,
   Button,
-  Switch,
   Divider,
   Select,
   MenuItem,
@@ -12,6 +11,7 @@ import {
   Stack,
   FormControl,
 } from '@mui/material';
+
 
 // Import Icons from MUI
 import TuneIcon from '@mui/icons-material/Tune';
@@ -145,15 +145,7 @@ const DisplaySettingsButton: React.FC<DisplaySettingsProps> = ({
             </FormControl>
           </Box>
 
-          <Divider sx={{ my: 1.5 }} />
 
-          {/* Switch */}
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-            <Typography variant="body2">Show archived links</Typography>
-            <Switch size="small" />
-          </Box>
-
-          <Divider sx={{ my: 1.5 }} />
 
           {/* Properties Tags */}
           <Box>

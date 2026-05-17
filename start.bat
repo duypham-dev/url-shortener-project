@@ -1,2 +1,2 @@
 @echo off
-wt -d ./server cmd /k "title Backend && npm run dev" ; new-tab -d ./frontend cmd /k "title Frontend && npm run dev" ; new-tab -d ./server cmd /k "title Kafka Consumer && npx tsx watch app/consumers/consumer.ts"
+wt -d ./server cmd /k "title Backend && npm run dev" ; new-tab -d ./frontend cmd /k "title Frontend && npm run dev"

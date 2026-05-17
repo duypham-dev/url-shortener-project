@@ -25,7 +25,7 @@ import {
 } from "./middlewares/errorHandler.middleware.js";
 
 const app = express();
-
+app.set('trust proxy', true);
 // Disable ETag generation to avoid conditional GETs being served from disk cache
 app.set('etag', false);
 
