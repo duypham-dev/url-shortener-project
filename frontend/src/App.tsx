@@ -17,7 +17,7 @@ import ProtectedRoute from "./components/ProtectedRoute";
 import PublicRoute from "./components/PublicRoute";
 
 // Pages
-import Home from "./pages/HomePage.tsx";
+import Home from "./pages/HomePage/HomePage.tsx";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import ForgotPassword from "./pages/ForgotPassword.tsx";
