@@ -128,7 +128,11 @@ export const SuccessModal: React.FC<SuccessModalProps> = React.memo(({ isOpen, o
               
               <div className="flex items-center gap-4">
                 <button 
-                  onClick={() => navigate('/links')}
+                  onClick={() => {
+                    onClose();
+                    const shortCode = qrCode?.shortCode || (shortUrl ? shortUrl.split('/').pop() : '');
+                    navigate(`/dashboard/links/${shortCode}/analytics`);
+                  }}
                   className="flex items-center gap-2 px-6 py-2.5 rounded-md font-medium text-blue-600 border border-blue-600 hover:bg-blue-50 transition-colors"
                 >
                   <BarChart2 size={18} />

@@ -50,7 +50,6 @@ const CreateLink: React.FC = () => {
 
       try {
         await createShortenUrl(destination.trim());
-        // Navigate back to links list on success
         navigate("/dashboard/links");
       } catch (err: unknown) {
         const msg =

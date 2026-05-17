@@ -1,6 +1,6 @@
 // frontend/src/App.tsx
 import React, { useEffect } from "react";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useAuthStore } from "./store/useAuthStore";
 import "./App.css";
@@ -34,6 +34,10 @@ import { RealtimeAnalytics } from "./pages/RealtimeAnalytics.tsx";
 import { QrCodes } from "./pages/QrList/QrCodes.tsx";
 import { Toaster } from "react-hot-toast";
 import { GlobalConfirmModal } from "./components/GlobalConfirmModal";
+import { ThemeProvider } from "./components/ThemeProvider";
+import { SettingsLayout } from "./pages/Settings/SettingsLayout";
+import { GeneralSettings } from "./pages/Settings/GeneralSettings";
+import { AccountSettings } from "./pages/Settings/AccountSettings";
 
 const App: React.FC = () => {
   // Kiểm tra trạng thái đăng nhập ngay khi ứng dụng mount (F5)
@@ -44,8 +48,9 @@ const App: React.FC = () => {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <Toaster position="top-center" />
-      <BrowserRouter>
+      <ThemeProvider>
+        <Toaster position="top-center" />
+        <BrowserRouter>
         <Routes>
           {/* Public routes - Ai cũng vào được */}
           <Route
@@ -117,8 +122,21 @@ const App: React.FC = () => {
             <Route path="campaigns" element={<p>campaigns page</p>} />
             <Route path="domains" element={<p>domains page</p>} />
             <Route path="integrations" element={<p>integrations page</p>} />
-            <Route path="settings" element={<p>settings page</p>} />
             <Route path="upgrade" element={<Upgrade />} />
+          </Route>
+
+          {/* Settings Route (Separate Layout) */}
+          <Route
+            path="/dashboard/settings"
+            element={
+              <ProtectedRoute>
+                <SettingsLayout />
+              </ProtectedRoute>
+            }
+          >
+            <Route index element={<Navigate to="general" replace />} />
+            <Route path="general" element={<GeneralSettings />} />
+            <Route path="account" element={<AccountSettings />} />
           </Route>
 
           {/* Kết quả thanh toán */}
@@ -126,6 +144,7 @@ const App: React.FC = () => {
         </Routes>
         <GlobalConfirmModal />
       </BrowserRouter>
+      </ThemeProvider>
     </QueryClientProvider>
   );
 };
