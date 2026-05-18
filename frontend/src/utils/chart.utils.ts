@@ -1,9 +1,4 @@
 /**
- * chart.utils.ts
- * Shared utility functions for Recharts chart components.
- */
-
-/**
  * Recharts tooltip formatter that normalises any incoming value type
  * into a locale-formatted click count string.
  */

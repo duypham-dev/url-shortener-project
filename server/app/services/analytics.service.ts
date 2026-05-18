@@ -91,10 +91,8 @@ export const resolveAnalyticsDateRange = (
   if (mode === "custom" && clientStart && clientEnd) {
     // Use client-supplied range — already validated for max 30-day span
     const start = new Date(clientStart);
-    console.log("Start date: ", start);
     start.setUTCHours(0, 0, 0, 0);
     const end = new Date(clientEnd);
-    console.log("End date: ", end);
     end.setUTCHours(23, 59, 59, 999);
     return { start: start.toISOString(), end: end.toISOString() };
   }

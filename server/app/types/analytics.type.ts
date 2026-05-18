@@ -1,6 +1,4 @@
 /**
- * analytics.type.ts
- *
  * Shared TypeScript interfaces for the analytics feature.
  * Consumed by controller, service, and repository layers.
  */

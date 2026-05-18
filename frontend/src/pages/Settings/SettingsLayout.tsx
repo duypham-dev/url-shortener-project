@@ -63,7 +63,6 @@ export const SettingsLayout: React.FC = () => {
               <Outlet />
             </div>
           </main>
-
         </div>
       </div>
     </div>

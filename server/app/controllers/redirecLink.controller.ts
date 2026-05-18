@@ -1,17 +1,3 @@
-/**
- * redirecLink.controller.ts
- *
- * Refactor Notes:
- * - Phase 5: Replaced direct prisma/Kafka calls with service layer.
- * - Phase 4: Errors forwarded via next(error) to global errorHandler.
- * - Phase 6: Removed debug console.log statements.
- * - Phase 7: Added referrer to click event message; removed debug console.log.
- * - Phase 8: Added CLICK vs SCAN detection via ?r=qr query parameter.
- *   When a QR code is scanned, the embedded URL includes ?r=qr. The redirect
- *   controller inspects this parameter to log the correct InteractionType.
- * - Project Phase 4: Added link-expiration enforcement — returns 410 Gone for
- *   expired links and skips caching already-expired entries.
- */
 import { logger } from "../utils/logger.js";
 import type { Request, Response, NextFunction } from "express";
 import { getCachedLink, cacheLink } from "../services/linkCache.service.js";

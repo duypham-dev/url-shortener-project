@@ -10,8 +10,6 @@ import type {
 
 /**
  * Fetch raw clicked_at timestamps for a given short code within a date range.
- * The service layer handles hourly/daily bucketing and zero-filling.
- * Uses Prisma query builder (no raw SQL) for database-agnostic code.
  */
 export const getTimeseriesClicksRepo = async (
   shortCode: string,

@@ -6,6 +6,8 @@ import { formatDate } from "../../../utils/date";
 import { useCopyToClipboard } from "../../../hooks/useCopyToClipboard";
 import { getShortUrlDisplay } from "../../../utils/url";
 import { EditLinkModal } from "../../../components/EditLinkModal";
+import { ShareLinkModal } from "../../../components/ShareLinkModal";
+
 
 interface LinkCardProps {
   link: LinkItem;
@@ -17,6 +19,8 @@ export const LinkCard: React.FC<LinkCardProps> = React.memo(({ link, viewMode = 
   const navigate = useNavigate();
   const shortUrlDisplay = getShortUrlDisplay(link.short_code);
   const [showEditModal, setShowEditModal] = React.useState(false);
+  const [showShareModal, setShowShareModal] = React.useState(false);
+
 
   const defaultFavicon = "https://t3.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=" + link.long_url + "&size=64";
 
@@ -26,8 +30,6 @@ export const LinkCard: React.FC<LinkCardProps> = React.memo(({ link, viewMode = 
 
   /**
    * Navigate to the analytics page for this link.
-   * The CreateQrCode panel is embedded there, so the user can
-   * create or manage the QR in the correct context.
    */
   const handleQrClick = () => {
     navigate(`/dashboard/links/${link.short_code}/analytics`);
@@ -52,7 +54,7 @@ export const LinkCard: React.FC<LinkCardProps> = React.memo(({ link, viewMode = 
           {viewMode === 'card' && (
             <div className="flex items-center text-gray-500 gap-1">
               <button className="p-1 hover:bg-gray-100 rounded-md transition-colors" onClick={() => setShowEditModal(true)}><Edit2 size={16} /></button>
-              <button className="p-1 hover:bg-gray-100 rounded-md transition-colors"><Share2 size={16} /></button>
+              <button className="p-1 hover:bg-gray-100 rounded-md transition-colors" onClick={() => setShowShareModal(true)} title="Share link"><Share2 size={16} /></button>
               <button onClick={() => navigateToAnalytics(link)} className="p-1 hover:bg-gray-100 rounded-md transition-colors"><BarChart2 size={16} /></button>
               <button onClick={handleQrClick} className={`p-1 rounded-md transition-colors ${link.has_qr ? 'text-blue-600 hover:bg-blue-50' : 'hover:bg-gray-100'}`}><QrCode size={16} /></button>
               <button className="p-1 hover:bg-gray-100 rounded-md transition-colors"><MoreHorizontal size={16} /></button>
@@ -78,7 +80,13 @@ export const LinkCard: React.FC<LinkCardProps> = React.memo(({ link, viewMode = 
                 >
                   <Edit2 size={16} />
                 </button>
-                <button className="p-1 hover:bg-gray-100 rounded-md transition-colors"><Share2 size={16} /></button>
+                <button 
+                  className="p-1 hover:bg-gray-100 rounded-md transition-colors"
+                  onClick={() => setShowShareModal(true)}
+                  title="Share link"
+                >
+                  <Share2 size={16} />
+                </button>
                 <button
                   onClick={() => navigateToAnalytics(link)}
                   className="p-1 hover:bg-gray-100 rounded-md transition-colors"
@@ -148,6 +156,11 @@ export const LinkCard: React.FC<LinkCardProps> = React.memo(({ link, viewMode = 
       {showEditModal && (
         <EditLinkModal link={link} onClose={() => setShowEditModal(false)} />
       )}
+      <ShareLinkModal 
+        isOpen={showShareModal} 
+        onClose={() => setShowShareModal(false)} 
+        shortUrl={shortUrlDisplay} 
+      />
     </div>
   );
 });
