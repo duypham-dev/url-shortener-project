@@ -108,8 +108,12 @@ model url_mappings {
   is_active  Boolean?  @default(true)
   has_qr     Boolean   @default(false)   // true when a qr_codes row is linked
 
-  created_at DateTime? @default(now()) @db.Timestamptz(6)
-  expires_at DateTime? @db.Timestamptz(6)
+  created_at  DateTime? @default(now()) @db.Timestamptz(6)
+  expires_at  DateTime? @db.Timestamptz(6)
+
+  // Denormalized counter — incremented atomically by the BullMQ click worker.
+  // Avoids expensive COUNT(*) aggregates on the click_logs table for list views.
+  click_count BigInt    @default(0)
 
   click_logs click_logs[]
   // 1-to-1: a url_mapping can have at most one QR code

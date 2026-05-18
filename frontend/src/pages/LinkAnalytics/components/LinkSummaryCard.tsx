@@ -1,26 +1,31 @@
-import React from "react";
+import React, { useState } from "react";
 import {
   FiMoreHorizontal,
   FiEdit2,
   FiShare2,
   FiCopy,
   FiTag,
-  FiChevronRight,
 } from "react-icons/fi";
 import type { LinkItem } from "../../../types/url.type";
 import { formatDate } from "../../../utils/date";
 import { getShortUrlDisplay } from "../../../utils/url";
 import { useCopyToClipboard } from "../../../hooks/useCopyToClipboard";
+import { EditLinkModal } from "../../../components/EditLinkModal";
+import { ShareLinkModal } from "../../../components/ShareLinkModal";
 
 const LinkSummaryCard: React.FC<{ link: LinkItem }> = ({ link }) => {
   const [, copy] = useCopyToClipboard();
   const shortUrlDisplay = getShortUrlDisplay(link.short_code);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [showShareModal, setShowShareModal] = useState(false);
+
+  const defaultFavicon = "https://t3.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=" + link.long_url + "&size=64";
 
   return (
     <div className="w-full bg-white rounded-xl p-6 font-sans border border-gray-100">
       <div className="flex items-start gap-4">
-        <div className="mt-1 w-8 h-8 rounded-full bg-[#f4f6fa] flex items-center justify-center text-gray-500 shrink-0 border border-gray-200">
-          <FiChevronRight size={18} strokeWidth={2.5} />
+        <div className="mt-1 w-8 h-8 rounded-full bg-[#f4f6fa] flex items-center justify-center overflow-hidden shrink-0 border border-gray-200">
+          <img src={defaultFavicon} alt="" className="w-full h-full object-contain" />
         </div>
 
         <div className="flex-1 min-w-0">
@@ -33,10 +38,17 @@ const LinkSummaryCard: React.FC<{ link: LinkItem }> = ({ link }) => {
               <button className="p-1.5 bg-white hover:bg-gray-50 border border-gray-300 rounded text-gray-700 transition-colors">
                 <FiMoreHorizontal size={18} />
               </button>
-              <button className="p-1.5 bg-white hover:bg-gray-50 border border-gray-300 rounded text-gray-700 transition-colors">
+              <button 
+                onClick={() => setShowEditModal(true)}
+                className="p-1.5 bg-white hover:bg-gray-50 border border-gray-300 rounded text-gray-700 transition-colors"
+                title="Edit link title"
+              >
                 <FiEdit2 size={16} />
               </button>
-              <button className="flex items-center gap-2 px-3 py-1.5 bg-[#eef1f6] hover:bg-[#e4e9f0] rounded text-[#273144] font-medium transition-colors text-sm border border-transparent">
+              <button 
+                onClick={() => setShowShareModal(true)}
+                className="flex items-center gap-2 px-3 py-1.5 bg-[#eef1f6] hover:bg-[#e4e9f0] rounded text-[#273144] font-medium transition-colors text-sm border border-transparent"
+              >
                 <FiShare2 size={16} />
                 <span>Share</span>
               </button>
@@ -100,6 +112,16 @@ const LinkSummaryCard: React.FC<{ link: LinkItem }> = ({ link }) => {
           </div>
         </div>
       </div>
+
+      {showEditModal && (
+        <EditLinkModal link={link} onClose={() => setShowEditModal(false)} />
+      )}
+
+      <ShareLinkModal 
+        isOpen={showShareModal} 
+        onClose={() => setShowShareModal(false)} 
+        shortUrl={shortUrlDisplay} 
+      />
     </div>
   );
 };

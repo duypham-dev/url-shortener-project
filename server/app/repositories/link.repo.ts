@@ -72,7 +72,7 @@ export const getUserLinksRepo = async (
       orderBy.push({ created_at: order });
       break;
     case "clickCount":
-      orderBy.push({ click_logs: { _count: order } });
+      orderBy.push({ click_count: order });
       break;
     case "title":
       orderBy.push({ title: order });
@@ -96,11 +96,7 @@ export const getUserLinksRepo = async (
       title: true,
       has_qr: true,
       created_at: true,
-      _count: {
-        select: {
-          click_logs: true,
-        },
-      },
+      click_count: true,
     },
   });
 };
@@ -118,11 +114,7 @@ export const getLinkInfoByShortCodeRepo = async (
       title: true,
       has_qr: true,
       created_at: true,
-      _count: {
-        select: {
-          click_logs: true,
-        },
-      },
+      click_count: true,
     },
   });
 };

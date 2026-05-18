@@ -102,10 +102,10 @@ export const getUserLinks = async (
   const hasNextPage = limit !== undefined && rows.length > limit;
   const items = hasNextPage ? rows.slice(0, limit) : rows;
 
-  const links = items.map(({ id, _count, ...link }) => ({
+  const links = items.map(({ id, click_count, ...link }) => ({
     id: id.toString(),
     ...link,
-    click_count: _count.click_logs,
+    click_count: Number(click_count),
   }));
 
   const nextCursor =
@@ -136,7 +136,7 @@ export const getLinkInfoByShortCode = async (
     title: link.title,
     has_qr: link.has_qr,
     created_at: link.created_at,
-    click_count: link._count.click_logs,
+    click_count: Number(link.click_count),
   };
 };
 

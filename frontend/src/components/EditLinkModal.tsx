@@ -9,19 +9,14 @@ import type { QrCodeItem } from "../types/qr.type";
 import { updateLink } from "../api/link.api";
 import { getQrCodeByShortCode, createQrCode, regenerateQrCode } from "../api/qrCode.api";
 import { getShortUrlDisplay } from "../utils/url";
-import { QR_COLORS } from "../config/qr.constants";
+import { QR_COLORS, QR_BG_COLORS, ERROR_CORRECTION_OPTIONS } from "../config/qr.constants";
 
 interface EditLinkModalProps {
   link: LinkItem;
   onClose: () => void;
 }
 
-const ERROR_CORRECTION_OPTIONS = [
-  { value: "L" as const, label: "L", desc: "Low (7%)" },
-  { value: "M" as const, label: "M", desc: "Medium (15%)" },
-  { value: "Q" as const, label: "Q", desc: "Quartile (25%)" },
-  { value: "H" as const, label: "H", desc: "High (30%)" },
-];
+
 
 export const EditLinkModal: React.FC<EditLinkModalProps> = ({ link, onClose }) => {
   const queryClient = useQueryClient();
@@ -59,6 +54,7 @@ export const EditLinkModal: React.FC<EditLinkModalProps> = ({ link, onClose }) =
     mutationFn: () => updateLink(link.short_code, { title: title.trim() || undefined }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["userLinks"] });
+      queryClient.invalidateQueries({ queryKey: ["linkAnalytics", link.short_code] });
     },
   });
 
@@ -177,7 +173,7 @@ export const EditLinkModal: React.FC<EditLinkModalProps> = ({ link, onClose }) =
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder="E.g. Product Launch Campaign"
-              className="w-full border border-gray-300 px-3 py-2 rounded text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
+              className="w-full border border-gray-300 px-3 py-2 rounded text-sm focus:ring-1 focus:ring-black focus:border-black outline-none transition-all"
             />
           </div>
 
@@ -210,7 +206,7 @@ export const EditLinkModal: React.FC<EditLinkModalProps> = ({ link, onClose }) =
                           type="text"
                           value={qrTitle}
                           onChange={(e) => setQrTitle(e.target.value)}
-                          className="w-full border border-gray-300 px-3 py-1.5 rounded text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                          className="w-full border border-gray-300 px-3 py-1.5 rounded text-sm focus:ring-1 focus:ring-black focus:border-black outline-none transition-all"
                         />
                       </div>
 
@@ -232,7 +228,7 @@ export const EditLinkModal: React.FC<EditLinkModalProps> = ({ link, onClose }) =
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1.5">Background Color</label>
                         <div className="flex flex-wrap gap-2">
-                          {["#ffffff", "#f8f9fa", "#e9ecef", "#ffd43b", "#74c0fc"].map((color) => (
+                          {QR_BG_COLORS.map((color) => (
                             <button
                               key={color}
                               onClick={() => setBgColor(color)}
