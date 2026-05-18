@@ -5,28 +5,54 @@ import type {
 } from "../types/analytics.type.js";
 
 // ----------------------------------------------------------------
-// Timeseries — fetch raw click timestamps for in-app grouping
+// Timeseries — aggregate clicks in the DB (not in Node.js memory)
 // ----------------------------------------------------------------
 
+export interface TimeseriesRawRow {
+  bucket: Date;
+  clicks: bigint;
+}
+
 /**
- * Fetch raw clicked_at timestamps for a given short code within a date range.
+ * Aggregate clicks by hour directly in PostgreSQL.
+ * Returns pre-bucketed rows — no in-memory grouping needed.
  */
-export const getTimeseriesClicksRepo = async (
+export const getTimeseriesHourlyRepo = async (
   shortCode: string,
   start: string,
   end: string,
-): Promise<{ clicked_at: Date | null }[]> => {
-  return prisma.click_logs.findMany({
-    where: {
-      short_code: shortCode,
-      clicked_at: {
-        gte: new Date(start),
-        lte: new Date(end),
-      },
-    },
-    select: { clicked_at: true },
-    orderBy: { clicked_at: "asc" },
-  });
+): Promise<TimeseriesRawRow[]> => {
+  return prisma.$queryRaw<TimeseriesRawRow[]>`
+    SELECT DATE_TRUNC('hour', clicked_at AT TIME ZONE 'UTC') AS bucket,
+           COUNT(*)::bigint AS clicks
+    FROM shortlink.click_logs
+    WHERE short_code = ${shortCode}
+      AND clicked_at >= ${new Date(start)}
+      AND clicked_at <= ${new Date(end)}
+    GROUP BY 1
+    ORDER BY 1 ASC
+  `;
+};
+
+/**
+ * Aggregate clicks by day directly in PostgreSQL.
+ * Returns pre-bucketed rows — no in-memory grouping needed.
+ */
+export const getTimeseriesDailyRepo = async (
+  shortCode: string,
+  start: string,
+  end: string,
+): Promise<TimeseriesRawRow[]> => {
+  return prisma.$queryRaw<TimeseriesRawRow[]>`
+    SELECT DATE_TRUNC('day', clicked_at AT TIME ZONE 'UTC') AS bucket,
+           COUNT(*)::bigint AS clicks
+    FROM shortlink.click_logs
+    WHERE short_code = ${shortCode}
+      AND clicked_at >= ${new Date(start)}
+      AND clicked_at <= ${new Date(end)}
+    GROUP BY 1
+    ORDER BY 1 ASC
+  `;
 };
 
 // ----------------------------------------------------------------

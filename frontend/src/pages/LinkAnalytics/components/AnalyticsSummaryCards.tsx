@@ -15,38 +15,39 @@ const AnalyticsSummaryCardsComponent: React.FC<AnalyticsSummaryCardsProps> = ({
   peakDayClicks,
   mode,
 }) => {
-  const avgLabel = mode === "last24h" ? "Trung bình/giờ" : "Trung bình/ngày";
-  const peakLabel = mode === "last24h" ? "Giờ cao nhất" : "Ngày cao nhất";
+  const avgLabel = mode === "last24h" ? "Avg. Clicks / Hour" : "Avg. Clicks / Day";
+  const peakLabel = mode === "last24h" ? "Peak Hour Clicks" : "Peak Day Clicks";
+
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
-      <div className="bg-white rounded-xl border border-gray-200 p-5">
-        <div className="flex items-center gap-3 mb-2">
-          <div className="w-10 h-10 rounded-lg bg-blue-50 flex items-center justify-center">
-            <MousePointerClick size={20} className="text-blue-600" />
+    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8 font-sans">
+      <div className="bg-white rounded-xl border border-gray-200 p-5 hover:-translate-y-0.5 hover:shadow-sm transition-all duration-300">
+        <div className="flex items-center gap-3 mb-3">
+          <div className="w-9 h-9 rounded-lg bg-gray-50 border border-gray-100 flex items-center justify-center text-gray-500 shadow-sm">
+            <MousePointerClick size={16} />
           </div>
-          <span className="text-sm font-medium text-gray-500">Tổng click</span>
+          <span className="text-sm font-normal text-gray-500">Total Clicks</span>
         </div>
-        <div className="text-3xl font-bold text-gray-900">{totalClicks.toLocaleString()}</div>
+        <div className="text-3xl font-bold text-gray-900 tracking-tight">{totalClicks.toLocaleString()}</div>
       </div>
 
-      <div className="bg-white rounded-xl border border-gray-200 p-5">
-        <div className="flex items-center gap-3 mb-2">
-          <div className="w-10 h-10 rounded-lg bg-emerald-50 flex items-center justify-center">
-            <TrendingUp size={20} className="text-emerald-600" />
+      <div className="bg-white rounded-xl border border-gray-200 p-5 hover:-translate-y-0.5 hover:shadow-sm transition-all duration-300">
+        <div className="flex items-center gap-3 mb-3">
+          <div className="w-9 h-9 rounded-lg bg-gray-50 border border-gray-100 flex items-center justify-center text-gray-500 shadow-sm">
+            <TrendingUp size={16} />
           </div>
-          <span className="text-sm font-medium text-gray-500">{avgLabel}</span>
+          <span className="text-sm font-normal text-gray-500">{avgLabel}</span>
         </div>
-        <div className="text-3xl font-bold text-gray-900">{averagePerDay.toLocaleString()}</div>
+        <div className="text-3xl font-bold text-gray-900 tracking-tight">{averagePerDay.toLocaleString()}</div>
       </div>
 
-      <div className="bg-white rounded-xl border border-gray-200 p-5">
-        <div className="flex items-center gap-3 mb-2">
-          <div className="w-10 h-10 rounded-lg bg-purple-50 flex items-center justify-center">
-            <BarChart2 size={20} className="text-purple-600" />
+      <div className="bg-white rounded-xl border border-gray-200 p-5 hover:-translate-y-0.5 hover:shadow-sm transition-all duration-300">
+        <div className="flex items-center gap-3 mb-3">
+          <div className="w-9 h-9 rounded-lg bg-gray-50 border border-gray-100 flex items-center justify-center text-gray-500 shadow-sm">
+            <BarChart2 size={16} />
           </div>
-          <span className="text-sm font-medium text-gray-500">{peakLabel}</span>
+          <span className="text-sm font-normal text-gray-500">{peakLabel}</span>
         </div>
-        <div className="text-3xl font-bold text-gray-900">{peakDayClicks.toLocaleString()}</div>
+        <div className="text-3xl font-bold text-gray-900 tracking-tight">{peakDayClicks.toLocaleString()}</div>
       </div>
     </div>
   );

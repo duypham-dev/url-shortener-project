@@ -5,13 +5,12 @@
  * Each function targets a single analytics dimension, called by the controller
  * based on the `groupBy` query parameter.
  *
- * Date ranges are computed server-side from the `mode` preset:
- *   last24h  — 24 hours back from now, hourly buckets
- *   last7d   — 7 days back from now, daily buckets
- *   last30d  — 30 days back from now, daily buckets
+ * Timeseries aggregation is done in PostgreSQL (DATE_TRUNC) — NOT in Node.js.
+ * Zero-filling empty buckets is the only in-memory work remaining.
  */
 import {
-  getTimeseriesClicksRepo,
+  getTimeseriesHourlyRepo,
+  getTimeseriesDailyRepo,
   getReferrersRepo,
   getCountriesRepo,
   getDevicesRepo,
@@ -68,9 +67,6 @@ export interface ResolvedDateRange {
 /**
  * Resolve start/end dates from the mode.
  *
- * For presets (last24h, last7d, last30d): dates computed server-side.
- * For custom: uses client-supplied start/end (validated by schema).
- *
  * - last24h: exactly 24 hours back from now
  * - last7d:  7 calendar days back from start-of-today (UTC)
  * - last30d: 30 calendar days back from start-of-today (UTC)
@@ -89,7 +85,6 @@ export const resolveAnalyticsDateRange = (
   }
 
   if (mode === "custom" && clientStart && clientEnd) {
-    // Use client-supplied range — already validated for max 30-day span
     const start = new Date(clientStart);
     start.setUTCHours(0, 0, 0, 0);
     const end = new Date(clientEnd);
@@ -106,127 +101,64 @@ export const resolveAnalyticsDateRange = (
   startDate.setUTCHours(0, 0, 0, 0);
   startDate.setUTCDate(startDate.getUTCDate() - (daysBack - 1));
 
-  return {
-    start: startDate.toISOString(),
-    end: endOfToday.toISOString(),
-  };
+  return { start: startDate.toISOString(), end: endOfToday.toISOString() };
 };
 
 // ----------------------------------------------------------------
-// Zero-fill utilities
+// Zero-fill — insert 0s for buckets missing from the DB result
 // ----------------------------------------------------------------
 
 /**
- * Generate all hourly bucket keys between start and end.
- * Bucket format: "YYYY-MM-DDTHH:00"
+ * Format a Date to a timeseries bucket key string.
+ * hourly: "YYYY-MM-DDTHH:00"  |  daily: "YYYY-MM-DD"
  */
-const generateHourlyBuckets = (start: Date, end: Date): string[] => {
-  const buckets: string[] = [];
-  const cursor = new Date(start);
-  // Truncate to the top of the hour
-  cursor.setMinutes(0, 0, 0);
-
-  while (cursor <= end) {
-    const yyyy = cursor.getUTCFullYear();
-    const mm = String(cursor.getUTCMonth() + 1).padStart(2, "0");
-    const dd = String(cursor.getUTCDate()).padStart(2, "0");
-    const hh = String(cursor.getUTCHours()).padStart(2, "0");
-    buckets.push(`${yyyy}-${mm}-${dd}T${hh}:00`);
-    cursor.setUTCHours(cursor.getUTCHours() + 1);
-  }
-
-  return buckets;
+const formatBucket = (d: Date, mode: "hourly" | "daily"): string => {
+  const yyyy = d.getUTCFullYear();
+  const mm = String(d.getUTCMonth() + 1).padStart(2, "0");
+  const dd = String(d.getUTCDate()).padStart(2, "0");
+  if (mode === "daily") return `${yyyy}-${mm}-${dd}`;
+  const hh = String(d.getUTCHours()).padStart(2, "0");
+  return `${yyyy}-${mm}-${dd}T${hh}:00`;
 };
 
 /**
- * Generate all daily bucket keys between start and end.
- * Bucket format: "YYYY-MM-DD"
+ * Zero-fill sparse DB results with all expected buckets in the date range.
  */
-const generateDailyBuckets = (start: Date, end: Date): string[] => {
-  const buckets: string[] = [];
-  const cursor = new Date(start);
-  // Truncate to start of day
-  cursor.setUTCHours(0, 0, 0, 0);
-
-  const endDay = new Date(end);
-  endDay.setUTCHours(23, 59, 59, 999);
-
-  while (cursor <= endDay) {
-    const yyyy = cursor.getUTCFullYear();
-    const mm = String(cursor.getUTCMonth() + 1).padStart(2, "0");
-    const dd = String(cursor.getUTCDate()).padStart(2, "0");
-    buckets.push(`${yyyy}-${mm}-${dd}`);
-    cursor.setUTCDate(cursor.getUTCDate() + 1);
-  }
-
-  return buckets;
-};
-
-/**
- * Group raw click timestamps into hourly buckets and zero-fill gaps.
- */
-const groupByHour = (
-  clicks: { clicked_at: Date | null }[],
+const zeroFill = (
+  dbRows: { bucket: Date; clicks: bigint }[],
   start: Date,
   end: Date,
+  mode: "hourly" | "daily",
 ): TimeseriesItem[] => {
-  const allBuckets = generateHourlyBuckets(start, end);
-  const countMap = new Map<string, number>();
-
-  // Initialize all buckets to 0
-  for (const b of allBuckets) {
-    countMap.set(b, 0);
+  // Build a lookup map from pre-aggregated DB rows
+  const counts = new Map<string, number>();
+  for (const row of dbRows) {
+    counts.set(formatBucket(row.bucket, mode), Number(row.clicks));
   }
 
-  // Count clicks into buckets
-  for (const row of clicks) {
-    if (!row.clicked_at) continue;
-    const d = row.clicked_at;
-    const yyyy = d.getUTCFullYear();
-    const mm = String(d.getUTCMonth() + 1).padStart(2, "0");
-    const dd = String(d.getUTCDate()).padStart(2, "0");
-    const hh = String(d.getUTCHours()).padStart(2, "0");
-    const key = `${yyyy}-${mm}-${dd}T${hh}:00`;
-    countMap.set(key, (countMap.get(key) ?? 0) + 1);
+  // Walk the full time range step-by-step and emit every bucket
+  const result: TimeseriesItem[] = [];
+  const cursor = new Date(start);
+
+  if (mode === "hourly") {
+    cursor.setUTCMinutes(0, 0, 0);
+    while (cursor <= end) {
+      const bucket = formatBucket(cursor, "hourly");
+      result.push({ bucket, clicks: counts.get(bucket) ?? 0 });
+      cursor.setUTCHours(cursor.getUTCHours() + 1);
+    }
+  } else {
+    cursor.setUTCHours(0, 0, 0, 0);
+    const endDay = new Date(end);
+    endDay.setUTCHours(23, 59, 59, 999);
+    while (cursor <= endDay) {
+      const bucket = formatBucket(cursor, "daily");
+      result.push({ bucket, clicks: counts.get(bucket) ?? 0 });
+      cursor.setUTCDate(cursor.getUTCDate() + 1);
+    }
   }
 
-  return allBuckets.map((bucket) => ({
-    bucket,
-    clicks: countMap.get(bucket) ?? 0,
-  }));
-};
-
-/**
- * Group raw click timestamps into daily buckets and zero-fill gaps.
- */
-const groupByDay = (
-  clicks: { clicked_at: Date | null }[],
-  start: Date,
-  end: Date,
-): TimeseriesItem[] => {
-  const allBuckets = generateDailyBuckets(start, end);
-  const countMap = new Map<string, number>();
-
-  // Initialize all buckets to 0
-  for (const b of allBuckets) {
-    countMap.set(b, 0);
-  }
-
-  // Count clicks into buckets
-  for (const row of clicks) {
-    if (!row.clicked_at) continue;
-    const d = row.clicked_at;
-    const yyyy = d.getUTCFullYear();
-    const mm = String(d.getUTCMonth() + 1).padStart(2, "0");
-    const dd = String(d.getUTCDate()).padStart(2, "0");
-    const key = `${yyyy}-${mm}-${dd}`;
-    countMap.set(key, (countMap.get(key) ?? 0) + 1);
-  }
-
-  return allBuckets.map((bucket) => ({
-    bucket,
-    clicks: countMap.get(bucket) ?? 0,
-  }));
+  return result;
 };
 
 // ----------------------------------------------------------------
@@ -242,24 +174,20 @@ export interface AnalyticsDateInput {
 
 /**
  * Get click timeseries for a link.
- * For presets, dates are computed server-side.
- * For custom, uses client-supplied start/end.
+ * Aggregation is performed in PostgreSQL — zero-filling is the only Node.js work.
  */
 export const getTimeseriesAnalytics = async (
   shortCode: string,
   input: AnalyticsDateInput,
 ): Promise<TimeseriesResult> => {
   const { start, end } = resolveAnalyticsDateRange(input.mode, input.clientStart, input.clientEnd);
+  const isHourly = input.mode === "last24h";
 
-  const rows = await getTimeseriesClicksRepo(shortCode, start, end);
+  const dbRows = isHourly
+    ? await getTimeseriesHourlyRepo(shortCode, start, end)
+    : await getTimeseriesDailyRepo(shortCode, start, end);
 
-  const startDate = new Date(start);
-  const endDate = new Date(end);
-
-  const items = input.mode === "last24h"
-    ? groupByHour(rows, startDate, endDate)
-    : groupByDay(rows, startDate, endDate);
-
+  const items = zeroFill(dbRows, new Date(start), new Date(end), isHourly ? "hourly" : "daily");
   return { mode: input.mode, items };
 };
 

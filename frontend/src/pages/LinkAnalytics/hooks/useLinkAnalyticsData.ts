@@ -94,6 +94,7 @@ export const useLinkAnalyticsData = ({
   // ---- Timeseries query ----
   const {
     data: timeseriesData,
+    isLoading: isTimeseriesLoading,
     error: timeseriesError,
   } = useQuery<TimeseriesResult, unknown>({
     queryKey: ["linkAnalytics", shortCode, "timeseries", filterParams],
@@ -106,6 +107,7 @@ export const useLinkAnalyticsData = ({
   // ---- Referrers query ----
   const {
     data: referrersData,
+    isLoading: isReferrersLoading,
     error: referrersError,
   } = useQuery<ReferrerItem[], unknown>({
     queryKey: ["linkAnalytics", shortCode, "referrers", filterParams],
@@ -118,6 +120,7 @@ export const useLinkAnalyticsData = ({
   // ---- Countries query ----
   const {
     data: countriesData,
+    isLoading: isCountriesLoading,
     error: countriesError,
   } = useQuery<AnalyticsBreakdownItem[], unknown>({
     queryKey: ["linkAnalytics", shortCode, "countries", filterParams],
@@ -130,6 +133,7 @@ export const useLinkAnalyticsData = ({
   // ---- Devices query ----
   const {
     data: devicesData,
+    isLoading: isDevicesLoading,
     error: devicesError,
   } = useQuery<DeviceBreakdown, unknown>({
     queryKey: ["linkAnalytics", shortCode, "devices", filterParams],
@@ -140,7 +144,11 @@ export const useLinkAnalyticsData = ({
   });
 
   // ---- Derived state ----
-  const isLoading = !isPlanLoaded || isLinkLoading;
+  // isLoading covers: plan not yet loaded, link info loading, AND analytics queries in-flight
+  const isAnalyticsLoading = analyticsEnabled && (
+    isTimeseriesLoading || isReferrersLoading || isCountriesLoading || isDevicesLoading
+  );
+  const isLoading = !isPlanLoaded || isLinkLoading || isAnalyticsLoading;
 
   // Plan-gated if user is free, or any analytics query returned PLAN_REQUIRED
   const anyPlanError =

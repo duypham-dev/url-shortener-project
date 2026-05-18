@@ -90,7 +90,7 @@ const formatMonthYear = (year: number, month: number): string => {
 };
 
 const formatDateShort = (date: Date): string =>
-  date.toLocaleDateString("vi-VN", { day: "2-digit", month: "2-digit", year: "numeric" });
+  date.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
 
 const daysDiff = (a: Date, b: Date): number => {
   const msPerDay = 1000 * 60 * 60 * 24;

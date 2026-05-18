@@ -50,7 +50,7 @@ const LinksSecondaryToolbarComponent: React.FC<LinksSecondaryToolbarProps> = ({
               <button
                 type="button"
                 onClick={() => onBulkUpdateStatus(false)}
-                className="flex items-center gap-1.5 px-3 py-1.5 bg-white hover:bg-gray-50 border border-gray-200 text-gray-900 rounded transition-all cursor-pointer shadow-sm focus:outline-none"
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-white hover:bg-gray-50 border border-gray-200 text-gray-900 rounded transition-all cursor-pointer focus:outline-none"
               >
                 <EyeOff size={14} className="stroke-[2.5]" />
                 Hide
@@ -67,7 +67,7 @@ const LinksSecondaryToolbarComponent: React.FC<LinksSecondaryToolbarProps> = ({
             )}
             <button
               type="button"
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-white hover:bg-gray-50 border border-gray-200 text-gray-900 rounded transition-all cursor-pointer shadow-sm focus:outline-none"
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-white hover:bg-gray-50 border border-gray-200 text-gray-900 rounded transition-all cursor-pointer focus:outline-none"
             >
               Tag
             </button>
