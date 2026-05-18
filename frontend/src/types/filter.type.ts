@@ -22,6 +22,7 @@ export interface LinksQueryParams {
   sortFilter: SortFilter;
   page?: number;
   limit?: number;
+  isActive?: boolean;
 }
 
 export const INITIAL_DATE_FILTER: DateFilter = { startDate: null, endDate: null };

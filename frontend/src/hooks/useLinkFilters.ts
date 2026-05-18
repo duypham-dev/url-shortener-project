@@ -19,6 +19,7 @@ export const useLinkFilters = () => {
   const endDateParam = searchParams.get("endDate");
   const sortByParam = searchParams.get("sortBy") || "createdAt";
   const sortOrderParam = searchParams.get("sortOrder") || "desc";
+  const isActiveParam = searchParams.get("isActive");
   const pageParam = searchParams.get("page") || 1;
   const limitParam = searchParams.get("limit") || 10;
 
@@ -34,6 +35,7 @@ export const useLinkFilters = () => {
 
   // Local state for search input
   const [draftSearchTerm, setDraftSearchTerm] = useState(searchParam);
+  const [isActive, setIsActive] = useState<boolean>(isActiveParam === "false" ? false : true);
 
   const [viewMode, setViewMode] = useState<'card' | 'row'>(() => {
     return (localStorage.getItem('viewMode') as 'card' | 'row') || 'card';
@@ -61,7 +63,8 @@ export const useLinkFilters = () => {
     sortFilter,
     page: Number(pageParam),
     limit: Number(limitParam),
-  }), [searchParam, dateFilter, linkFilters, sortFilter, pageParam, limitParam]);
+    isActive,
+  }), [searchParam, dateFilter, linkFilters, sortFilter, pageParam, limitParam, isActive]);
 
   const handleSearchTermChange = useCallback((value: string) => {
     setDraftSearchTerm(value);
@@ -114,6 +117,21 @@ export const useLinkFilters = () => {
   const handleClearAllFilters = useCallback(() => {
     setSearchParams(new URLSearchParams());
     setDraftSearchTerm("");
+    setIsActive(true);
+  }, [setSearchParams]);
+
+  const handleIsActiveChange = useCallback((active: boolean) => {
+    setIsActive(active);
+    setSearchParams(prev => {
+      const next = new URLSearchParams(prev);
+      if (!active) {
+        next.set("isActive", "false");
+      } else {
+        next.delete("isActive");
+      }
+      next.set("page", "1");
+      return next;
+    });
   }, [setSearchParams]);
 
   // Return all what UI needs
@@ -131,6 +149,8 @@ export const useLinkFilters = () => {
     handleLinkFiltersChange,
     handleSortChange,
     handleClearAllFilters,
-    handleViewModeChange
+    handleViewModeChange,
+    isActive,
+    handleIsActiveChange
   };
 };

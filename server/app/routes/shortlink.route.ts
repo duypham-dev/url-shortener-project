@@ -17,7 +17,7 @@ import { redirectRateLimit } from "../middlewares/redirectRateLimit.middleware.j
 
 
 // Schemas
-import { urlSchema, getLinksQuerySchema, updateLinkSchema } from "../schemas/link.schema.js";
+import { urlSchema, getLinksQuerySchema, updateLinkSchema, bulkUpdateLinksSchema } from "../schemas/link.schema.js";
 import { shortCodeSchema } from "../schemas/shortCode.schema.js";
 import { analyticsQuerySchema } from "../schemas/analytics.schema.js";
 
@@ -35,6 +35,14 @@ router.get(
   verifyToken,
   validate(shortCodeSchema),
   linkController.getLinkInfor,
+);
+
+// PATCH /api/v1/links/bulk-status — bulk update active/hidden status
+router.patch(
+  "/links/bulk-status",
+  verifyToken,
+  validate(bulkUpdateLinksSchema),
+  linkController.bulkUpdateLinksHandler,
 );
 
 // PATCH /api/v1/links/:shortCode — update info of a single link

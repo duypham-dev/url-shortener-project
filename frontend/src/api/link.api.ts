@@ -40,6 +40,9 @@ export const getUserLinks = async (params?: LinksQueryParams): Promise<LinkItem[
   if (params?.search) {
     query.search = params.search;
   }
+  if (params?.isActive !== undefined) {
+    query.isActive = String(params.isActive);
+  }
   if (params?.dateFilter?.startDate) {
     query.startDate = params.dateFilter.startDate.toISOString();
   }
@@ -65,10 +68,16 @@ export const getLinkInfo = async (shortCode: string): Promise<LinkItem> => {
   return response.data;
 };
 
-// update link title
 export const updateLink = async (
   shortCode: string,
   data: { title?: string },
 ): Promise<void> => {
   await axiosClient.patch(`/links/${shortCode}`, data);
+};
+
+export const bulkUpdateLinksStatus = async (
+  shortCodes: string[],
+  isActive: boolean,
+): Promise<void> => {
+  await axiosClient.patch(`/links/bulk-status`, { shortCodes, isActive });
 };

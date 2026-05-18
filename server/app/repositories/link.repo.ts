@@ -35,6 +35,7 @@ export interface GetUserLinksOptions {
   endDate?: string;
   sortBy?: string;
   sortOrder?: string;
+  isActive?: boolean;
 }
 
 /**
@@ -44,11 +45,11 @@ export const getUserLinksRepo = async (
   userId: number,
   options: GetUserLinksOptions = {},
 ) => {
-  const { limit, cursor, search, startDate, endDate, sortBy, sortOrder } = options;
+  const { limit, cursor, search, startDate, endDate, sortBy, sortOrder, isActive } = options;
 
   const whereClause: Prisma.url_mappingsWhereInput = {
     user_id: userId,
-    is_active: true,
+    is_active: isActive !== undefined ? isActive : true,
   };
 
   if (search) {
@@ -188,5 +189,21 @@ export const updateLinkRepo = async (
   return prisma.url_mappings.updateMany({
     where: { short_code: shortCode, user_id: userId },
     data,
+  });
+};
+
+export const bulkUpdateLinksStatusRepo = async (
+  shortCodes: string[],
+  isActive: boolean,
+  userId: number,
+) => {
+  return prisma.url_mappings.updateMany({
+    where: {
+      short_code: { in: shortCodes },
+      user_id: userId,
+    },
+    data: {
+      is_active: isActive,
+    },
   });
 };

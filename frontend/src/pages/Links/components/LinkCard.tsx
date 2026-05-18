@@ -12,9 +12,11 @@ import { ShareLinkModal } from "../../../components/ShareLinkModal";
 interface LinkCardProps {
   link: LinkItem;
   viewMode?: 'card' | 'row';
+  isSelected?: boolean;
+  onToggleSelect?: () => void;
 }
 
-export const LinkCard: React.FC<LinkCardProps> = React.memo(({ link, viewMode = 'row' }) => {
+export const LinkCard: React.FC<LinkCardProps> = React.memo(({ link, viewMode = 'row', isSelected = false, onToggleSelect }) => {
   const [copiedValue, copy] = useCopyToClipboard();
   const navigate = useNavigate();
   const shortUrlDisplay = getShortUrlDisplay(link.short_code);
@@ -43,6 +45,8 @@ export const LinkCard: React.FC<LinkCardProps> = React.memo(({ link, viewMode = 
           <div className="flex gap-4">
             <input
               type="checkbox"
+              checked={isSelected}
+              onChange={onToggleSelect}
               className="w-4 h-4 mt-1 border-gray-300 rounded text-blue-600 focus:ring-blue-500 cursor-pointer"
             />
             <div className="sm:block mt-1 w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center overflow-hidden shrink-0 border border-gray-200">

@@ -46,6 +46,14 @@ export const getLinksQuerySchema = z.object({
     endDate: z.iso.datetime().optional(),
     sortBy: z.enum(["title", "createdAt", "clickCount"]).optional(),
     sortOrder: z.enum(["asc", "desc"]).optional().default("desc"),
+    isActive: z.enum(["true", "false"]).optional(),
+  }),
+});
+
+export const bulkUpdateLinksSchema = z.object({
+  body: z.object({
+    shortCodes: z.array(z.string().min(1)).min(1, "Please provide at least one link to update."),
+    isActive: z.boolean(),
   }),
 });
 

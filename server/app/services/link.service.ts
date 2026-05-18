@@ -19,6 +19,7 @@ import {
   updateLinkRepo,
   shortCodeExistsRepo,
   incrementCustomLinkUsageRepo,
+  bulkUpdateLinksStatusRepo,
   type GetUserLinksOptions,
 } from "../repositories/link.repo";
 import { ConflictError } from "../errors/app.error.js";
@@ -202,6 +203,17 @@ export const updateLink = async (
   data: { title?: string },
 ): Promise<void> => {
   await updateLinkRepo(shortCode, userId, data);
+};
+
+// ----------------------------------------------------------------
+// Bulk update links status (active / hidden)
+// ----------------------------------------------------------------
+export const bulkUpdateLinksStatus = async (
+  shortCodes: string[],
+  isActive: boolean,
+  userId: number,
+): Promise<void> => {
+  await bulkUpdateLinksStatusRepo(shortCodes, isActive, userId);
 };
 
 // ----------------------------------------------------------------

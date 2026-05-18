@@ -4,6 +4,7 @@ import {
   getLinkInfoByShortCode,
   updateLink,
   createCustomAliasLink,
+  bulkUpdateLinksStatus,
 } from "../services/link.service.js";
 import { getUserLinks } from "../services/link.service.js";
 import { createQrCodeForLink } from "../services/qrCode.service.js";
@@ -127,6 +128,8 @@ export const getLinksList = async (req: Request, res: Response, next: NextFuncti
     const endDate = req.query.endDate as string | undefined;
     const sortBy = req.query.sortBy as string | undefined;
     const sortOrder = req.query.sortOrder as string | undefined;
+    const isActiveStr = req.query.isActive as string | undefined;
+    const isActive = isActiveStr === "false" ? false : (isActiveStr === "true" ? true : undefined);
 
     const { links, hasNextPage, nextCursor } = await getUserLinks(userId, {
       limit,
@@ -136,6 +139,7 @@ export const getLinksList = async (req: Request, res: Response, next: NextFuncti
       ...(endDate !== undefined ? { endDate } : {}),
       ...(sortBy !== undefined ? { sortBy } : {}),
       ...(sortOrder !== undefined ? { sortOrder } : {}),
+      ...(isActive !== undefined ? { isActive } : {}),
     });
     
     res.status(200).json({
@@ -201,9 +205,32 @@ export const updateLinkHandler = async (
   }
 };
 
+// Controller function to bulk update link status
+export const bulkUpdateLinksHandler = async (
+  req: Request<{}, {}, { shortCodes: string[]; isActive: boolean }>,
+  res: Response,
+  next: NextFunction,
+): Promise<void> => {
+  try {
+    const userId = req.user?.userId;
+    const { shortCodes, isActive } = req.body;
+
+    if (!userId) {
+      throw new UnauthorizedError("Unauthorized.");
+    }
+
+    await bulkUpdateLinksStatus(shortCodes, isActive, userId);
+
+    res.status(200).json({ success: true, message: "Links updated successfully." });
+  } catch (error) {
+    next(error);
+  }
+};
+
 export const linkController = {
     genShortLink,
     getLinksList,
     getLinkInfor,
     updateLinkHandler,
+    bulkUpdateLinksHandler,
 }

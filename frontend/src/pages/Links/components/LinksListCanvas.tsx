@@ -9,6 +9,8 @@ interface LinksListCanvasProps {
   isLoading: boolean;
   error: string | null;
   viewMode: 'card' | 'row';
+  selectedShortCodes: string[];
+  onToggleSelect: (shortCode: string) => void;
 }
 
 const LinksListCanvasComponent: React.FC<LinksListCanvasProps> = ({
@@ -16,6 +18,8 @@ const LinksListCanvasComponent: React.FC<LinksListCanvasProps> = ({
   isLoading,
   error,
   viewMode,
+  selectedShortCodes,
+  onToggleSelect,
 }) => {
   return (
     <div className={`relative pt-4 min-h-[50vh] ${viewMode === 'card' ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 items-start content-start' : 'space-y-4'}`}>
@@ -36,7 +40,13 @@ const LinksListCanvasComponent: React.FC<LinksListCanvasProps> = ({
       )}
 
       {links.map((link) => (
-        <LinkCard key={link.short_code} link={link} viewMode={viewMode} />
+        <LinkCard 
+          key={link.short_code} 
+          link={link} 
+          viewMode={viewMode} 
+          isSelected={selectedShortCodes.includes(link.short_code)}
+          onToggleSelect={() => onToggleSelect(link.short_code)}
+        />
       ))}
     </div>
   );
