@@ -49,6 +49,8 @@ const CreateLink: React.FC = () => {
   const [expiresAt, setExpiresAt] = useState("");
 
   const [qrColor, setQrColor] = useState<string>(QR_COLORS[0]);
+  const [qrBgColor, setQrBgColor] = useState<string>("#ffffff");
+  const [qrErrorCorrection, setQrErrorCorrection] = useState<"L" | "M" | "Q" | "H">("Q");
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -96,7 +98,7 @@ const CreateLink: React.FC = () => {
           ...(expirationEnabled && expiresAt
             ? { expiresAt: new Date(expiresAt).toISOString() }
             : {}),
-          ...(generateQr ? { generateQr: true, qrOptions: { fgColor: qrColor, bgColor: "#ffffff" } } : {}),
+          ...(generateQr ? { generateQr: true, qrOptions: { fgColor: qrColor, bgColor: qrBgColor, errorCorrection: qrErrorCorrection } } : {}),
         });
         
         // Invalidate the cache so the list updates when we go back
@@ -113,7 +115,7 @@ const CreateLink: React.FC = () => {
         setIsSubmitting(false);
       }
     },
-    [destination, title, customAliasEnabled, customAlias, expirationEnabled, expiresAt, generateQr, qrColor, navigate, queryClient],
+    [destination, title, customAliasEnabled, customAlias, expirationEnabled, expiresAt, generateQr, qrColor, qrBgColor, qrErrorCorrection, navigate, queryClient],
   );
 
   const handleDomainChange = (event: SelectChangeEvent<string>) => {
@@ -145,7 +147,7 @@ const CreateLink: React.FC = () => {
                 value={destination}
                 onChange={(e) => setDestination(e.target.value)}
                 placeholder="https://example.com/my-long-url"
-                className="w-full rounded-md border border-gray-300 px-3 py-2.5 text-gray-900 focus:outline-none focus:ring-1 focus:ring-blue-600 focus:border-blue-600"
+                className="w-full rounded-md border border-gray-300 px-3 py-2.5 text-gray-900 focus:outline-none focus:ring-1 focus:ring-black focus:border-black transition-colors"
               />
             </div>
 
@@ -181,7 +183,7 @@ const CreateLink: React.FC = () => {
                         borderColor: "#9ca3af",
                       },
                       "&.Mui-focused .MuiOutlinedInput-notchedOutline": {
-                        borderColor: "#2563eb",
+                        borderColor: "#000000",
                         borderWidth: "1px",
                       },
                     }}
@@ -213,7 +215,7 @@ const CreateLink: React.FC = () => {
                 </div>
                 {customAliasEnabled ? (
                   <div>
-                    <div className="flex items-center border border-gray-300 rounded-md overflow-hidden focus-within:ring-1 focus-within:ring-blue-600 focus-within:border-blue-600">
+                    <div className="flex items-center border border-gray-300 rounded-md overflow-hidden focus-within:ring-1 focus-within:ring-black focus-within:border-black transition-colors">
                       <span className="px-3 py-2.5 bg-gray-50 text-gray-500 text-sm border-r border-gray-300 whitespace-nowrap select-none">
                         /
                       </span>
@@ -255,7 +257,7 @@ const CreateLink: React.FC = () => {
               <input
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
-                className="w-full rounded-md border border-gray-300 px-3 py-2.5 text-gray-900 focus:outline-none focus:ring-1 focus:ring-blue-600 focus:border-blue-600"
+                className="w-full rounded-md border border-gray-300 px-3 py-2.5 text-gray-900 focus:outline-none focus:ring-1 focus:ring-black focus:border-black transition-colors"
               />
             </div>
           </section>
@@ -290,7 +292,7 @@ const CreateLink: React.FC = () => {
                 </div>
 
                 {generateQr && (
-                  <QRPanel destination={destination} qrColor={qrColor} setQrColor={setQrColor} />
+                  <QRPanel destination={destination} qrColor={qrColor} setQrColor={setQrColor} bgColor={qrBgColor} setBgColor={setQrBgColor} errorCorrection={qrErrorCorrection} setErrorCorrection={setQrErrorCorrection} />
                 )}
               </div>
             </div>
@@ -349,7 +351,7 @@ const CreateLink: React.FC = () => {
                     value={expiresAt}
                     onChange={(e) => setExpiresAt(e.target.value)}
                     min={new Date().toISOString().slice(0, 16)} // Prevent selecting past dates
-                    className="w-full rounded-md border border-gray-300 px-3 py-2.5 text-gray-900 focus:outline-none focus:ring-1 focus:ring-blue-600 focus:border-blue-600"
+                    className="w-full rounded-md border border-gray-300 px-3 py-2.5 text-gray-900 focus:outline-none focus:ring-1 focus:ring-black focus:border-black transition-colors"
                     required={expirationEnabled}
                   />
                   <p className="mt-2 text-xs text-gray-500">

@@ -13,3 +13,18 @@ export const QR_COLORS: readonly string[] = [
   '#7055CE', // Purple
   '#C65089', // Pink
 ] as const;
+
+export const QR_BG_COLORS: readonly string[] = [
+  "#ffffff", 
+  "#f8f9fa", 
+  "#e9ecef", 
+  "#ffd43b", 
+  "#74c0fc"
+] as const;
+
+export const ERROR_CORRECTION_OPTIONS = [
+  { value: "L" as const, label: "L", desc: "Low (7%)" },
+  { value: "M" as const, label: "M", desc: "Medium (15%)" },
+  { value: "Q" as const, label: "Q", desc: "Quartile (25%)" },
+  { value: "H" as const, label: "H", desc: "High (30%)" },
+] as const;

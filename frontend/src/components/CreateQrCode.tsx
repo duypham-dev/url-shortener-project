@@ -5,6 +5,7 @@
 // for an existing short link (urlMappingId is required).
 
 import React, { useState, useCallback } from "react";
+import { createPortal } from "react-dom";
 import { QRCodeSVG } from "qrcode.react";
 import { X, HelpCircle } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
@@ -16,7 +17,7 @@ import {
   selectPlanName,
   selectCanUseQr,
 } from "../store/usePlanStore";
-import { QR_COLORS } from "../config/qr.constants";
+import { QR_COLORS, QR_BG_COLORS, ERROR_CORRECTION_OPTIONS } from "../config/qr.constants";
 import type { QrCodeItem } from "../types/qr.type";
 
 // ----------------------------------------------------------------
@@ -34,12 +35,7 @@ export interface CreateQrCodePanelProps {
   onSuccess: (qr: QrCodeItem) => void;
 }
 
-const ERROR_CORRECTION_OPTIONS = [
-  { value: "L" as const, label: "L", desc: "Low (7%)" },
-  { value: "M" as const, label: "M", desc: "Medium (15%)" },
-  { value: "Q" as const, label: "Q", desc: "Quartile (25%)" },
-  { value: "H" as const, label: "H", desc: "High (30%)" },
-];
+
 
 // ----------------------------------------------------------------
 // Component
@@ -129,8 +125,14 @@ const CreateQrCode: React.FC<CreateQrCodePanelProps> = ({
   );
 
   // ---- Form state ----
-  return (
-    <div className="bg-white rounded-xl border border-gray-100">
+  return createPortal(
+    <>
+      <div 
+        className="fixed inset-0 bg-gray-900/20 backdrop-blur-md z-[100] animate-in fade-in duration-200"
+        onClick={onClose}
+        aria-hidden="true"
+      />
+      <div className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[95%] max-w-2xl bg-white rounded-xl shadow-xl z-[100] overflow-hidden max-h-[90vh] flex flex-col animate-in zoom-in-95 duration-200">
       {/* Panel header */}
       <div className="flex items-center justify-between px-6 pt-5 pb-4 border-b border-gray-100">
         <h3 className="text-[17px] font-bold text-[#141C3A]">Create QR Code</h3>
@@ -178,7 +180,7 @@ const CreateQrCode: React.FC<CreateQrCodePanelProps> = ({
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             placeholder="e.g. Product launch campaign"
-            className="w-full rounded-md border border-gray-300 px-3 py-2 text-gray-900 text-sm focus:outline-none focus:ring-1 focus:ring-blue-600 focus:border-blue-600"
+            className="w-full rounded-md border border-gray-300 px-3 py-2 text-gray-900 text-sm focus:outline-none focus:ring-1 focus:ring-black focus:border-black transition-colors"
           />
         </div>
 
@@ -209,7 +211,7 @@ const CreateQrCode: React.FC<CreateQrCodePanelProps> = ({
             <div>
               <h4 className="text-sm font-semibold text-[#141C3A] mb-2.5">Background</h4>
               <div className="flex flex-wrap gap-2">
-                {["#ffffff", "#f8f9fa", "#e9ecef", "#ffd43b", "#74c0fc"].map((color) => (
+                {QR_BG_COLORS.map((color) => (
                   <button
                     key={color}
                     type="button"
@@ -305,6 +307,8 @@ const CreateQrCode: React.FC<CreateQrCodePanelProps> = ({
         </div>
       </form>
     </div>
+    </>,
+    document.body
   );
 };
 

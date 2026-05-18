@@ -9,10 +9,11 @@ export interface CreateShortenOptions {
   qrOptions?: {
     fgColor?: string;
     bgColor?: string;
+    errorCorrection?: "L" | "M" | "Q" | "H";
   };
-  /** Phase 5 — optional custom back-half (e.g. "my-brand") */
+  /** Phase 5 — optional custom back-half */
   customAlias?: string;
-  /** Phase 4 — optional ISO expiry date string (e.g. "2026-12-31T00:00:00Z") */
+  /** Phase 4 — optional ISO expiry date string */
   expiresAt?: string | null;
   title?: string;
 }
@@ -33,7 +34,7 @@ export const createShortenUrl = async (
   return response.data;
 };
 
-
+// get links with filters 
 export const getUserLinks = async (params?: LinksQueryParams): Promise<LinkItem[]> => {
   const query: Record<string, string> = {};
   if (params?.search) {
@@ -58,11 +59,13 @@ export const getUserLinks = async (params?: LinksQueryParams): Promise<LinkItem[
   return response.data || [];
 };
 
+// get link info by shortcode
 export const getLinkInfo = async (shortCode: string): Promise<LinkItem> => {
   const response = (await axiosClient.get(`/links/${shortCode}`)) as ApiEnvelope<LinkItem>;
   return response.data;
 };
 
+// update link title
 export const updateLink = async (
   shortCode: string,
   data: { title?: string },

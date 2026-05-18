@@ -1,15 +1,20 @@
 import React from 'react';
 import { QRCodeSVG } from 'qrcode.react';
-import { QR_COLORS } from '../../../config/qr.constants';
-
+import { QR_COLORS, QR_BG_COLORS, ERROR_CORRECTION_OPTIONS } from '../../../config/qr.constants';
 type Props = {
   destination: string;
   qrColor: string;
   setQrColor: (color: string) => void;
+  bgColor: string;
+  setBgColor: (color: string) => void;
+  errorCorrection: "L" | "M" | "Q" | "H";
+  setErrorCorrection: (level: "L" | "M" | "Q" | "H") => void;
   size?: number;
 };
 
-const QRPanel: React.FC<Props> = ({ destination, qrColor, setQrColor, size = 180 }) => {
+
+
+const QRPanel: React.FC<Props> = ({ destination, qrColor, setQrColor, bgColor, setBgColor, errorCorrection, setErrorCorrection, size = 180 }) => {
   return (
     <div className="mt-4 pt-4 animate-in fade-in slide-in-from-top-2 duration-300">
       <p className="text-sm text-gray-700 mb-4">
@@ -34,6 +39,47 @@ const QRPanel: React.FC<Props> = ({ destination, qrColor, setQrColor, size = 180
                   }`}
                   style={{ backgroundColor: color }}
                 />
+              ))}
+            </div>
+          </div>
+
+          <div>
+            <h4 className="text-[15px] font-semibold text-[#141C3A] mb-3">Background color</h4>
+            <div className="flex flex-wrap gap-3">
+              {QR_BG_COLORS.map((color) => (
+                <button
+                  key={color}
+                  type="button"
+                  onClick={() => setBgColor(color)}
+                  className={`w-9 h-9 rounded-full transition-all duration-200 border ${
+                    bgColor === color
+                      ? "ring-2 ring-offset-2 ring-blue-500 border-transparent"
+                      : "border-gray-200 hover:scale-110"
+                  }`}
+                  style={{ backgroundColor: color }}
+                />
+              ))}
+            </div>
+          </div>
+
+          <div>
+            <h4 className="text-[15px] font-semibold text-[#141C3A] mb-1">Error Correction Level</h4>
+            <p className="text-[13px] text-gray-500 mb-3">Higher = more readable when damaged, but denser.</p>
+            <div className="flex gap-2">
+              {ERROR_CORRECTION_OPTIONS.map((opt) => (
+                <button
+                  key={opt.value}
+                  type="button"
+                  onClick={() => setErrorCorrection(opt.value)}
+                  className={`flex-1 py-1.5 rounded-md text-sm font-medium border transition-colors ${
+                    errorCorrection === opt.value
+                      ? "bg-blue-600 text-white border-blue-600"
+                      : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50"
+                  }`}
+                  title={opt.desc}
+                >
+                  {opt.label}
+                </button>
               ))}
             </div>
           </div>
@@ -70,7 +116,7 @@ const QRPanel: React.FC<Props> = ({ destination, qrColor, setQrColor, size = 180
           <h4 className="text-[15px] font-semibold text-[#141C3A] mb-3 self-start">Preview</h4>
 
           <div className="w-full aspect-square bg-white border border-gray-200 p-3 flex items-center justify-center">
-            <QRCodeSVG value={destination || 'https://example.com'} size={size} bgColor={'#ffffff'} fgColor={qrColor} level={'Q'} />
+            <QRCodeSVG value={destination || 'https://example.com'} size={size} bgColor={bgColor} fgColor={qrColor} level={errorCorrection} />
           </div>
 
           <p className="text-[13px] text-gray-500 mt-4 text-center leading-relaxed">
