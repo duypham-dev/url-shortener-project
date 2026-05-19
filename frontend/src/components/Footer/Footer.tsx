@@ -7,10 +7,10 @@ export function Footer() {
             <div className="w-6 h-6 bg-black rounded-full grid place-items-center">
               <div className="w-3 h-3 bg-white rounded-full"></div>
             </div>
-            dub
+            ShortLK
           </a>
           <p className="text-sm text-gray-500">
-            © {new Date().getFullYear()} Dub Technologies, Inc. All rights reserved.
+            © {new Date().getFullYear()} ShortLK Technologies, Inc. All rights reserved.
           </p>
         </div>
         <div className="flex items-center gap-6 text-sm text-gray-500 font-medium">
