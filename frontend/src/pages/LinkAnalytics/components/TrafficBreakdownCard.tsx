@@ -1,14 +1,14 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { 
-  Globe, 
-  Monitor, 
-  Smartphone, 
-  Tablet, 
-  Laptop, 
-  Award, 
-  HelpCircle, 
+import {
+  Globe,
+  Monitor,
+  Smartphone,
+  Tablet,
+  Laptop,
+  Award,
+  HelpCircle,
   MousePointerClick,
-  type LucideIcon 
+  type LucideIcon
 } from "lucide-react";
 import type { AnalyticsBreakdownItem } from "../../../types/analytics.type";
 
@@ -96,7 +96,7 @@ export const TrafficBreakdownCard: React.FC<TrafficBreakdownCardProps> = ({
   }, [activeTab, breakdownByTab]);
 
   const activeItems = breakdownByTab[activeTab];
-  
+
   // Pre-calculate derived values
   const { totalClicks, items } = useMemo(() => {
     const total = activeItems.reduce((sum, item) => sum + item.clicks, 0);
@@ -120,9 +120,8 @@ export const TrafficBreakdownCard: React.FC<TrafficBreakdownCardProps> = ({
                 key={item.key}
                 type="button"
                 onClick={() => setActiveTab(item.key)}
-                className={`relative pb-3 text-sm font-normal transition-all cursor-pointer focus:outline-none whitespace-nowrap ${
-                  isActive ? "text-black" : "text-gray-400 hover:text-gray-600"
-                }`}
+                className={`relative pb-3 text-sm font-normal transition-all cursor-pointer focus:outline-none whitespace-nowrap ${isActive ? "text-black" : "text-gray-400 hover:text-gray-600"
+                  }`}
               >
                 {item.label}
                 {isActive && (
